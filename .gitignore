@@ -1,15 +1,48 @@
+# Android Studio
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+.gradle/
+.idea/
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
 local.properties
+.DS_Store
+
+# Build output
+/build/
+.captures/
+.cxx/
+.externalNativeBuild/
+
+# APKs
+*.apk
+*.ap_
+
+# Compose cache
+.compose-cache/
+
+# NDK / CMake / Gradle wrappers
+*.lock
+**/gradle-wrapper.jar
+**/gradle-wrapper.properties
+
+# Node (si extensions web plus tard)
+node_modules/
+
+# API ASP.NET Core (si tu ajoutes ton API ici)
+bin/
+obj/
+*.user
+*.suo
+*.vs/
+appsettings*.json
+
+# Logs et OS temporaires
+*.log
+Thumbs.db
+
+# VS Code
+.vscode/
