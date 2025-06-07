@@ -1,44 +1,65 @@
+// app/build.gradle.kts
+
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.Properties
+import org.gradle.api.tasks.Exec
+import org.gradle.api.tasks.StopExecutionException
 
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
-    id("org.jetbrains.kotlin.kapt") // ✅ pour Room, ZXing, etc.
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.kapt")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// ✅ Gestion version auto-incrémentée
+// --- VERSIONING AUTOMATIQUE ---
 val versionPropsFile = rootProject.file("version.properties")
 val versionProps = Properties().apply {
+    if (!versionPropsFile.exists()) {
+        versionPropsFile.parentFile.mkdirs()
+        versionPropsFile.writeText("versionCode=1\nversionName=1.0")
+    }
     load(versionPropsFile.inputStream())
 }
 
-val currentCode = versionProps["versionCode"].toString().toInt()
-val currentName = versionProps["versionName"].toString().replace(",", ".").toDouble()
+val currentCode = versionProps.getProperty("versionCode").toInt()
+val currentName = versionProps.getProperty("versionName").toDouble()
 
-val nextCode = currentCode + 1
-val nextName = String.format(Locale.US, "%.2f", currentName + 0.01)
+tasks.register("incrementVersion") {
+    group = "versioning"
+    description = "Incrémente versionCode et versionName avant chaque build"
+    doLast {
+        val nextCode = currentCode + 1
+        val nextName = String.format(Locale.US, "%.2f", currentName + 0.01)
+        versionProps.setProperty("versionCode", nextCode.toString())
+        versionProps.setProperty("versionName", nextName)
+        versionProps.store(versionPropsFile.outputStream(), null)
+        println("→ versionCode = $nextCode, versionName = $nextName")
+    }
+}
 
-versionProps["versionCode"] = nextCode.toString()
-versionProps["versionName"] = nextName
-versionProps.store(versionPropsFile.outputStream(), null)
+// On déclenche l’incrément juste avant tout build
+tasks.named("preBuild") {
+    dependsOn("incrementVersion")
+}
 
 android {
     namespace = "com.riva.atsmobile"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.Riva.atfmobile"
+        applicationId = "com.riva.atsmobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = nextCode
-        versionName = nextName
-        buildConfigField("String", "BUILD_VERSION", "\"$nextName\"")
 
-        val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        versionCode = versionProps.getProperty("versionCode").toInt()
+        versionName = versionProps.getProperty("versionName")
+
+        buildConfigField("String", "BUILD_VERSION", "\"$versionName\"")
+        val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            .format(Date())
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -78,73 +99,101 @@ android {
 }
 
 dependencies {
-    // 🔧 Compose Core
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+    // BOM pour Compose
+    implementation(platform("androidx.compose:compose-bom:2023.08.00"))
+
+    // Core & Lifecycle
+    implementation("androidx.core:core-ktx:1.8.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
+    implementation("androidx.activity:activity-compose:1.7.2")
+
+    // Compose UI
+    implementation("androidx.compose.ui:ui:1.6.1")
+    implementation("androidx.compose.ui:ui-graphics:1.6.1")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.6.1")
     implementation("androidx.compose.material3:material3:1.2.1")
-    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.compose.material:material-icons-extended:1.6.1")
 
-    implementation("androidx.compose.material:material-icons-extended")
-
-    // 🔧 Navigation
+    // Navigation & animations
     implementation("androidx.navigation:navigation-compose:2.7.7")
-
-    // ✅ UI moderne + animations
     implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
     implementation("com.google.accompanist:accompanist-navigation-animation:0.34.0")
     implementation("com.google.accompanist:accompanist-placeholder-material:0.34.0")
     implementation("com.google.accompanist:accompanist-flowlayout:0.34.0")
     implementation("androidx.compose.animation:animation:1.6.1")
 
-    // ✅ SignalR WebSocket
-    implementation("com.microsoft.signalr:signalr:6.0.10")
-
-    // ✅ Réseau & JSON
+    // Réseau & JSON
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.microsoft.signalr:signalr:6.0.10")
 
-    // ✅ Graphiques / courbes
-    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    // Graphiques
+    implementation("com.github.PhilJay:MPAndroidChart:3.1.0")
 
-    // ✅ Stockage local
+    // Stockage local
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation("androidx.room:room-runtime:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
-    // ✅ Caméra / Prise de photo
+    // Caméra & Photo
     implementation("androidx.camera:camera-camera2:1.3.1")
     implementation("androidx.camera:camera-lifecycle:1.3.1")
     implementation("androidx.camera:camera-view:1.3.1")
 
-    // ✅ QR Code / RFID (prévision)
+    // QR & RFID
     implementation("com.google.zxing:core:3.5.2")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
-    // ✅ Logs / debug
+    // Android Material Components (XML themes pour Material3)
+    implementation("com.google.android.material:material:1.11.0")
+    // Logging
     implementation("com.jakewharton.timber:timber:5.0.1")
 
-    // ✅ (Optionnel) PDF export
+    // PDF
     implementation("com.itextpdf:itext7-core:7.2.5")
 
-    // ✅ ViewModel / LiveData Compose
-    implementation("androidx.compose.runtime:runtime-livedata")
+    // ViewModel & LiveData Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.1")
 
-    //✅  dépendance de chiffrement
+    // Sécurité
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // ✅ Tests
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+    // Tests
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.3")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2023.08.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.1")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.6.1")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.6.1")
 }
+
+// --- PUSH AUTO CROSS-PLATFORM APRÈS BUILD ---
+val gitAddDev by tasks.registering(Exec::class) {
+    group = "build"
+    description = "Stage all changes"
+    commandLine("git", "add", "-A")
+}
+
+val gitCommitDev by tasks.registering(Exec::class) {
+    group = "build"
+    description = "Commit staged changes if any"
+    // on ne plante pas s'il n'y a rien à committer
+    isIgnoreExitValue = true
+    val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+    commandLine("git", "commit", "-m", "chore: build réussi $timestamp")
+}
+
+val gitPushDev by tasks.registering(Exec::class) {
+    group = "build"
+    description = "Push commits to dev branch"
+    commandLine("git", "push", "origin", "dev")
+}
+
+// Chaînage : assemble* → add → commit → push
+tasks.matching { it.name.startsWith("assemble") }.configureEach {
+    finalizedBy(gitAddDev)
+}
+gitAddDev.configure { finalizedBy(gitCommitDev) }
+gitCommitDev.configure { finalizedBy(gitPushDev) }
