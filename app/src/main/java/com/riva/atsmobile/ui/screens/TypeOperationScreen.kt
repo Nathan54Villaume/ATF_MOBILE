@@ -1,6 +1,5 @@
 package com.riva.atsmobile.ui.screens
 
-import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -17,20 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material3.ElevatedButton
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -39,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.google.gson.Gson
 import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.ui.shared.BaseScreen
 import com.riva.atsmobile.viewmodel.SelectionViewModel
@@ -58,27 +46,26 @@ fun TypeOperationScreen(
     val snackbarHost = remember { SnackbarHostState() }
     val matricule    by viewModel.matricule.collectAsState()
 
-    // Instanciation unique du client SignalR
+    // Pour debug du JSON brut
+    var rawJson by remember { mutableStateOf<String?>(null) }
+
+    // Création unique du client SignalR
     val signalRClient = remember(context, matricule) {
         SignalRClientAutoDetect(context, matricule)
     }
 
-    // Démarrage une seule fois et configuration des callbacks
-    LaunchedEffect(Unit) {
-        Log.i("TypeOpScreen", "▶ Lancement (matricule=$matricule)")
-        signalRClient.apply {
-            onReceiveGammesError = { err ->
-                scope.launch { snackbarHost.showSnackbar("Erreur gammes : $err") }
-            }
-            onReceiveGammes = { list ->
-                Log.i("SignalR-RAW", "RAW JSON gammes reçues : $list")
-                viewModel.setGammes(list)
-            }
-            connectAndFetchGammes(4.5, 7.0)
+    LaunchedEffect(signalRClient) {
+        signalRClient.onReceiveGammesError = { err ->
+            scope.launch { snackbarHost.showSnackbar("Erreur gammes : $err") }
         }
+        signalRClient.onReceiveGammes = { list ->
+            rawJson = Gson().toJson(list)
+            viewModel.setGammes(list)
+        }
+        signalRClient.connectAndFetchGammes(4.5, 7.0)
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(signalRClient) {
         onDispose { signalRClient.disconnect() }
     }
 
@@ -104,6 +91,16 @@ fun TypeOperationScreen(
                 .padding(16.dp)
         ) {
             Column(Modifier.fillMaxSize()) {
+                rawJson?.let {
+                    Text(
+                        "JSON brut reçu :\n$it",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    )
+                }
+
                 Text(
                     "Sélectionnez vos gammes",
                     style    = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
@@ -176,9 +173,7 @@ fun TypeOperationScreen(
 
             SnackbarHost(
                 hostState = snackbarHost,
-                modifier  = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 8.dp)
+                modifier  = Modifier.align(Alignment.BottomCenter)
             )
         }
     }
@@ -224,7 +219,7 @@ private fun GammeGrid(
                     gamme == selected -> MaterialTheme.colorScheme.primary
                     else              -> Color.White
                 }
-                val fw = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
+                val fw    = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
                 val scale by animateFloatAsState(
                     targetValue   = if (gamme == selected) 1.05f else 1f,
                     animationSpec = tween(300)
