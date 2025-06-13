@@ -51,39 +51,45 @@ fun TypeOperationScreen(
     viewModel: SelectionViewModel,
     navController: NavController
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val snackbarHost = remember { SnackbarHostState() }
-    val signalRClient = remember(context) { SignalRClientAutoDetect(context) }
+    val context       = LocalContext.current
+    val scope         = rememberCoroutineScope()
+    val snackbarHost  = remember { SnackbarHostState() }
+    // on prend le matricule du ViewModel
+    val matricule     by viewModel.matricule.collectAsState()
+    // on passe le matricule au client SignalR
+    val signalRClient = remember(context, matricule) {
+        SignalRClientAutoDetect(context, matricule)
+    }
 
     DisposableEffect(Unit) {
-        // Handlers pour réception des gammes
+        // On configure les callbacks
         signalRClient.onReceiveGammes = { list ->
             viewModel.setGammes(list)
         }
         signalRClient.onReceiveGammesError = { err ->
-            scope.launch {
-                snackbarHost.showSnackbar("Erreur gammes : $err")
-            }
+            scope.launch { snackbarHost.showSnackbar("Erreur gammes : $err") }
         }
-        // Connexion et récupération
+        // Lancement de la connexion + login + fetch
         signalRClient.connectAndFetchGammes(4.5, 7.0)
-        onDispose { signalRClient.disconnect() }
+
+        onDispose {
+            signalRClient.disconnect()
+        }
     }
 
-    val isConnected by viewModel.isOnline.collectAsState()
-    val gammes by viewModel.gammes.collectAsState()
-    val current by viewModel.currentGamme.collectAsState()
-    val desired by viewModel.desiredGamme.collectAsState()
-    val zone by viewModel.zoneDeTravail.collectAsState()
+    val isConnected  by viewModel.isOnline.collectAsState()
+    val gammes       by viewModel.gammes.collectAsState()
+    val current      by viewModel.currentGamme.collectAsState()
+    val desired      by viewModel.desiredGamme.collectAsState()
+    val zone         by viewModel.zoneDeTravail.collectAsState()
     val intervention by viewModel.intervention.collectAsState()
 
     BaseScreen(
-        title = "Type d’opération",
-        navController = navController,
-        viewModel = viewModel,
-        showBack = true,
-        showLogout = false,
+        title            = "Type d’opération",
+        navController    = navController,
+        viewModel        = viewModel,
+        showBack         = true,
+        showLogout       = false,
         connectionStatus = isConnected
     ) { padding ->
         Box(
@@ -95,7 +101,7 @@ fun TypeOperationScreen(
             Column(Modifier.fillMaxSize()) {
                 Text(
                     "Sélectionnez vos gammes",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    style    = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
@@ -110,16 +116,16 @@ fun TypeOperationScreen(
                     }
                 } else {
                     GammeGrid(
-                        title = "GAMME ACTUELLE",
-                        gammes = gammes,
+                        title    = "GAMME ACTUELLE",
+                        gammes   = gammes,
                         selected = current,
                         onSelect = viewModel::selectCurrentGamme,
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(Modifier.height(16.dp))
                     GammeGrid(
-                        title = "GAMME VISÉE",
-                        gammes = gammes,
+                        title    = "GAMME VISÉE",
+                        gammes   = gammes,
                         selected = desired,
                         onSelect = viewModel::selectDesiredGamme,
                         restrict = current,
@@ -135,8 +141,8 @@ fun TypeOperationScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     ElevatedButton(
-                        onClick = { navController.popBackStack() },
-                        shape = RoundedCornerShape(50),
+                        onClick  = { navController.popBackStack() },
+                        shape    = RoundedCornerShape(50),
                         modifier = Modifier.width(140.dp)
                     ) {
                         Icon(Icons.Default.WbSunny, contentDescription = null)
@@ -144,13 +150,13 @@ fun TypeOperationScreen(
                         Text("Retour")
                     }
                     ElevatedButton(
-                        onClick = {
+                        onClick  = {
                             viewModel.validateGammeChange { _, msg ->
                                 scope.launch { snackbarHost.showSnackbar(msg) }
                             }
                         },
-                        enabled = current != null && desired != null,
-                        shape = RoundedCornerShape(50),
+                        enabled  = current != null && desired != null,
+                        shape    = RoundedCornerShape(50),
                         modifier = Modifier.width(140.dp)
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null)
@@ -164,7 +170,7 @@ fun TypeOperationScreen(
 
             SnackbarHost(
                 hostState = snackbarHost,
-                modifier = Modifier
+                modifier  = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 8.dp)
             )
@@ -184,37 +190,37 @@ private fun GammeGrid(
     Column(modifier) {
         Text(title, style = MaterialTheme.typography.titleMedium)
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+            columns               = GridCells.Fixed(3),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
+            verticalArrangement   = Arrangement.spacedBy(8.dp),
+            modifier              = Modifier.fillMaxSize()
         ) {
             items(gammes) { gamme ->
                 val disabled = restrict != null && gamme == restrict
                 val borderColor by animateColorAsState(
                     when {
-                        disabled -> Color.LightGray
+                        disabled          -> Color.LightGray
                         gamme == selected -> MaterialTheme.colorScheme.primary
-                        else -> Color.Gray
+                        else              -> Color.Gray
                     },
                     animationSpec = tween(500, easing = FastOutSlowInEasing)
                 )
                 val bgColor by animateColorAsState(
                     when {
-                        disabled -> Color(0xFF2E2E2E)
+                        disabled          -> Color(0xFF2E2E2E)
                         gamme == selected -> MaterialTheme.colorScheme.primary.copy(alpha = .1f)
-                        else -> Color(0xFF1E1E1E)
+                        else              -> Color(0xFF1E1E1E)
                     },
                     animationSpec = tween(500)
                 )
                 val txtColor = when {
-                    disabled -> Color.LightGray
+                    disabled          -> Color.LightGray
                     gamme == selected -> MaterialTheme.colorScheme.primary
-                    else -> Color.White
+                    else              -> Color.White
                 }
                 val fw = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
                 val scale by animateFloatAsState(
-                    targetValue = if (gamme == selected) 1.05f else 1f,
+                    targetValue   = if (gamme == selected) 1.05f else 1f,
                     animationSpec = tween(300)
                 )
 
@@ -229,9 +235,9 @@ private fun GammeGrid(
                 ) {
                     Text(
                         gamme.designation,
-                        color = txtColor,
+                        color      = txtColor,
                         fontWeight = fw,
-                        style = MaterialTheme.typography.bodyMedium
+                        style      = MaterialTheme.typography.bodyMedium
                     )
                 }
             }

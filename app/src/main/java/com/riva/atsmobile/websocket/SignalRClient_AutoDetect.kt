@@ -11,17 +11,14 @@ import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.utils.ApiConfig
 import kotlinx.coroutines.*
 
-class SignalRClientAutoDetect(private val context: Context) {
-
+class SignalRClientAutoDetect(
+    private val context: Context,
+    private val matricule: String
+) {
     private var connection: HubConnection? = null
 
-    /** Callback quand la connexion devient active */
     var onConnected: (() -> Unit)? = null
-
-    /** Reçoit la liste de gammes */
     var onReceiveGammes: ((List<Gamme>) -> Unit)? = null
-
-    /** Reçoit une erreur lors de la récupération des gammes */
     var onReceiveGammesError: ((String) -> Unit)? = null
 
     private val gson = Gson()
@@ -31,36 +28,24 @@ class SignalRClientAutoDetect(private val context: Context) {
             .trimEnd('/') + "/ws"
     }
 
-    /**
-     * Démarre ou redémarre la connexion SignalR.
-     */
     fun connect() {
-        // Si déjà connecté, on ne fait rien
         if (connection?.connectionState == HubConnectionState.CONNECTED) return
 
-        // (Re)création du HubConnection
         connection = HubConnectionBuilder.create(resolvedUrl).build()
 
-        // Reconnexion automatique après fermeture
         connection?.onClosed { error ->
             Log.d("SignalR", "🔌 Connexion fermée${error?.message?.let { ": $it" } ?: ""}")
             CoroutineScope(Dispatchers.IO).launch {
-                delay(2_000)
+                delay(2000)
                 connect()
             }
         }
 
-        // Déclaration des handlers
         connection?.apply {
             on("ReceiveGammes", { payload: String ->
-                // 1) Log du JSON brut
                 Log.d("SignalR-RAW", "RAW JSON payload: $payload")
-
-                // 2) Parsing
                 val type = object : TypeToken<List<Gamme>>() {}.type
                 val list: List<Gamme> = gson.fromJson(payload, type)
-
-                // 3) Invocation du callback sur le Main thread
                 CoroutineScope(Dispatchers.Main).launch {
                     onReceiveGammes?.invoke(list)
                 }
@@ -74,53 +59,44 @@ class SignalRClientAutoDetect(private val context: Context) {
             }, String::class.java)
         }
 
-        // Démarrage asynchrone de la connexion
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 connection?.start()?.blockingAwait()
                 Log.d("SignalR", "✅ Connecté à $resolvedUrl")
-                // Callback onConnected sur le Main thread
+                // Après avoir effectivement ouvert la connexion
+                // on envoie d'abord le login, puis on notifie
+                connection?.send("Login", matricule)
+                Log.d("SignalR", "📤 Login envoyé : $matricule")
+
                 withContext(Dispatchers.Main) {
                     onConnected?.invoke()
                 }
             } catch (e: Exception) {
                 Log.e("SignalR", "❌ Connexion échouée: ${e.message}", e)
-                delay(2_000)
+                delay(2000)
                 connect()
             }
         }
     }
 
-    /** Arrêt manuel de la connexion */
     fun disconnect() {
         connection?.stop()
         connection = null
         Log.d("SignalR", "🔌 Déconnecté manuellement")
     }
 
-    /**
-     * Envoie GetLatestGammes au hub.
-     * Si la connexion n’est pas encore active, diffère jusqu’à onConnected.
-     */
     fun invokeGetLatestGammes(min: Double, max: Double) {
         val conn = connection
         if (conn?.connectionState == HubConnectionState.CONNECTED) {
             Log.d("SignalR", "📤 Invoke GetLatestGammes($min, $max)")
             conn.send("GetLatestGammes", min, max)
         } else {
-            // Planifier l’envoi après connexion
-            onConnected = {
-                Log.d("SignalR", "📤 (post-connect) Invoke GetLatestGammes($min, $max)")
-                connection?.send("GetLatestGammes", min, max)
-            }
+            onConnected = { invokeGetLatestGammes(min, max) }
         }
     }
 
-    /**
-     * Confort : connecte + fetch.
-     * Se base sur onConnected pour déclencher le fetch.
-     */
     fun connectAndFetchGammes(min: Double, max: Double) {
+        // onConnected ne lancera pas avant le Login
         onConnected = { invokeGetLatestGammes(min, max) }
         connect()
     }
