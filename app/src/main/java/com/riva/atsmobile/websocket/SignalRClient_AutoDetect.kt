@@ -17,7 +17,9 @@ class SignalRClientAutoDetect(
 ) {
     private var connection: HubConnection? = null
 
-    var onConnected: (() -> Unit)? = null
+    /** Scope unique pour tous les coroutines internes */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     var onReceiveGammes: ((List<Gamme>) -> Unit)? = null
     var onReceiveGammesError: ((String) -> Unit)? = null
 
@@ -28,24 +30,32 @@ class SignalRClientAutoDetect(
             .trimEnd('/') + "/ws"
     }
 
+    /**
+     * Démarre ou redémarre la connexion SignalR.
+     */
     fun connect() {
+        // Si déjà connecté, on ne recrée pas tout
         if (connection?.connectionState == HubConnectionState.CONNECTED) return
 
+        // (Re)création du HubConnection
         connection = HubConnectionBuilder.create(resolvedUrl).build()
 
+        // En cas de fermeture, on retente après 2s
         connection?.onClosed { error ->
-            Log.d("SignalR", "🔌 Connexion fermée${error?.message?.let { ": $it" } ?: ""}")
-            CoroutineScope(Dispatchers.IO).launch {
-                delay(2000)
+            Log.d("SignalR", "🔌 Fermeture connexion${error?.message?.let { ": $it" } ?: ""}")
+            scope.launch {
+                delay(2_000)
                 connect()
             }
         }
 
+        // Enregistrement des handlers
         connection?.apply {
             on("ReceiveGammes", { payload: String ->
-                Log.d("SignalR-RAW", "RAW JSON payload: $payload")
+                Log.d("SignalR-RAW", payload)
                 val type = object : TypeToken<List<Gamme>>() {}.type
                 val list: List<Gamme> = gson.fromJson(payload, type)
+                // Notification sur le thread Main
                 CoroutineScope(Dispatchers.Main).launch {
                     onReceiveGammes?.invoke(list)
                 }
@@ -59,45 +69,54 @@ class SignalRClientAutoDetect(
             }, String::class.java)
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
+        // Démarrage de la connexion
+        scope.launch {
             try {
                 connection?.start()?.blockingAwait()
                 Log.d("SignalR", "✅ Connecté à $resolvedUrl")
-                // Après avoir effectivement ouvert la connexion
-                // on envoie d'abord le login, puis on notifie
+
+                // 1) on envoie le login
                 connection?.send("Login", matricule)
                 Log.d("SignalR", "📤 Login envoyé : $matricule")
-
-                withContext(Dispatchers.Main) {
-                    onConnected?.invoke()
-                }
             } catch (e: Exception) {
-                Log.e("SignalR", "❌ Connexion échouée: ${e.message}", e)
-                delay(2000)
+                Log.e("SignalR", "❌ Échec connexion : ${e.message}", e)
+                delay(2_000)
                 connect()
             }
         }
     }
 
+    /** Arrêt manuel de la connexion */
     fun disconnect() {
-        connection?.stop()
-        connection = null
-        Log.d("SignalR", "🔌 Déconnecté manuellement")
-    }
-
-    fun invokeGetLatestGammes(min: Double, max: Double) {
-        val conn = connection
-        if (conn?.connectionState == HubConnectionState.CONNECTED) {
-            Log.d("SignalR", "📤 Invoke GetLatestGammes($min, $max)")
-            conn.send("GetLatestGammes", min, max)
-        } else {
-            onConnected = { invokeGetLatestGammes(min, max) }
+        scope.launch {
+            connection?.stop()
+            connection = null
+            Log.d("SignalR", "🔌 Déconnecté manuellement")
         }
     }
 
+    /**
+     * Envoie directement GetLatestGammes.
+     * Appeler **après** avoir appelé `connect()`.
+     * Si la connexion n'est pas encore active, on réessaie automatiquement après 500 ms.
+     */
+    fun invokeGetLatestGammes(min: Double, max: Double) {
+        scope.launch {
+            // attente fine si nécessaire
+            while (connection?.connectionState != HubConnectionState.CONNECTED) {
+                delay(500)
+            }
+            Log.d("SignalR", "📤 Invoke GetLatestGammes($min, $max)")
+            connection?.send("GetLatestGammes", min, max)
+        }
+    }
+
+    /**
+     * Confort : connecte puis, dès que le login est envoyé, appelle GetLatestGammes.
+     */
     fun connectAndFetchGammes(min: Double, max: Double) {
-        // onConnected ne lancera pas avant le Login
-        onConnected = { invokeGetLatestGammes(min, max) }
         connect()
+        // on lance le fetch de façon asynchrone
+        invokeGetLatestGammes(min, max)
     }
 }

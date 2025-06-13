@@ -23,12 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -54,22 +49,25 @@ fun TypeOperationScreen(
     val context       = LocalContext.current
     val scope         = rememberCoroutineScope()
     val snackbarHost  = remember { SnackbarHostState() }
-    // on prend le matricule du ViewModel
+
+    // On récupère le matricule du ViewModel
     val matricule     by viewModel.matricule.collectAsState()
-    // on passe le matricule au client SignalR
+
+    // On crée ou recrée le SignalRClient si 'matricule' change
     val signalRClient = remember(context, matricule) {
         SignalRClientAutoDetect(context, matricule)
     }
 
-    DisposableEffect(Unit) {
-        // On configure les callbacks
+    // Disposer une seule fois à la composition
+    DisposableEffect(signalRClient) {
+        // Callbacks
         signalRClient.onReceiveGammes = { list ->
             viewModel.setGammes(list)
         }
         signalRClient.onReceiveGammesError = { err ->
             scope.launch { snackbarHost.showSnackbar("Erreur gammes : $err") }
         }
-        // Lancement de la connexion + login + fetch
+        // Lancement de la connexion + Login + fetch
         signalRClient.connectAndFetchGammes(4.5, 7.0)
 
         onDispose {
@@ -77,6 +75,7 @@ fun TypeOperationScreen(
         }
     }
 
+    // Observables du ViewModel
     val isConnected  by viewModel.isOnline.collectAsState()
     val gammes       by viewModel.gammes.collectAsState()
     val current      by viewModel.currentGamme.collectAsState()
@@ -136,6 +135,7 @@ fun TypeOperationScreen(
 
                 DetailsRow(current, desired)
                 Spacer(Modifier.weight(1f))
+
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
