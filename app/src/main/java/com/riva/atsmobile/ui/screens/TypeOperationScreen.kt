@@ -16,7 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material3.CircularProgressIndicator
+
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -121,7 +121,7 @@ fun TypeOperationScreen(
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        Text("Chargement...", style = MaterialTheme.typography.bodyMedium)
                     }
                 } else {
                     GammeGrid(
