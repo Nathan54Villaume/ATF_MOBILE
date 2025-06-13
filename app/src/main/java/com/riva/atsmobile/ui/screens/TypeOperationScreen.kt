@@ -8,16 +8,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -25,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,7 +25,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -66,26 +58,28 @@ fun TypeOperationScreen(
     val matricule     by viewModel.matricule.collectAsState()
     val signalRClient = remember { SignalRClientAutoDetect(context) }
 
-    LaunchedEffect(Unit) {
+    DisposableEffect(key1 = matricule) {
+        // Initialisation
         viewModel.InitNetworkObserverIfNeeded(context)
 
         signalRClient.onMessage = { msg ->
             scope.launch { snackbarHost.showSnackbar(msg) }
         }
-
         signalRClient.onReceiveGammes = { list ->
             viewModel.setGammes(list)
         }
-
         signalRClient.onReceiveGammesError = { err ->
-            scope.launch { snackbarHost.showSnackbar("Erreur gammes: $err") }
+            scope.launch { snackbarHost.showSnackbar("Erreur gammes : $err") }
         }
-
         signalRClient.onConnected = {
             signalRClient.invokeGetLatestGammes(4.5, 7.0)
         }
 
         signalRClient.connect(matricule)
+
+        onDispose {
+            signalRClient.disconnect()
+        }
     }
 
     val isConnected  by viewModel.isOnline.collectAsState()
@@ -103,15 +97,16 @@ fun TypeOperationScreen(
         showLogout       = false,
         connectionStatus = isConnected
     ) { padding ->
+        // Wrap content and Snackbar in a Box to allow align
         Box(
-            Modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(16.dp)
         ) {
             Column(
                 Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
             ) {
                 Text(
                     "Sélectionnez vos gammes",
@@ -119,24 +114,37 @@ fun TypeOperationScreen(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
-                GammeGrid(
-                    title    = "GAMME ACTUELLE",
-                    gammes   = gammes,
-                    selected = current,
-                    onSelect = viewModel::selectCurrentGamme
-                )
+                if (gammes.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    GammeGrid(
+                        title    = "GAMME ACTUELLE",
+                        gammes   = gammes,
+                        selected = current,
+                        onSelect = viewModel::selectCurrentGamme,
+                        modifier = Modifier.weight(1f)
+                    )
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                GammeGrid(
-                    title    = "GAMME VISÉE",
-                    gammes   = gammes,
-                    selected = desired,
-                    onSelect = viewModel::selectDesiredGamme,
-                    restrict = current
-                )
+                    GammeGrid(
+                        title    = "GAMME VISÉE",
+                        gammes   = gammes,
+                        selected = desired,
+                        onSelect = viewModel::selectDesiredGamme,
+                        restrict = current,
+                        modifier = Modifier.weight(1f)
+                    )
 
-                Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(24.dp))
+                }
 
                 DetailsRow(current, desired)
 
@@ -174,6 +182,7 @@ fun TypeOperationScreen(
                 Footer(zone, intervention)
             }
 
+            // Snackbar positioned at bottom center
             SnackbarHost(
                 hostState = snackbarHost,
                 modifier  = Modifier
@@ -190,61 +199,62 @@ private fun GammeGrid(
     gammes: List<Gamme>,
     selected: Gamme?,
     onSelect: (Gamme) -> Unit,
-    restrict: Gamme? = null
+    restrict: Gamme? = null,
+    modifier: Modifier = Modifier
 ) {
-    Text(title, style = MaterialTheme.typography.titleMedium)
-    LazyVerticalGrid(
-        columns               = GridCells.Fixed(3),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement   = Arrangement.spacedBy(8.dp),
-        modifier              = Modifier
-            .fillMaxWidth()
-            .height(100.dp)
-    ) {
-        items(gammes) { gamme ->
-            val disabled = (restrict != null && gamme == restrict)
-            val borderColor by animateColorAsState(
-                when {
+    Column(modifier) {
+        Text(title, style = MaterialTheme.typography.titleMedium)
+        LazyVerticalGrid(
+            columns               = GridCells.Fixed(3),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement   = Arrangement.spacedBy(8.dp),
+            modifier              = Modifier.fillMaxSize()
+        ) {
+            items(gammes) { gamme ->
+                val disabled = (restrict != null && gamme == restrict)
+                val borderColor by animateColorAsState(
+                    when {
+                        disabled          -> Color.LightGray
+                        gamme == selected -> MaterialTheme.colorScheme.primary
+                        else              -> Color.Gray
+                    },
+                    animationSpec = tween(500, easing = FastOutSlowInEasing)
+                )
+                val bgColor by animateColorAsState(
+                    when {
+                        disabled          -> Color(0xFF2E2E2E)
+                        gamme == selected -> MaterialTheme.colorScheme.primary.copy(alpha = .1f)
+                        else              -> Color(0xFF1E1E1E)
+                    },
+                    animationSpec = tween(500)
+                )
+                val txtColor = when {
                     disabled          -> Color.LightGray
                     gamme == selected -> MaterialTheme.colorScheme.primary
-                    else              -> Color.Gray
-                },
-                animationSpec = tween(500, easing = FastOutSlowInEasing)
-            )
-            val bgColor by animateColorAsState(
-                when {
-                    disabled          -> Color(0xFF2E2E2E)
-                    gamme == selected -> MaterialTheme.colorScheme.primary.copy(alpha = .1f)
-                    else              -> Color(0xFF1E1E1E)
-                },
-                animationSpec = tween(500)
-            )
-            val txtColor = when {
-                disabled          -> Color.LightGray
-                gamme == selected -> MaterialTheme.colorScheme.primary
-                else              -> Color.White
-            }
-            val fw = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
-            val scale by animateFloatAsState(
-                targetValue   = if (gamme == selected) 1.05f else 1f,
-                animationSpec = tween(300)
-            )
-
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .scale(scale)
-                    .background(bgColor, RoundedCornerShape(20.dp))
-                    .border(BorderStroke(2.dp, borderColor), RoundedCornerShape(20.dp))
-                    .clickable(enabled = !disabled) { onSelect(gamme) }
-                    .padding(vertical = 8.dp, horizontal = 4.dp)
-            ) {
-                Text(
-                    gamme.designation,
-                    color      = txtColor,
-                    fontWeight = fw,
-                    style      = MaterialTheme.typography.bodyMedium
+                    else              -> Color.White
+                }
+                val fw = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
+                val scale by animateFloatAsState(
+                    targetValue   = if (gamme == selected) 1.05f else 1f,
+                    animationSpec = tween(300)
                 )
+
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .scale(scale)
+                        .background(bgColor, RoundedCornerShape(20.dp))
+                        .border(BorderStroke(2.dp, borderColor), RoundedCornerShape(20.dp))
+                        .clickable(enabled = !disabled) { onSelect(gamme) }
+                        .padding(vertical = 8.dp, horizontal = 4.dp)
+                ) {
+                    Text(
+                        gamme.designation,
+                        color      = txtColor,
+                        fontWeight = fw,
+                        style      = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
     }
