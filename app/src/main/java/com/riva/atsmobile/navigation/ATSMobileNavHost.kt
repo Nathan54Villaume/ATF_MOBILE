@@ -1,11 +1,19 @@
 package com.riva.atsmobile.navigation
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.riva.atsmobile.ui.screens.*
+import com.riva.atsmobile.ui.screens.ChangePasswordScreen
+import com.riva.atsmobile.ui.screens.ChangementGammeScreen
+import com.riva.atsmobile.ui.screens.HomeScreen
+import com.riva.atsmobile.ui.screens.LoginScreen
+import com.riva.atsmobile.ui.screens.ParametresScreen
+import com.riva.atsmobile.ui.screens.TypeOperationScreen
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 
 @Composable
@@ -53,6 +61,13 @@ fun ATSMobileNavHost(
                 DevSettingsScreen(navController, viewModel)
             }
         }
+
+        composable(Routes.TypeOperation) {
+            requireRoleOrDev(role, devMode, navController) {
+                TypeOperationScreen(viewModel, navController)
+            }
+        }
+
     }
 }
 
