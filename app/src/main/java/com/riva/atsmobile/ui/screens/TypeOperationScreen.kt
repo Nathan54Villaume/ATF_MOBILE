@@ -91,7 +91,6 @@ fun TypeOperationScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Section Gammes
             Text(
                 "Sélectionnez vos gammes",
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
@@ -117,12 +116,10 @@ fun TypeOperationScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Détails animés
             AnimatedDetails(current = current, desired = desired)
 
             Spacer(Modifier.weight(1f))
 
-            // Actions
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -137,7 +134,7 @@ fun TypeOperationScreen(
                     Text("Retour")
                 }
                 ElevatedButton(
-                    onClick = { viewModel.validateGammeChange { success, msg -> /* Snackbar */ } },
+                    onClick = { viewModel.validateGammeChange { success, msg -> } },
                     enabled = current != null && desired != null,
                     shape = RoundedCornerShape(50),
                     modifier = Modifier.width(140.dp)
@@ -148,7 +145,6 @@ fun TypeOperationScreen(
                 }
             }
 
-            // Footer
             Footer(zone, intervention)
         }
     }
@@ -174,9 +170,27 @@ private fun GammeGrid(
         items(gammes) { gamme ->
             val isDisabled = restrict != null && gamme == restrict
             val borderColor by animateColorAsState(
-                if (gamme == selected) MaterialTheme.colorScheme.primary else Color.Gray,
+                when {
+                    isDisabled -> Color.LightGray
+                    gamme == selected -> MaterialTheme.colorScheme.primary
+                    else -> Color.Gray
+                },
                 animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
             )
+            val backgroundColor by animateColorAsState(
+                when {
+                    isDisabled -> Color(0xFF2E2E2E)
+                    gamme == selected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    else -> Color(0xFF1E1E1E)
+                },
+                animationSpec = tween(durationMillis = 500)
+            )
+            val textColor = when {
+                isDisabled -> Color.LightGray
+                gamme == selected -> MaterialTheme.colorScheme.primary
+                else -> Color.White
+            }
+            val fontWeight = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
             val scale by animateFloatAsState(
                 targetValue = if (gamme == selected) 1.05f else 1f,
                 animationSpec = tween(durationMillis = 300)
@@ -185,7 +199,7 @@ private fun GammeGrid(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .scale(scale)
-                    .background(Color(0xFF1E1E1E), RoundedCornerShape(20.dp))
+                    .background(backgroundColor, RoundedCornerShape(20.dp))
                     .border(BorderStroke(2.dp, borderColor), RoundedCornerShape(20.dp))
                     .clickable(enabled = !isDisabled) { onSelect(gamme) }
                     .padding(vertical = 8.dp, horizontal = 4.dp)
@@ -193,8 +207,8 @@ private fun GammeGrid(
                 Text(
                     text = gamme.name,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = if (gamme == selected) MaterialTheme.colorScheme.primary else Color.White,
-                        fontWeight = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
+                        color = textColor,
+                        fontWeight = fontWeight
                     )
                 )
             }
