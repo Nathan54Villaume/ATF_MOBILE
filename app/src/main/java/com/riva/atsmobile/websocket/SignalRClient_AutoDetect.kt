@@ -11,51 +11,50 @@ import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.utils.ApiConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
  * Client SignalR pour se connecter au backend WebSocket,
  * recevoir les notifications et la liste des gammes.
+ * Gère manuellement la reconnexion en cas de fermeture.
  */
 class SignalRClientAutoDetect(private val context: Context) {
 
     private var connection: HubConnection? = null
+    private var currentMatricule: String? = null
 
-    /** Notification générique du serveur */
     var onMessage: ((String) -> Unit)? = null
-
-    /** Callback pour la liste de gammes reçue */
     var onReceiveGammes: ((List<Gamme>) -> Unit)? = null
-
-    /** Callback pour les erreurs lors de la récupération des gammes */
     var onReceiveGammesError: ((String) -> Unit)? = null
-
-    /** Invoked après envoi du login et prêt à envoyer les appels métier */
     var onConnected: (() -> Unit)? = null
 
     private val gson = Gson()
-
-    // URL WebSocket basée sur l'API HTTP
     private val resolvedUrl: String by lazy {
-        val baseUrl = ApiConfig.getBaseUrl(context)
-        baseUrl.replace("http://", "ws://").trimEnd('/') + "/ws"
+        ApiConfig.getBaseUrl(context)
+            .replace("http://", "ws://").trimEnd('/') + "/ws"
     }
 
     /**
-     * Établit la connexion au Hub, configure les handlers,
-     * démarre la connexion, envoie le login, puis onConnected().
+     * Démarre la connexion ou relance si fermée.
      */
     fun connect(matricule: String = "N1234") {
-        // Ne créer qu'une fois si déjà connecté
+        currentMatricule = matricule
         if (connection != null && connection?.connectionState == HubConnectionState.CONNECTED) return
 
         connection = HubConnectionBuilder
             .create(resolvedUrl)
             .build()
 
-        // Log de fermeture
+        // Sur fermeture, on planifie une reconnexion
         connection?.onClosed { error ->
             Log.d("SignalR", "🔌 Connexion fermée${error?.message?.let { ": $it" } ?: ""}")
+            currentMatricule?.let { id ->
+                CoroutineScope(Dispatchers.IO).launch {
+                    delay(2000)
+                    connect(id)
+                }
+            }
         }
 
         // Handlers
@@ -66,7 +65,7 @@ class SignalRClientAutoDetect(private val context: Context) {
             }, String::class.java)
 
             on("ReceiveGammes", { payload: String ->
-                Log.d("SignalR", "📨 Gammes reçues (${payload.length} chars)")
+                Log.d("SignalR", "📨 Gammes reçues (${payload.length})")
                 val type = object : TypeToken<List<Gamme>>() {}.type
                 onReceiveGammes?.invoke(gson.fromJson(payload, type))
             }, String::class.java)
@@ -77,44 +76,40 @@ class SignalRClientAutoDetect(private val context: Context) {
             }, String::class.java)
         }
 
-        // Démarrage asynchrone
+        // Lancement asynchrone
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 connection?.start()?.blockingAwait()
                 Log.d("SignalR", "✅ Connecté à $resolvedUrl")
-
-                // Envoi du login
                 connection?.send("Login", matricule)
                 Log.d("SignalR", "📤 Login envoyé: $matricule")
-
-                // Callback ready
                 onConnected?.invoke()
             } catch (e: Exception) {
-                Log.e("SignalR", "❌ Erreur de connexion: ${e.message}", e)
+                Log.e("SignalR", "❌ Connexion échouée: ${e.message}", e)
+                // en cas d'erreur, replanifier reconnexion
+                delay(2000)
+                connect(matricule)
             }
         }
     }
 
-    /** Coupe la connexion du Hub */
+    /** Arrêt manuel de la connexion */
     fun disconnect() {
         connection?.stop()
         connection = null
         Log.d("SignalR", "🔌 Déconnecté manuellement")
     }
 
-    /** Envoie la requête GetLatestGammes(min, max) */
-    fun invokeGetLatestGammes(minDiam: Double, maxDiam: Double) {
-        connection?.let {
-            Log.d("SignalR", "📤 Appel GetLatestGammes($minDiam, $maxDiam)")
-            it.send("GetLatestGammes", minDiam, maxDiam)
+    /** Envoie GetLatestGammes */
+    fun invokeGetLatestGammes(min: Double, max: Double) {
+        connection?.send("GetLatestGammes", min, max)?.also {
+            Log.d("SignalR", "📤 GetLatestGammes($min, $max)")
         }
     }
 
-    /** Connecte puis appelle directement InvokeGetLatestGammes */
+    /** Connecte et fetch directement les gammes */
     fun connectAndFetchGammes(matricule: String, min: Double, max: Double) {
-        onConnected = {
-            invokeGetLatestGammes(min, max)
-        }
+        onConnected = { invokeGetLatestGammes(min, max) }
         connect(matricule)
     }
 }
