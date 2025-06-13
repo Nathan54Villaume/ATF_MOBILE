@@ -66,40 +66,28 @@ fun TypeOperationScreen(
     val matricule     by viewModel.matricule.collectAsState()
     val signalRClient = remember { SignalRClientAutoDetect(context) }
 
-    // 1) Connexion au Hub et abonnement aux events
     LaunchedEffect(Unit) {
         viewModel.InitNetworkObserverIfNeeded(context)
 
-        // notifications simples
         signalRClient.onMessage = { msg ->
             scope.launch { snackbarHost.showSnackbar(msg) }
         }
 
-        // réception de la liste de gammes
         signalRClient.onReceiveGammes = { list ->
             viewModel.setGammes(list)
         }
 
         signalRClient.onReceiveGammesError = { err ->
-            scope.launch {
-                snackbarHost.showSnackbar("Erreur gammes: $err")
-            }
+            scope.launch { snackbarHost.showSnackbar("Erreur gammes: $err") }
         }
 
-        // déclenche les requêtes métier seulement après connexion+login
         signalRClient.onConnected = {
-            // dès qu'on est connecté, on récupère les gammes
             signalRClient.invokeGetLatestGammes(4.5, 7.0)
-
-            // exemple : plus tard, tu pourras appeler d'autres méthodes :
-            // signalRClient.invokeGetStatuts()
         }
 
-        // lance la connexion + login
         signalRClient.connect(matricule)
     }
 
-    // 2) États du ViewModel
     val isConnected  by viewModel.isOnline.collectAsState()
     val gammes       by viewModel.gammes.collectAsState()
     val current      by viewModel.currentGamme.collectAsState()
@@ -107,7 +95,6 @@ fun TypeOperationScreen(
     val zone         by viewModel.zoneDeTravail.collectAsState()
     val intervention by viewModel.intervention.collectAsState()
 
-    // 3) UI
     BaseScreen(
         title            = "Type d’opération",
         navController    = navController,
@@ -253,7 +240,7 @@ private fun GammeGrid(
                     .padding(vertical = 8.dp, horizontal = 4.dp)
             ) {
                 Text(
-                    gamme.name,
+                    gamme.designation,
                     color      = txtColor,
                     fontWeight = fw,
                     style      = MaterialTheme.typography.bodyMedium
@@ -268,18 +255,18 @@ private fun DetailsRow(current: Gamme?, desired: Gamme?) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         current?.let {
             Column {
-                Text("Actuelle : ${it.name}", fontWeight = FontWeight.SemiBold)
-                Text("Maille : ${it.meshSize} mm")
-                Text("Fil   : ${it.wireDiameter} mm")
-                Text("Chaîne: ${it.chainCount}")
+                Text("Actuelle : ${it.designation}", fontWeight = FontWeight.SemiBold)
+                Text("Maille : ${it.dimension}")
+                Text("Chaîne : ${it.diamChaine} mm")
+                Text("Trame  : ${it.diamTrame} mm")
             }
         }
         desired?.let {
             Column(horizontalAlignment = Alignment.End) {
-                Text("Souhait : ${it.name}", fontWeight = FontWeight.SemiBold)
-                Text("Maille : ${it.meshSize} mm")
-                Text("Fil   : ${it.wireDiameter} mm")
-                Text("Chaîne: ${it.chainCount}")
+                Text("Souhait : ${it.designation}", fontWeight = FontWeight.SemiBold)
+                Text("Maille : ${it.dimension}")
+                Text("Chaîne : ${it.diamChaine} mm")
+                Text("Trame  : ${it.diamTrame} mm")
             }
         }
     }
