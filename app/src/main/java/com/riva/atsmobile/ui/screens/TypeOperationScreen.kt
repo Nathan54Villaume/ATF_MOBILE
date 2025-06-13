@@ -43,19 +43,18 @@ fun TypeOperationScreen(
     val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.InitNetworkObserverIfNeeded(context)
-        // Exemple de données mockées pour tester la sélection :
+        // Exemple de données mock pour tester la sélection
         viewModel.setGammes(
             listOf(
-                Gamme("PAF R", name = "PAF R", meshSize = "5",  wireDiameter = "1.0", chainCount = "10"),
-                Gamme("PAF C", name = "PAF C", meshSize = "6",  wireDiameter = "1.2", chainCount = "12"),
-                Gamme("PAF N", name = "PAF N", meshSize = "8",  wireDiameter = "1.5", chainCount = "15"),
-                Gamme("ST 15C",name = "ST 15C", meshSize = "10", wireDiameter = "2.0", chainCount = "20"),
-                Gamme("ST 20", name = "ST 20", meshSize = "12", wireDiameter = "2.5", chainCount = "25"),
-                Gamme("ST 25CS",name = "ST 25CS", meshSize = "15", wireDiameter = "3.0", chainCount = "30")
+                Gamme(id = "1", name = "PAF R",   meshSize = "5",  wireDiameter = "1.0", chainCount = "10"),
+                Gamme(id = "2", name = "PAF C",   meshSize = "6",  wireDiameter = "1.2", chainCount = "12"),
+                Gamme(id = "3", name = "PAF N",   meshSize = "8",  wireDiameter = "1.5", chainCount = "15"),
+                Gamme(id = "4", name = "ST 15C", meshSize = "10", wireDiameter = "2.0", chainCount = "20"),
+                Gamme(id = "5", name = "ST 20",  meshSize = "12", wireDiameter = "2.5", chainCount = "25"),
+                Gamme(id = "6", name = "ST 25CS",meshSize = "15", wireDiameter = "3.0", chainCount = "30")
             )
         )
     }
-
 
     // États provenant du ViewModel
     val isConnected by viewModel.isOnline.collectAsState()
@@ -84,7 +83,7 @@ fun TypeOperationScreen(
                     .padding(16.dp)
             ) {
                 // Sélection : Gamme actuelle
-                Text(text = "Gamme actuelle :")
+                Text(text = "Gamme actuelle :", style = MaterialTheme.typography.titleMedium)
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
                     modifier = Modifier
@@ -114,7 +113,7 @@ fun TypeOperationScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Sélection : Gamme souhaitée
-                Text(text = "Gamme souhaitée :")
+                Text(text = "Gamme souhaitée :", style = MaterialTheme.typography.titleMedium)
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
                     modifier = Modifier
@@ -146,6 +145,7 @@ fun TypeOperationScreen(
 
                 // Détails des sélections
                 Row(modifier = Modifier.fillMaxWidth()) {
+                    // Colonne gauche : Gamme actuelle
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                         currentGamme?.let { gamme ->
                             Text(text = "Nom : ${gamme.name}")
@@ -155,11 +155,14 @@ fun TypeOperationScreen(
                             Text(text = "Chaîne : ${gamme.chainCount}")
                         }
                     }
+                    // Colonne droite : Gamme souhaitée
                     Column(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
                         desiredGamme?.let { gamme ->
                             Text(text = "Souhait : ${gamme.name}")
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(text = "Maille (mm) : ${gamme.meshSize}")
+                            Text(text = "Fil (mm) : ${gamme.wireDiameter}")
+                            Text(text = "Chaîne : ${gamme.chainCount}")
                         }
                     }
                 }
