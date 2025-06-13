@@ -205,34 +205,34 @@ private fun GammeGrid(
             val disabled = (restrict != null && gamme == restrict)
             val borderColor by animateColorAsState(
                 when {
-                    disabled         -> Color.LightGray
-                    gamme == selected-> MaterialTheme.colorScheme.primary
-                    else             -> Color.Gray
+                    disabled          -> Color.LightGray
+                    gamme == selected -> MaterialTheme.colorScheme.primary
+                    else              -> Color.Gray
                 },
                 animationSpec = tween(500, easing = FastOutSlowInEasing)
             )
             val bgColor by animateColorAsState(
                 when {
-                    disabled         -> Color(0xFF2E2E2E)
-                    gamme == selected-> MaterialTheme.colorScheme.primary.copy(alpha = .1f)
-                    else             -> Color(0xFF1E1E1E)
+                    disabled          -> Color(0xFF2E2E2E)
+                    gamme == selected -> MaterialTheme.colorScheme.primary.copy(alpha = .1f)
+                    else              -> Color(0xFF1E1E1E)
                 },
                 animationSpec = tween(500)
             )
             val txtColor = when {
-                disabled         -> Color.LightGray
-                gamme == selected-> MaterialTheme.colorScheme.primary
-                else             -> Color.White
+                disabled          -> Color.LightGray
+                gamme == selected -> MaterialTheme.colorScheme.primary
+                else              -> Color.White
             }
             val fw = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
             val scale by animateFloatAsState(
-                targetValue    = if (gamme == selected) 1.05f else 1f,
-                animationSpec  = tween(300)
+                targetValue   = if (gamme == selected) 1.05f else 1f,
+                animationSpec = tween(300)
             )
 
             Box(
                 contentAlignment = Alignment.Center,
-                modifier         = Modifier
+                modifier = Modifier
                     .scale(scale)
                     .background(bgColor, RoundedCornerShape(20.dp))
                     .border(BorderStroke(2.dp, borderColor), RoundedCornerShape(20.dp))
@@ -256,17 +256,17 @@ private fun DetailsRow(current: Gamme?, desired: Gamme?) {
         current?.let {
             Column {
                 Text("Actuelle : ${it.designation}", fontWeight = FontWeight.SemiBold)
-                Text("Maille : ${it.dimension}")
-                Text("Chaîne : ${it.diamChaine} mm")
-                Text("Trame  : ${it.diamTrame} mm")
+                Text("Maille           : ${it.dimension} mm")
+                Text("Chaîne/Trame     : ${it.diamChaineTrame}")
+                Text("Esp. fil/chaîne  : ${it.espFilChaineTrame} mm")
             }
         }
         desired?.let {
             Column(horizontalAlignment = Alignment.End) {
                 Text("Souhait : ${it.designation}", fontWeight = FontWeight.SemiBold)
-                Text("Maille : ${it.dimension}")
-                Text("Chaîne : ${it.diamChaine} mm")
-                Text("Trame  : ${it.diamTrame} mm")
+                Text("Maille           : ${it.dimension} mm")
+                Text("Chaîne/Trame     : ${it.diamChaineTrame}")
+                Text("Esp. fil/chaîne  : ${it.espFilChaineTrame} mm")
             }
         }
     }

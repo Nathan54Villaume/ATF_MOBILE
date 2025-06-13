@@ -3,7 +3,7 @@ package com.riva.atsmobile.model
 import java.time.LocalDateTime
 
 /**
- * Modèle Kotlin correspondant au DTO TreillisDto renvoyé par l'API.
+ * Data class representing the TreillisDto returned by the API.
  */
 data class Gamme(
     val designation: String,
@@ -13,11 +13,10 @@ data class Gamme(
     val nuance: String,
     val diamChaine: Double,
     val diamTrame: Double,
-    val aboutAvAr: String,
-    val aboutAdAg: String,
+    // Diamètre Chaîne/Trame combiné (ex. "4x5 mm"), traité comme String
     val diamChaineTrame: String,
     val dimension: String,
-    val espFilChaineTrame: Double,
+    val espFilChaineTrame: String,
     val norme: String,
     val colissage: String,
     val massePanneau: Double,
