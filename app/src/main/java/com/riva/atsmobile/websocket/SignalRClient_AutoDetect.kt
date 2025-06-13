@@ -9,21 +9,19 @@ import com.microsoft.signalr.HubConnectionBuilder
 import com.microsoft.signalr.HubConnectionState
 import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.utils.ApiConfig
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
-/**
- * Client SignalR pour se connecter au backend WebSocket
- * et récupérer la liste des gammes.
- * Gère manuellement la reconnexion en cas de fermeture.
- */
 class SignalRClientAutoDetect(private val context: Context) {
 
     private var connection: HubConnection? = null
 
+    /** Callback quand la connexion devient active */
+    var onConnected: (() -> Unit)? = null
+
+    /** Reçoit la liste de gammes */
     var onReceiveGammes: ((List<Gamme>) -> Unit)? = null
+
+    /** Reçoit une erreur lors de la récupération des gammes */
     var onReceiveGammesError: ((String) -> Unit)? = null
 
     private val gson = Gson()
@@ -33,16 +31,16 @@ class SignalRClientAutoDetect(private val context: Context) {
     }
 
     /**
-     * Démarre la connexion ou relance si fermée.
+     * Démarre ou redémarre la connexion SignalR.
      */
     fun connect() {
-        if (connection != null && connection?.connectionState == HubConnectionState.CONNECTED) return
+        // Si déjà connecté, rien à faire
+        if (connection?.connectionState == HubConnectionState.CONNECTED) return
 
-        connection = HubConnectionBuilder
-            .create(resolvedUrl)
-            .build()
+        // (Re)création du HubConnection
+        connection = HubConnectionBuilder.create(resolvedUrl).build()
 
-        // Sur fermeture, on planifie une reconnexion
+        // Sur fermeture, on tente de reconnecter après 2s
         connection?.onClosed { error ->
             Log.d("SignalR", "🔌 Connexion fermée${error?.message?.let { ": $it" } ?: ""}")
             CoroutineScope(Dispatchers.IO).launch {
@@ -51,28 +49,32 @@ class SignalRClientAutoDetect(private val context: Context) {
             }
         }
 
-        // Handlers
+        // Handlers de réception
         connection?.apply {
             on("ReceiveGammes", { payload: String ->
-                Log.d("SignalR", "📨 Gammes reçues (${payload.length})")
+                Log.d("SignalR", "📨 Gammes reçues (${payload.length} chars)")
                 val type = object : TypeToken<List<Gamme>>() {}.type
                 onReceiveGammes?.invoke(gson.fromJson(payload, type))
             }, String::class.java)
 
             on("ReceiveGammesError", { err: String ->
-                Log.e("SignalR", "❌ Erreur gammes: $err")
+                Log.e("SignalR", "❌ ReceiveGammesError: $err")
                 onReceiveGammesError?.invoke(err)
             }, String::class.java)
         }
 
-        // Lancement asynchrone
+        // Démarrage asynchrone
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 connection?.start()?.blockingAwait()
                 Log.d("SignalR", "✅ Connecté à $resolvedUrl")
+                // Dès que connecté, on prévient le caller
+                withContext(Dispatchers.Main) {
+                    onConnected?.invoke()
+                }
             } catch (e: Exception) {
                 Log.e("SignalR", "❌ Connexion échouée: ${e.message}", e)
-                // en cas d'erreur, replanifier reconnexion
+                // Retenter après 2s en cas d’erreur
                 delay(2000)
                 connect()
             }
@@ -86,19 +88,31 @@ class SignalRClientAutoDetect(private val context: Context) {
         Log.d("SignalR", "🔌 Déconnecté manuellement")
     }
 
-    /** Envoie GetLatestGammes */
+    /**
+     * Envoie GetLatestGammes au hub.
+     * Ne l’appelle que si on est CONNECTED.
+     * Si pas encore connecté, planifie via onConnected.
+     */
     fun invokeGetLatestGammes(min: Double, max: Double) {
-        connection?.send("GetLatestGammes", min, max)?.also {
-            Log.d("SignalR", "📤 GetLatestGammes($min, $max)")
+        val conn = connection
+        if (conn?.connectionState == HubConnectionState.CONNECTED) {
+            Log.d("SignalR", "📤 Invoke GetLatestGammes($min, $max)")
+            conn.send("GetLatestGammes", min, max)
+        } else {
+            // On diffère l’envoi jusqu’à ce qu’onConnected soit appelé
+            onConnected = {
+                Log.d("SignalR", "📤 (post-connect) Invoke GetLatestGammes($min, $max)")
+                connection?.send("GetLatestGammes", min, max)
+            }
         }
     }
 
-    /** Connecte et fetch directement les gammes */
+    /**
+     * Confort : connecte + fetch.
+     * Se base sur onConnected pour déclencher le fetch.
+     */
     fun connectAndFetchGammes(min: Double, max: Double) {
+        onConnected = { invokeGetLatestGammes(min, max) }
         connect()
-        onReceiveGammes?.let {
-            // attendre connexion puis appeler
-            invokeGetLatestGammes(min, max)
-        }
     }
 }
