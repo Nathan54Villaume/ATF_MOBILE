@@ -29,11 +29,15 @@ import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -45,6 +49,8 @@ import androidx.navigation.NavController
 import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.ui.shared.BaseScreen
 import com.riva.atsmobile.viewmodel.SelectionViewModel
+import com.riva.atsmobile.websocket.SignalRClientAutoDetect
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -55,19 +61,32 @@ fun TypeOperationScreen(
     navController: NavController
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val matricule by viewModel.matricule.collectAsState()
+    val signalRClient = remember { SignalRClientAutoDetect(context) }
+
+    // Connexion SignalR et chargement des gammes
     LaunchedEffect(Unit) {
         viewModel.InitNetworkObserverIfNeeded(context)
-        // TODO: replace with real fetch
-        viewModel.setGammes(
-            listOf(
-                Gamme("1","PAF R","5","1.0","10"),
-                Gamme("2","PAF C","6","1.2","12"),
-                Gamme("3","PAF N","8","1.5","15"),
-                Gamme("4","ST 15C","10","2.0","20"),
-                Gamme("5","ST 20","12","2.5","25"),
-                Gamme("6","ST 25CS","15","3.0","30")
-            )
-        )
+
+        // Gestion des notifications génériques
+        signalRClient.onMessage = { msg ->
+            scope.launch { snackbarHostState.showSnackbar(msg) }
+        }
+        // Réception de la liste des gammes
+        signalRClient.onReceiveGammes = { list: List<Gamme> ->
+            viewModel.setGammes(list)
+        }
+        // Erreur serveur
+        signalRClient.onReceiveGammesError = { err ->
+            scope.launch { snackbarHostState.showSnackbar("Erreur gammes: $err") }
+        }
+
+        // Connexion et login
+        signalRClient.connect(matricule)
+        // Demande des gammes filtrées entre 4.5 et 7.0 mm
+        signalRClient.invokeGetLatestGammes(4.5, 7.0)
     }
 
     val isConnected by viewModel.isOnline.collectAsState()
@@ -85,67 +104,81 @@ fun TypeOperationScreen(
         showLogout = false,
         connectionStatus = isConnected
     ) { paddingValues ->
-        Column(
+        Box(
             Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
         ) {
-            Text(
-                "Sélectionnez vos gammes",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            GammeGrid(
-                title = "Gamme actuelle",
-                gammes = gammes,
-                selected = current,
-                onSelect = { viewModel.selectCurrentGamme(it) }
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            GammeGrid(
-                title = "Gamme souhaitée",
-                gammes = gammes,
-                selected = desired,
-                onSelect = { viewModel.selectDesiredGamme(it) },
-                restrict = current
-            )
-
-            Spacer(Modifier.height(24.dp))
-
-            AnimatedDetails(current = current, desired = desired)
-
-            Spacer(Modifier.weight(1f))
-
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
             ) {
-                ElevatedButton(
-                    onClick = { navController.popBackStack() },
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.width(140.dp)
+                Text(
+                    "Sélectionnez vos gammes",
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                GammeGrid(
+                    title = "GAMME ACTUELLE",
+                    gammes = gammes,
+                    selected = current,
+                    onSelect = { viewModel.selectCurrentGamme(it) }
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                GammeGrid(
+                    title = "GAMME VISÉE",
+                    gammes = gammes,
+                    selected = desired,
+                    onSelect = { viewModel.selectDesiredGamme(it) },
+                    restrict = current
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                AnimatedDetails(current = current, desired = desired)
+
+                Spacer(Modifier.weight(1f))
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Icon(Icons.Default.WbSunny, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Retour")
+                    ElevatedButton(
+                        onClick = { navController.popBackStack() },
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.width(140.dp)
+                    ) {
+                        Icon(Icons.Default.WbSunny, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Retour")
+                    }
+                    ElevatedButton(
+                        onClick = {
+                            viewModel.validateGammeChange { success, msg ->
+                                scope.launch { snackbarHostState.showSnackbar(msg) }
+                            }
+                        },
+                        enabled = current != null && desired != null,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.width(140.dp)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Valider")
+                    }
                 }
-                ElevatedButton(
-                    onClick = { viewModel.validateGammeChange { success, msg -> } },
-                    enabled = current != null && desired != null,
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.width(140.dp)
-                ) {
-                    Icon(Icons.Default.Check, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Valider")
-                }
+
+                Footer(zone, intervention)
             }
 
-            Footer(zone, intervention)
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }
@@ -171,30 +204,31 @@ private fun GammeGrid(
             val isDisabled = restrict != null && gamme == restrict
             val borderColor by animateColorAsState(
                 when {
-                    isDisabled -> Color.LightGray
-                    gamme == selected -> MaterialTheme.colorScheme.primary
-                    else -> Color.Gray
+                    isDisabled         -> Color.LightGray
+                    gamme == selected  -> MaterialTheme.colorScheme.primary
+                    else               -> Color.Gray
                 },
-                animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
+                animationSpec = tween(500, easing = FastOutSlowInEasing)
             )
             val backgroundColor by animateColorAsState(
                 when {
-                    isDisabled -> Color(0xFF2E2E2E)
-                    gamme == selected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                    else -> Color(0xFF1E1E1E)
+                    isDisabled         -> Color(0xFF2E2E2E)
+                    gamme == selected  -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    else               -> Color(0xFF1E1E1E)
                 },
-                animationSpec = tween(durationMillis = 500)
+                animationSpec = tween(500)
             )
             val textColor = when {
-                isDisabled -> Color.LightGray
-                gamme == selected -> MaterialTheme.colorScheme.primary
-                else -> Color.White
+                isDisabled         -> Color.LightGray
+                gamme == selected  -> MaterialTheme.colorScheme.primary
+                else               -> Color.White
             }
             val fontWeight = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
             val scale by animateFloatAsState(
                 targetValue = if (gamme == selected) 1.05f else 1f,
-                animationSpec = tween(durationMillis = 300)
+                animationSpec = tween(300)
             )
+
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
