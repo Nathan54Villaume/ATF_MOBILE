@@ -16,7 +16,7 @@ data class Gamme(
     /** Maille (ex. "10x10 mm") */
     val dimension: String,
     /** Espacement fil-chaîne/trame en mm */
-    val espFilChaineTrame: Double,
+    val espFilChaineTrame: String,
     val norme: String,
     val colissage: String,
     val massePanneau: Double,
