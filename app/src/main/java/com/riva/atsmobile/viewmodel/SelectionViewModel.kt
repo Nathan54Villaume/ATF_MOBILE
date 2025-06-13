@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
+import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.model.LoginResponse
 import com.riva.atsmobile.utils.ApiConfig
 import com.riva.atsmobile.utils.LocalAuthManager
@@ -22,6 +23,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class SelectionViewModel : ViewModel() {
 
+    // --- Données utilisateur / session ---
     private val _matricule = MutableStateFlow("")
     val matricule: StateFlow<String> = _matricule.asStateFlow()
 
@@ -40,10 +42,83 @@ class SelectionViewModel : ViewModel() {
     private val _devModeEnabled = MutableStateFlow(false)
     val devModeEnabled: StateFlow<Boolean> = _devModeEnabled.asStateFlow()
 
+    // --- Statut réseau ---
     private val _isOnline = MutableStateFlow(false)
     val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
-
     private var isNetworkLoopStarted = false
+
+    // === Flux & méthodes pour l’écran “Type d’opération” ===
+
+    // Liste des gammes disponibles
+    private val _gammes = MutableStateFlow<List<Gamme>>(emptyList())
+    val gammes: StateFlow<List<Gamme>> = _gammes.asStateFlow()
+
+    // Sélection de la gamme actuelle
+    private val _currentGamme = MutableStateFlow<Gamme?>(null)
+    val currentGamme: StateFlow<Gamme?> = _currentGamme.asStateFlow()
+
+    // Sélection de la gamme souhaitée
+    private val _desiredGamme = MutableStateFlow<Gamme?>(null)
+    val desiredGamme: StateFlow<Gamme?> = _desiredGamme.asStateFlow()
+
+    // Zone de travail et intervention
+    private val _zoneDeTravail = MutableStateFlow("")
+    val zoneDeTravail: StateFlow<String> = _zoneDeTravail.asStateFlow()
+
+    private val _intervention = MutableStateFlow("")
+    val intervention: StateFlow<String> = _intervention.asStateFlow()
+
+    /** Initialise la liste des gammes (depuis API ou locale) */
+    fun setGammes(list: List<Gamme>) {
+        _gammes.value = list
+    }
+
+    /** Définit la gamme actuelle et réinitialise la gamme souhaitée si identique */
+    fun selectCurrentGamme(g: Gamme) {
+        _currentGamme.value = g
+        if (_desiredGamme.value == g) {
+            _desiredGamme.value = null
+        }
+    }
+
+    /** Définit la gamme souhaitée (différente de la gamme actuelle) */
+    fun selectDesiredGamme(g: Gamme) {
+        if (_currentGamme.value != g) {
+            _desiredGamme.value = g
+        }
+    }
+
+    fun setZoneDeTravail(zone: String) {
+        _zoneDeTravail.value = zone
+    }
+
+    fun setIntervention(inter: String) {
+        _intervention.value = inter
+    }
+
+    /**
+     * Valide le changement de gamme.
+     * @param onResult callback avec (success, message)
+     */
+    fun validateGammeChange(onResult: (success: Boolean, msg: String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                // TODO : remplacer par ton appel réel à l’API
+                // ex. api.changeGamme(
+                //      currentGamme.value!!.id,
+                //      desiredGamme.value!!.id,
+                //      zoneDeTravail.value,
+                //      intervention.value
+                // )
+                onResult(true, "Validation OK")
+            } catch (e: Exception) {
+                Log.e("SelectionViewModel", "Erreur validation gamme", e)
+                onResult(false, e.message ?: "Erreur inconnue")
+            }
+        }
+    }
+
+    // --- Fonctions existantes ---
 
     fun setMatricule(value: String) { _matricule.value = value }
     fun setNom(value: String) { _nom.value = value }
@@ -94,7 +169,11 @@ class SelectionViewModel : ViewModel() {
         }
     }
 
-    suspend fun verifierConnexion(context: Context, matricule: String, motDePasse: String): Result<LoginResponse> {
+    suspend fun verifierConnexion(
+        context: Context,
+        matricule: String,
+        motDePasse: String
+    ): Result<LoginResponse> {
         val baseUrl = ApiConfig.getBaseUrl(context)
         Log.d("API_URL", "Base URL utilisée pour la connexion : $baseUrl")
         val url = "$baseUrl/api/auth/login"
