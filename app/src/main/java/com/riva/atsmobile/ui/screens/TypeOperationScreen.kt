@@ -43,9 +43,19 @@ fun TypeOperationScreen(
     val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.InitNetworkObserverIfNeeded(context)
-        // TODO: charger les gammes depuis l'API ou source locale
-        // viewModel.setGammes(fetchGammes())
+        // Exemple de données mockées pour tester la sélection :
+        viewModel.setGammes(
+            listOf(
+                Gamme("PAF R", name = "PAF R", meshSize = "5",  wireDiameter = "1.0", chainCount = "10"),
+                Gamme("PAF C", name = "PAF C", meshSize = "6",  wireDiameter = "1.2", chainCount = "12"),
+                Gamme("PAF N", name = "PAF N", meshSize = "8",  wireDiameter = "1.5", chainCount = "15"),
+                Gamme("ST 15C",name = "ST 15C", meshSize = "10", wireDiameter = "2.0", chainCount = "20"),
+                Gamme("ST 20", name = "ST 20", meshSize = "12", wireDiameter = "2.5", chainCount = "25"),
+                Gamme("ST 25CS",name = "ST 25CS", meshSize = "15", wireDiameter = "3.0", chainCount = "30")
+            )
+        )
     }
+
 
     // États provenant du ViewModel
     val isConnected by viewModel.isOnline.collectAsState()
