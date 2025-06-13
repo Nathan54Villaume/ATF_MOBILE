@@ -133,6 +133,7 @@ dependencies {
     // Stockage local
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation("androidx.room:room-runtime:2.6.1")
+    implementation(libs.androidx.media3.common.ktx)
     kapt("androidx.room:room-compiler:2.6.1")
 
     // Caméra & Photo
