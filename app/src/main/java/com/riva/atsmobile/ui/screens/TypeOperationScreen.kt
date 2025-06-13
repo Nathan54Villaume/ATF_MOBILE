@@ -1,6 +1,13 @@
 package com.riva.atsmobile.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,13 +17,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.Button
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,7 +36,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.riva.atsmobile.model.Gamme
@@ -39,28 +54,26 @@ fun TypeOperationScreen(
     viewModel: SelectionViewModel,
     navController: NavController
 ) {
-    // Initialisation du réseau et des données
     val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.InitNetworkObserverIfNeeded(context)
-        // Exemple de données mock pour tester la sélection
+        // TODO: replace with real fetch
         viewModel.setGammes(
             listOf(
-                Gamme(id = "1", name = "PAF R",   meshSize = "5",  wireDiameter = "1.0", chainCount = "10"),
-                Gamme(id = "2", name = "PAF C",   meshSize = "6",  wireDiameter = "1.2", chainCount = "12"),
-                Gamme(id = "3", name = "PAF N",   meshSize = "8",  wireDiameter = "1.5", chainCount = "15"),
-                Gamme(id = "4", name = "ST 15C", meshSize = "10", wireDiameter = "2.0", chainCount = "20"),
-                Gamme(id = "5", name = "ST 20",  meshSize = "12", wireDiameter = "2.5", chainCount = "25"),
-                Gamme(id = "6", name = "ST 25CS",meshSize = "15", wireDiameter = "3.0", chainCount = "30")
+                Gamme("1","PAF R","5","1.0","10"),
+                Gamme("2","PAF C","6","1.2","12"),
+                Gamme("3","PAF N","8","1.5","15"),
+                Gamme("4","ST 15C","10","2.0","20"),
+                Gamme("5","ST 20","12","2.5","25"),
+                Gamme("6","ST 25CS","15","3.0","30")
             )
         )
     }
 
-    // États provenant du ViewModel
     val isConnected by viewModel.isOnline.collectAsState()
     val gammes by viewModel.gammes.collectAsState()
-    val currentGamme by viewModel.currentGamme.collectAsState()
-    val desiredGamme by viewModel.desiredGamme.collectAsState()
+    val current by viewModel.currentGamme.collectAsState()
+    val desired by viewModel.desiredGamme.collectAsState()
     val zone by viewModel.zoneDeTravail.collectAsState()
     val intervention by viewModel.intervention.collectAsState()
 
@@ -72,142 +85,155 @@ fun TypeOperationScreen(
         showLogout = false,
         connectionStatus = isConnected
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
+        Column(
+            Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .padding(16.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
+            // Section Gammes
+            Text(
+                "Sélectionnez vos gammes",
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            GammeGrid(
+                title = "Gamme actuelle",
+                gammes = gammes,
+                selected = current,
+                onSelect = { viewModel.selectCurrentGamme(it) }
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            GammeGrid(
+                title = "Gamme souhaitée",
+                gammes = gammes,
+                selected = desired,
+                onSelect = { viewModel.selectDesiredGamme(it) },
+                restrict = current
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // Détails animés
+            AnimatedDetails(current = current, desired = desired)
+
+            Spacer(Modifier.weight(1f))
+
+            // Actions
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                // Sélection : Gamme actuelle
-                Text(text = "Gamme actuelle :", style = MaterialTheme.typography.titleMedium)
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    userScrollEnabled = false
+                ElevatedButton(
+                    onClick = { navController.popBackStack() },
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.width(140.dp)
                 ) {
-                    items(gammes) { gamme: Gamme ->
-                        OutlinedButton(
-                            onClick = { viewModel.selectCurrentGamme(gamme) },
-                            border = BorderStroke(
-                                2.dp,
-                                if (currentGamme == gamme)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.onSurface
-                            ),
-                            modifier = Modifier
-                                .padding(4.dp)
-                                .fillMaxWidth()
-                        ) {
-                            Text(gamme.name)
-                        }
-                    }
+                    Icon(Icons.Default.WbSunny, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Retour")
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Sélection : Gamme souhaitée
-                Text(text = "Gamme souhaitée :", style = MaterialTheme.typography.titleMedium)
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    userScrollEnabled = false
+                ElevatedButton(
+                    onClick = { viewModel.validateGammeChange { success, msg -> /* Snackbar */ } },
+                    enabled = current != null && desired != null,
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.width(140.dp)
                 ) {
-                    items(gammes) { gamme: Gamme ->
-                        OutlinedButton(
-                            onClick = { viewModel.selectDesiredGamme(gamme) },
-                            enabled = gamme != currentGamme,
-                            border = BorderStroke(
-                                2.dp,
-                                if (desiredGamme == gamme)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.onSurface
-                            ),
-                            modifier = Modifier
-                                .padding(4.dp)
-                                .fillMaxWidth()
-                        ) {
-                            Text(gamme.name)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Détails des sélections
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    // Colonne gauche : Gamme actuelle
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        currentGamme?.let { gamme ->
-                            Text(text = "Nom : ${gamme.name}")
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = "Maille (mm) : ${gamme.meshSize}")
-                            Text(text = "Fil (mm) : ${gamme.wireDiameter}")
-                            Text(text = "Chaîne : ${gamme.chainCount}")
-                        }
-                    }
-                    // Colonne droite : Gamme souhaitée
-                    Column(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
-                        desiredGamme?.let { gamme ->
-                            Text(text = "Souhait : ${gamme.name}")
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = "Maille (mm) : ${gamme.meshSize}")
-                            Text(text = "Fil (mm) : ${gamme.wireDiameter}")
-                            Text(text = "Chaîne : ${gamme.chainCount}")
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                // Boutons Retour / Valider
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Button(onClick = { navController.popBackStack() }) {
-                        Text("Retour")
-                    }
-                    Button(
-                        onClick = {
-                            viewModel.validateGammeChange { success, msg ->
-                                // TODO: afficher Snackbar ou Dialog avec msg
-                            }
-                        },
-                        enabled = currentGamme != null && desiredGamme != null
-                    ) {
-                        Text("Valider")
-                    }
+                    Icon(Icons.Default.Check, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Valider")
                 }
             }
 
-            // Bandeau bas : zone, intervention et date/heure
+            // Footer
+            Footer(zone, intervention)
+        }
+    }
+}
+
+@Composable
+private fun GammeGrid(
+    title: String,
+    gammes: List<Gamme>,
+    selected: Gamme?,
+    onSelect: (Gamme) -> Unit,
+    restrict: Gamme? = null
+) {
+    Text(title, style = MaterialTheme.typography.titleMedium)
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+    ) {
+        items(gammes) { gamme ->
+            val isDisabled = restrict != null && gamme == restrict
+            val borderColor by animateColorAsState(
+                if (gamme == selected) MaterialTheme.colorScheme.primary else Color.Gray,
+                animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
+            )
+            val scale by animateFloatAsState(
+                targetValue = if (gamme == selected) 1.05f else 1f,
+                animationSpec = tween(durationMillis = 300)
+            )
             Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(8.dp)
+                    .scale(scale)
+                    .background(Color(0xFF1E1E1E), RoundedCornerShape(20.dp))
+                    .border(BorderStroke(2.dp, borderColor), RoundedCornerShape(20.dp))
+                    .clickable(enabled = !isDisabled) { onSelect(gamme) }
+                    .padding(vertical = 8.dp, horizontal = 4.dp)
             ) {
-                val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = "Zone : $zone    Interv. : $intervention")
-                    Text(text = now)
-                }
+                Text(
+                    text = gamme.name,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = if (gamme == selected) MaterialTheme.colorScheme.primary else Color.White,
+                        fontWeight = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
+                    )
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun AnimatedDetails(current: Gamme?, desired: Gamme?) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        current?.let {
+            Column {
+                Text("Actuelle : ${it.name}", fontWeight = FontWeight.SemiBold)
+                Text("Maille: ${it.meshSize} mm")
+                Text("Fil: ${it.wireDiameter} mm")
+                Text("Chaîne: ${it.chainCount}")
+            }
+        }
+        desired?.let {
+            Column(horizontalAlignment = Alignment.End) {
+                Text("Souhait : ${it.name}", fontWeight = FontWeight.SemiBold)
+                Text("Maille: ${it.meshSize} mm")
+                Text("Fil: ${it.wireDiameter} mm")
+                Text("Chaîne: ${it.chainCount}")
+            }
+        }
+    }
+}
+
+@Composable
+private fun Footer(zone: String, intervention: String) {
+    val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text("Zone: $zone | Interv: $intervention", style = MaterialTheme.typography.bodySmall)
+        Text(now, style = MaterialTheme.typography.bodySmall)
     }
 }
