@@ -25,6 +25,9 @@ class SignalRClientAutoDetect(private val context: Context) {
     /** En cas d’erreur serveur sur GetLatestGammes */
     var onReceiveGammesError: ((String) -> Unit)? = null
 
+    /** Callback invoqué une fois la connexion établie et le login envoyé */
+    var onConnected: (() -> Unit)? = null
+
     private val gson = Gson()
 
     private val resolvedUrl: String by lazy {
@@ -32,6 +35,9 @@ class SignalRClientAutoDetect(private val context: Context) {
         baseUrl.replace("http://", "ws://").trimEnd('/') + "/ws"
     }
 
+    /**
+     * Établit la connexion au Hub, configure les handlers, et appelle onConnected() une fois prêt.
+     */
     fun connect(matricule: String = "N1234") {
         if (connection != null) return
 
@@ -47,7 +53,7 @@ class SignalRClientAutoDetect(private val context: Context) {
 
                 // Liste de gammes
                 connection?.on("ReceiveGammes", { payload: String ->
-                    Log.d("SignalR", "📨 Reçu ReceiveGammes")
+                    Log.d("SignalR", "📨 Reçu ReceiveGammes (${payload.length} chars)")
                     val type = object : TypeToken<List<Gamme>>() {}.type
                     val list: List<Gamme> = gson.fromJson(payload, type)
                     onReceiveGammes?.invoke(list)
@@ -59,12 +65,16 @@ class SignalRClientAutoDetect(private val context: Context) {
                     onReceiveGammesError?.invoke(errorMsg)
                 }, String::class.java)
 
+                // Démarrage de la connexion (bloquant)
                 connection?.start()?.blockingAwait()
                 Log.d("SignalR", "✅ Connecté à $resolvedUrl")
 
-                // Login sur le hub
+                // Envoi du login
                 connection?.send("Login", matricule)
                 Log.d("SignalR", "📤 Login envoyé : $matricule")
+
+                // Maintenant que tout est prêt, on notifie l'appelant
+                onConnected?.invoke()
 
             } catch (e: Exception) {
                 Log.e("SignalR", "❌ Erreur connexion : ${e.message}", e)
@@ -72,17 +82,29 @@ class SignalRClientAutoDetect(private val context: Context) {
         }
     }
 
+    /** Déconnecte proprement */
     fun disconnect() {
         connection?.stop()
         connection = null
         Log.d("SignalR", "🔌 Déconnecté manuellement")
     }
 
-    /** Demande au serveur la liste des gammes filtrée */
+    /** Envoie simplement la requête GetLatestGammes – à appeler après onConnected */
     fun invokeGetLatestGammes(minDiam: Double, maxDiam: Double) {
         connection?.let {
-            it.send("GetLatestGammes", minDiam, maxDiam)
             Log.d("SignalR", "📤 Invoke GetLatestGammes($minDiam, $maxDiam)")
+            it.send("GetLatestGammes", minDiam, maxDiam)
         }
+    }
+
+    /**
+     * Confort : connecte, logue, puis demande directement les gammes dans l'ordre sécurisé.
+     */
+    fun connectAndFetchGammes(matricule: String, minDiam: Double, maxDiam: Double) {
+        onConnected = {
+            // une fois connecté et loggé
+            invokeGetLatestGammes(minDiam, maxDiam)
+        }
+        connect(matricule)
     }
 }

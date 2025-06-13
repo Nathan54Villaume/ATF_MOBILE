@@ -60,52 +60,64 @@ fun TypeOperationScreen(
     viewModel: SelectionViewModel,
     navController: NavController
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val snackbarHost = remember { SnackbarHostState() }
-    val matricule by viewModel.matricule.collectAsState()
-    val signalR = remember { SignalRClientAutoDetect(context) }
+    val context       = LocalContext.current
+    val scope         = rememberCoroutineScope()
+    val snackbarHost  = remember { SnackbarHostState() }
+    val matricule     by viewModel.matricule.collectAsState()
+    val signalRClient = remember { SignalRClientAutoDetect(context) }
 
     // 1) Connexion au Hub et abonnement aux events
     LaunchedEffect(Unit) {
         viewModel.InitNetworkObserverIfNeeded(context)
 
         // notifications simples
-        signalR.onMessage = { msg ->
+        signalRClient.onMessage = { msg ->
             scope.launch { snackbarHost.showSnackbar(msg) }
         }
 
         // réception de la liste de gammes
-        signalR.onReceiveGammes = { list ->
+        signalRClient.onReceiveGammes = { list ->
             viewModel.setGammes(list)
         }
-        signalR.onReceiveGammesError = { err ->
+
+        signalRClient.onReceiveGammesError = { err ->
             scope.launch {
                 snackbarHost.showSnackbar("Erreur gammes: $err")
             }
         }
 
-        // connect + login + demande de données
-        signalR.connect(matricule)
-        signalR.invokeGetLatestGammes(4.5, 7.0)
+        // ← NE PLUS invoquer immédiatement ici :
+        // signalRClient.connect(matricule)
+        // signalRClient.invokeGetLatestGammes(4.5, 7.0)
+
+        // À la place, on attend la connexion pour appeler nos requêtes :
+        signalRClient.onConnected = {
+            // Ce code n'est exécuté qu'une fois le start()+login terminés
+            signalRClient.invokeGetLatestGammes(4.5, 7.0)
+            // Plus tard, si tu as d'autres requêtes :
+            // signalRClient.invokeGetStatuts()
+        }
+
+        // Démarre la connexion + login
+        signalRClient.connect(matricule)
     }
 
     // 2) États du ViewModel
-    val isConnected    by viewModel.isOnline.collectAsState()
-    val gammes         by viewModel.gammes.collectAsState()
-    val currentGamme   by viewModel.currentGamme.collectAsState()
-    val desiredGamme   by viewModel.desiredGamme.collectAsState()
-    val zone           by viewModel.zoneDeTravail.collectAsState()
-    val intervention   by viewModel.intervention.collectAsState()
+    val isConnected  by viewModel.isOnline.collectAsState()
+    val gammes       by viewModel.gammes.collectAsState()
+    val current      by viewModel.currentGamme.collectAsState()
+    val desired      by viewModel.desiredGamme.collectAsState()
+    val zone         by viewModel.zoneDeTravail.collectAsState()
+    val intervention by viewModel.intervention.collectAsState()
 
     // 3) UI
     BaseScreen(
-        title             = "Type d’opération",
-        navController     = navController,
-        viewModel         = viewModel,
-        showBack          = true,
-        showLogout        = false,
-        connectionStatus  = isConnected
+        title            = "Type d’opération",
+        navController    = navController,
+        viewModel        = viewModel,
+        showBack         = true,
+        showLogout       = false,
+        connectionStatus = isConnected
     ) { padding ->
         Box(
             Modifier
@@ -126,7 +138,7 @@ fun TypeOperationScreen(
                 GammeGrid(
                     title    = "GAMME ACTUELLE",
                     gammes   = gammes,
-                    selected = currentGamme,
+                    selected = current,
                     onSelect = viewModel::selectCurrentGamme
                 )
 
@@ -135,14 +147,14 @@ fun TypeOperationScreen(
                 GammeGrid(
                     title    = "GAMME VISÉE",
                     gammes   = gammes,
-                    selected = desiredGamme,
+                    selected = desired,
                     onSelect = viewModel::selectDesiredGamme,
-                    restrict = currentGamme
+                    restrict = current
                 )
 
                 Spacer(Modifier.height(24.dp))
 
-                DetailsRow(currentGamme, desiredGamme)
+                DetailsRow(current, desired)
 
                 Spacer(Modifier.weight(1f))
 
@@ -165,7 +177,7 @@ fun TypeOperationScreen(
                                 scope.launch { snackbarHost.showSnackbar(msg) }
                             }
                         },
-                        enabled   = currentGamme != null && desiredGamme != null,
+                        enabled   = current != null && desired != null,
                         shape     = RoundedCornerShape(50),
                         modifier  = Modifier.width(140.dp)
                     ) {
@@ -187,6 +199,9 @@ fun TypeOperationScreen(
         }
     }
 }
+
+// ... GammeGrid, DetailsRow et Footer inchangés ...
+
 
 @Composable
 private fun GammeGrid(
