@@ -40,7 +40,6 @@ tasks.register("incrementVersion") {
     }
 }
 
-// On déclenche l’incrément juste avant tout build
 tasks.named("preBuild") {
     dependsOn("incrementVersion")
 }
@@ -99,20 +98,21 @@ android {
 }
 
 dependencies {
-    // BOM pour Compose
-    implementation(platform("androidx.compose:compose-bom:2023.08.00"))
+    // BOM pour Compose (mis à jour pour inclure ui-text)
+    implementation(platform("androidx.compose:compose-bom:2024.01.00"))
 
     // Core & Lifecycle
     implementation("androidx.core:core-ktx:1.8.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
-    implementation("androidx.activity:activity-compose:1.7.2")
+    implementation("androidx.activity:activity-compose:1.8.0")
 
     // Compose UI
-    implementation("androidx.compose.ui:ui:1.6.1")
-    implementation("androidx.compose.ui:ui-graphics:1.6.1")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.6.1")
-    implementation("androidx.compose.material3:material3:1.2.1")
-    implementation("androidx.compose.material:material-icons-extended:1.6.1")
+    implementation("androidx.compose.ui:ui")                 // core UI
+    implementation("androidx.compose.ui:ui-graphics")        // dessin, couleurs…
+    implementation("androidx.compose.ui:ui-tooling-preview")  // preview
+    implementation("androidx.compose.ui:ui-text")            // textes & animations IME
+    implementation("androidx.compose.material3:material3")   // Material3 widgets
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Navigation & animations
     implementation("androidx.navigation:navigation-compose:2.7.7")
@@ -120,7 +120,7 @@ dependencies {
     implementation("com.google.accompanist:accompanist-navigation-animation:0.34.0")
     implementation("com.google.accompanist:accompanist-placeholder-material:0.34.0")
     implementation("com.google.accompanist:accompanist-flowlayout:0.34.0")
-    implementation("androidx.compose.animation:animation:1.6.1")
+    implementation("androidx.compose.animation:animation")
 
     // Réseau & JSON
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -162,11 +162,10 @@ dependencies {
     // Tests
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.3")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2023.08.00"))
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.1")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.6.1")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.6.1")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.01.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
 // --- PUSH AUTO CROSS-PLATFORM APRÈS BUILD ---
@@ -179,7 +178,6 @@ val gitAddDev by tasks.registering(Exec::class) {
 val gitCommitDev by tasks.registering(Exec::class) {
     group = "build"
     description = "Commit staged changes if any"
-    // on ne plante pas s'il n'y a rien à committer
     isIgnoreExitValue = true
     val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
     commandLine("git", "commit", "-m", "chore: build réussi $timestamp")
@@ -191,7 +189,6 @@ val gitPushDev by tasks.registering(Exec::class) {
     commandLine("git", "push", "origin", "dev")
 }
 
-// Chaînage : assemble* → add → commit → push
 tasks.matching { it.name.startsWith("assemble") }.configureEach {
     finalizedBy(gitAddDev)
 }
