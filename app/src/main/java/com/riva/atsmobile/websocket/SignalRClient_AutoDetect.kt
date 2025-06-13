@@ -15,19 +15,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Client SignalR pour se connecter au backend WebSocket,
- * recevoir les notifications et la liste des gammes.
+ * Client SignalR pour se connecter au backend WebSocket
+ * et récupérer la liste des gammes.
  * Gère manuellement la reconnexion en cas de fermeture.
  */
 class SignalRClientAutoDetect(private val context: Context) {
 
     private var connection: HubConnection? = null
-    private var currentMatricule: String? = null
 
-    var onMessage: ((String) -> Unit)? = null
     var onReceiveGammes: ((List<Gamme>) -> Unit)? = null
     var onReceiveGammesError: ((String) -> Unit)? = null
-    var onConnected: (() -> Unit)? = null
 
     private val gson = Gson()
     private val resolvedUrl: String by lazy {
@@ -38,8 +35,7 @@ class SignalRClientAutoDetect(private val context: Context) {
     /**
      * Démarre la connexion ou relance si fermée.
      */
-    fun connect(matricule: String = "N1234") {
-        currentMatricule = matricule
+    fun connect() {
         if (connection != null && connection?.connectionState == HubConnectionState.CONNECTED) return
 
         connection = HubConnectionBuilder
@@ -49,21 +45,14 @@ class SignalRClientAutoDetect(private val context: Context) {
         // Sur fermeture, on planifie une reconnexion
         connection?.onClosed { error ->
             Log.d("SignalR", "🔌 Connexion fermée${error?.message?.let { ": $it" } ?: ""}")
-            currentMatricule?.let { id ->
-                CoroutineScope(Dispatchers.IO).launch {
-                    delay(2000)
-                    connect(id)
-                }
+            CoroutineScope(Dispatchers.IO).launch {
+                delay(2000)
+                connect()
             }
         }
 
         // Handlers
         connection?.apply {
-            on("NouvelleNotification", { msg: String ->
-                Log.d("SignalR", "📨 Notification: $msg")
-                onMessage?.invoke(msg)
-            }, String::class.java)
-
             on("ReceiveGammes", { payload: String ->
                 Log.d("SignalR", "📨 Gammes reçues (${payload.length})")
                 val type = object : TypeToken<List<Gamme>>() {}.type
@@ -81,14 +70,11 @@ class SignalRClientAutoDetect(private val context: Context) {
             try {
                 connection?.start()?.blockingAwait()
                 Log.d("SignalR", "✅ Connecté à $resolvedUrl")
-                connection?.send("Login", matricule)
-                Log.d("SignalR", "📤 Login envoyé: $matricule")
-                onConnected?.invoke()
             } catch (e: Exception) {
                 Log.e("SignalR", "❌ Connexion échouée: ${e.message}", e)
                 // en cas d'erreur, replanifier reconnexion
                 delay(2000)
-                connect(matricule)
+                connect()
             }
         }
     }
@@ -108,8 +94,11 @@ class SignalRClientAutoDetect(private val context: Context) {
     }
 
     /** Connecte et fetch directement les gammes */
-    fun connectAndFetchGammes(matricule: String, min: Double, max: Double) {
-        onConnected = { invokeGetLatestGammes(min, max) }
-        connect(matricule)
+    fun connectAndFetchGammes(min: Double, max: Double) {
+        connect()
+        onReceiveGammes?.let {
+            // attendre connexion puis appeler
+            invokeGetLatestGammes(min, max)
+        }
     }
 }
