@@ -34,13 +34,11 @@ class SignalRClientAutoDetect(private val context: Context) {
      * Démarre ou redémarre la connexion SignalR.
      */
     fun connect() {
-        // Si déjà connecté, rien à faire
         if (connection?.connectionState == HubConnectionState.CONNECTED) return
 
-        // (Re)création du HubConnection
         connection = HubConnectionBuilder.create(resolvedUrl).build()
 
-        // Sur fermeture, on tente de reconnecter après 2s
+        // En cas de fermeture, on retente la connexion après 2s
         connection?.onClosed { error ->
             Log.d("SignalR", "🔌 Connexion fermée${error?.message?.let { ": $it" } ?: ""}")
             CoroutineScope(Dispatchers.IO).launch {
@@ -52,14 +50,24 @@ class SignalRClientAutoDetect(private val context: Context) {
         // Handlers de réception
         connection?.apply {
             on("ReceiveGammes", { payload: String ->
-                Log.d("SignalR", "📨 Gammes reçues (${payload.length} chars)")
+                // 1) Log du JSON brut
+                Log.d("SignalR-RAW", "RAW JSON payload: $payload")
+
+                // 2) Parsing
                 val type = object : TypeToken<List<Gamme>>() {}.type
-                onReceiveGammes?.invoke(gson.fromJson(payload, type))
+                val list: List<Gamme> = gson.fromJson(payload, type)
+
+                // 3) Invocation sur le Main thread
+                CoroutineScope(Dispatchers.Main).launch {
+                    onReceiveGammes?.invoke(list)
+                }
             }, String::class.java)
 
             on("ReceiveGammesError", { err: String ->
                 Log.e("SignalR", "❌ ReceiveGammesError: $err")
-                onReceiveGammesError?.invoke(err)
+                CoroutineScope(Dispatchers.Main).launch {
+                    onReceiveGammesError?.invoke(err)
+                }
             }, String::class.java)
         }
 
@@ -68,13 +76,12 @@ class SignalRClientAutoDetect(private val context: Context) {
             try {
                 connection?.start()?.blockingAwait()
                 Log.d("SignalR", "✅ Connecté à $resolvedUrl")
-                // Dès que connecté, on prévient le caller
+                // Callback onConnected sur le Main thread
                 withContext(Dispatchers.Main) {
                     onConnected?.invoke()
                 }
             } catch (e: Exception) {
                 Log.e("SignalR", "❌ Connexion échouée: ${e.message}", e)
-                // Retenter après 2s en cas d’erreur
                 delay(2000)
                 connect()
             }
@@ -90,8 +97,7 @@ class SignalRClientAutoDetect(private val context: Context) {
 
     /**
      * Envoie GetLatestGammes au hub.
-     * Ne l’appelle que si on est CONNECTED.
-     * Si pas encore connecté, planifie via onConnected.
+     * Si la connexion n’est pas encore active, différer jusqu’à onConnected.
      */
     fun invokeGetLatestGammes(min: Double, max: Double) {
         val conn = connection
@@ -99,7 +105,7 @@ class SignalRClientAutoDetect(private val context: Context) {
             Log.d("SignalR", "📤 Invoke GetLatestGammes($min, $max)")
             conn.send("GetLatestGammes", min, max)
         } else {
-            // On diffère l’envoi jusqu’à ce qu’onConnected soit appelé
+            // Différer l’appel
             onConnected = {
                 Log.d("SignalR", "📤 (post-connect) Invoke GetLatestGammes($min, $max)")
                 connection?.send("GetLatestGammes", min, max)
