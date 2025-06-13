@@ -36,7 +36,8 @@ class SignalRClientAutoDetect(private val context: Context) {
     }
 
     /**
-     * Établit la connexion au Hub, configure les handlers, et appelle onConnected() une fois prêt.
+     * Établit la connexion au Hub, configure les handlers,
+     * démarre la connexion, envoie le login, puis appelle onConnected().
      */
     fun connect(matricule: String = "N1234") {
         if (connection != null) return
@@ -99,10 +100,11 @@ class SignalRClientAutoDetect(private val context: Context) {
 
     /**
      * Confort : connecte, logue, puis demande directement les gammes dans l'ordre sécurisé.
+     * Exemple d’appel :
+     *   signalRClient.connectAndFetchGammes(matricule, 4.5, 7.0)
      */
     fun connectAndFetchGammes(matricule: String, minDiam: Double, maxDiam: Double) {
         onConnected = {
-            // une fois connecté et loggé
             invokeGetLatestGammes(minDiam, maxDiam)
         }
         connect(matricule)

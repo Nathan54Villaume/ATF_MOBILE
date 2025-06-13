@@ -86,19 +86,16 @@ fun TypeOperationScreen(
             }
         }
 
-        // ← NE PLUS invoquer immédiatement ici :
-        // signalRClient.connect(matricule)
-        // signalRClient.invokeGetLatestGammes(4.5, 7.0)
-
-        // À la place, on attend la connexion pour appeler nos requêtes :
+        // déclenche les requêtes métier seulement après connexion+login
         signalRClient.onConnected = {
-            // Ce code n'est exécuté qu'une fois le start()+login terminés
+            // dès qu'on est connecté, on récupère les gammes
             signalRClient.invokeGetLatestGammes(4.5, 7.0)
-            // Plus tard, si tu as d'autres requêtes :
+
+            // exemple : plus tard, tu pourras appeler d'autres méthodes :
             // signalRClient.invokeGetStatuts()
         }
 
-        // Démarre la connexion + login
+        // lance la connexion + login
         signalRClient.connect(matricule)
     }
 
@@ -199,9 +196,6 @@ fun TypeOperationScreen(
         }
     }
 }
-
-// ... GammeGrid, DetailsRow et Footer inchangés ...
-
 
 @Composable
 private fun GammeGrid(
