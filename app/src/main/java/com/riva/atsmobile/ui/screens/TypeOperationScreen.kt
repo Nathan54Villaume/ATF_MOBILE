@@ -16,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.WbSunny
-
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -58,10 +57,11 @@ fun TypeOperationScreen(
     val matricule     by viewModel.matricule.collectAsState()
     val signalRClient = remember { SignalRClientAutoDetect(context) }
 
-    DisposableEffect(key1 = matricule) {
-        // Initialisation
+    DisposableEffect(Unit) {
+        // Initialisation du réseau
         viewModel.InitNetworkObserverIfNeeded(context)
 
+        // Callbacks SignalR
         signalRClient.onMessage = { msg ->
             scope.launch { snackbarHost.showSnackbar(msg) }
         }
@@ -75,9 +75,11 @@ fun TypeOperationScreen(
             signalRClient.invokeGetLatestGammes(4.5, 7.0)
         }
 
+        // Démarrage de la connexion
         signalRClient.connect(matricule)
 
         onDispose {
+            // Déconnexion à la fin de vie de l'écran
             signalRClient.disconnect()
         }
     }
@@ -97,17 +99,13 @@ fun TypeOperationScreen(
         showLogout       = false,
         connectionStatus = isConnected
     ) { padding ->
-        // Wrap content and Snackbar in a Box to allow align
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            Column(
-                Modifier
-                    .fillMaxSize()
-            ) {
+            Column(Modifier.fillMaxSize()) {
                 Text(
                     "Sélectionnez vos gammes",
                     style    = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
@@ -131,9 +129,7 @@ fun TypeOperationScreen(
                         onSelect = viewModel::selectCurrentGamme,
                         modifier = Modifier.weight(1f)
                     )
-
                     Spacer(Modifier.height(16.dp))
-
                     GammeGrid(
                         title    = "GAMME VISÉE",
                         gammes   = gammes,
@@ -142,36 +138,33 @@ fun TypeOperationScreen(
                         restrict = current,
                         modifier = Modifier.weight(1f)
                     )
-
                     Spacer(Modifier.height(24.dp))
                 }
 
                 DetailsRow(current, desired)
-
                 Spacer(Modifier.weight(1f))
-
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     ElevatedButton(
-                        onClick   = { navController.popBackStack() },
-                        shape     = RoundedCornerShape(50),
-                        modifier  = Modifier.width(140.dp)
+                        onClick  = { navController.popBackStack() },
+                        shape    = RoundedCornerShape(50),
+                        modifier = Modifier.width(140.dp)
                     ) {
                         Icon(Icons.Default.WbSunny, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text("Retour")
                     }
                     ElevatedButton(
-                        onClick   = {
-                            viewModel.validateGammeChange { success, msg ->
+                        onClick  = {
+                            viewModel.validateGammeChange { _, msg ->
                                 scope.launch { snackbarHost.showSnackbar(msg) }
                             }
                         },
-                        enabled   = current != null && desired != null,
-                        shape     = RoundedCornerShape(50),
-                        modifier  = Modifier.width(140.dp)
+                        enabled  = current != null && desired != null,
+                        shape    = RoundedCornerShape(50),
+                        modifier = Modifier.width(140.dp)
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
@@ -181,8 +174,6 @@ fun TypeOperationScreen(
 
                 Footer(zone, intervention)
             }
-
-            // Snackbar positioned at bottom center
             SnackbarHost(
                 hostState = snackbarHost,
                 modifier  = Modifier
@@ -211,7 +202,7 @@ private fun GammeGrid(
             modifier              = Modifier.fillMaxSize()
         ) {
             items(gammes) { gamme ->
-                val disabled = (restrict != null && gamme == restrict)
+                val disabled = restrict != null && gamme == restrict
                 val borderColor by animateColorAsState(
                     when {
                         disabled          -> Color.LightGray
@@ -292,8 +283,7 @@ private fun Footer(zone: String, intervention: String) {
             .padding(top = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text("Zone : $zone  |  Interv. : $intervention",
-            style = MaterialTheme.typography.bodySmall)
+        Text("Zone : $zone  |  Interv. : $intervention", style = MaterialTheme.typography.bodySmall)
         Text(now, style = MaterialTheme.typography.bodySmall)
     }
 }

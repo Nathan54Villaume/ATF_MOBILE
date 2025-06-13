@@ -6,6 +6,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
+import com.microsoft.signalr.HubConnectionState
 import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.utils.ApiConfig
 import kotlinx.coroutines.CoroutineScope
@@ -40,33 +41,42 @@ class SignalRClientAutoDetect(private val context: Context) {
      * démarre la connexion, envoie le login, puis appelle onConnected().
      */
     fun connect(matricule: String = "N1234") {
-        if (connection != null) return
+        if (connection != null && connection?.connectionState == HubConnectionState.CONNECTED) return
 
+        connection = HubConnectionBuilder
+            .create(resolvedUrl)
+            // Pour activer la reconnexion automatique, décommentez si supporté :
+            // .withAutomaticReconnect()
+            .build()
+
+        // Gestion de la fermeture
+        connection?.onClosed { error ->
+            Log.d("SignalR", "🔌 Connexion fermée${error?.message?.let { ": $it" } ?: ""}")
+        }
+
+        // Notification générique
+        connection?.on("NouvelleNotification", { message: String ->
+            Log.d("SignalR", "📨 Reçu NouvelleNotification : $message")
+            onMessage?.invoke(message)
+        }, String::class.java)
+
+        // Liste de gammes
+        connection?.on("ReceiveGammes", { payload: String ->
+            Log.d("SignalR", "📨 Reçu ReceiveGammes (${payload.length} chars)")
+            val type = object : TypeToken<List<Gamme>>() {}.type
+            val list: List<Gamme> = gson.fromJson(payload, type)
+            onReceiveGammes?.invoke(list)
+        }, String::class.java)
+
+        // Erreur sur GetLatestGammes
+        connection?.on("ReceiveGammesError", { errorMsg: String ->
+            Log.e("SignalR", "❌ ReceiveGammesError : $errorMsg")
+            onReceiveGammesError?.invoke(errorMsg)
+        }, String::class.java)
+
+        // Démarrage de la connexion (bloquant)
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                connection = HubConnectionBuilder.create(resolvedUrl).build()
-
-                // Notification générique
-                connection?.on("NouvelleNotification", { message: String ->
-                    Log.d("SignalR", "📨 Reçu NouvelleNotification : $message")
-                    onMessage?.invoke(message)
-                }, String::class.java)
-
-                // Liste de gammes
-                connection?.on("ReceiveGammes", { payload: String ->
-                    Log.d("SignalR", "📨 Reçu ReceiveGammes (${payload.length} chars)")
-                    val type = object : TypeToken<List<Gamme>>() {}.type
-                    val list: List<Gamme> = gson.fromJson(payload, type)
-                    onReceiveGammes?.invoke(list)
-                }, String::class.java)
-
-                // Erreur sur GetLatestGammes
-                connection?.on("ReceiveGammesError", { errorMsg: String ->
-                    Log.e("SignalR", "❌ ReceiveGammesError : $errorMsg")
-                    onReceiveGammesError?.invoke(errorMsg)
-                }, String::class.java)
-
-                // Démarrage de la connexion (bloquant)
                 connection?.start()?.blockingAwait()
                 Log.d("SignalR", "✅ Connecté à $resolvedUrl")
 
@@ -76,7 +86,6 @@ class SignalRClientAutoDetect(private val context: Context) {
 
                 // Maintenant que tout est prêt, on notifie l'appelant
                 onConnected?.invoke()
-
             } catch (e: Exception) {
                 Log.e("SignalR", "❌ Erreur connexion : ${e.message}", e)
             }
@@ -100,8 +109,6 @@ class SignalRClientAutoDetect(private val context: Context) {
 
     /**
      * Confort : connecte, logue, puis demande directement les gammes dans l'ordre sécurisé.
-     * Exemple d’appel :
-     *   signalRClient.connectAndFetchGammes(matricule, 4.5, 7.0)
      */
     fun connectAndFetchGammes(matricule: String, minDiam: Double, maxDiam: Double) {
         onConnected = {
