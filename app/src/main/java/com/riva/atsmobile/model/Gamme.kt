@@ -1,7 +1,5 @@
 package com.riva.atsmobile.model
 
-import java.time.LocalDateTime
-
 /**
  * Data class representing the TreillisDto returned by the API.
  */
@@ -13,14 +11,17 @@ data class Gamme(
     val nuance: String,
     val diamChaine: Double,
     val diamTrame: Double,
-    // Diamètre Chaîne/Trame combiné (ex. "4x5 mm"), traité comme String
+    /** Diamètre Chaîne/Trame combiné (ex. "4x5 mm") */
     val diamChaineTrame: String,
+    /** Maille (ex. "10x10 mm") */
     val dimension: String,
-    val espFilChaineTrame: String,
+    /** Espacement fil-chaîne/trame en mm */
+    val espFilChaineTrame: Double,
     val norme: String,
     val colissage: String,
     val massePanneau: Double,
     val massePaquet: Double,
-    val horoMaj: LocalDateTime,
+    /** Horodatage au format ISO8601, parsé côté UI si besoin */
+    val horoMaj: String,
     val valid: Boolean
 )
