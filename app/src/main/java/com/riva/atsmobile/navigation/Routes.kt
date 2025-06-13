@@ -7,4 +7,6 @@ object Routes {
     const val DevTools = "devtools"
     const val ChangePassword = "change_password"
     const val ChangementGamme = "changement_gamme"
+    const val TypeOperation = "type_operation"
+
 }
