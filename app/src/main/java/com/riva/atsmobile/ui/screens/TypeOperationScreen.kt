@@ -62,52 +62,55 @@ fun TypeOperationScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarHost = remember { SnackbarHostState() }
     val matricule by viewModel.matricule.collectAsState()
-    val signalRClient = remember { SignalRClientAutoDetect(context) }
+    val signalR = remember { SignalRClientAutoDetect(context) }
 
-    // Connexion SignalR et chargement des gammes
+    // 1) Connexion au Hub et abonnement aux events
     LaunchedEffect(Unit) {
         viewModel.InitNetworkObserverIfNeeded(context)
 
-        // Gestion des notifications génériques
-        signalRClient.onMessage = { msg ->
-            scope.launch { snackbarHostState.showSnackbar(msg) }
+        // notifications simples
+        signalR.onMessage = { msg ->
+            scope.launch { snackbarHost.showSnackbar(msg) }
         }
-        // Réception de la liste des gammes
-        signalRClient.onReceiveGammes = { list: List<Gamme> ->
+
+        // réception de la liste de gammes
+        signalR.onReceiveGammes = { list ->
             viewModel.setGammes(list)
         }
-        // Erreur serveur
-        signalRClient.onReceiveGammesError = { err ->
-            scope.launch { snackbarHostState.showSnackbar("Erreur gammes: $err") }
+        signalR.onReceiveGammesError = { err ->
+            scope.launch {
+                snackbarHost.showSnackbar("Erreur gammes: $err")
+            }
         }
 
-        // Connexion et login
-        signalRClient.connect(matricule)
-        // Demande des gammes filtrées entre 4.5 et 7.0 mm
-        signalRClient.invokeGetLatestGammes(4.5, 7.0)
+        // connect + login + demande de données
+        signalR.connect(matricule)
+        signalR.invokeGetLatestGammes(4.5, 7.0)
     }
 
-    val isConnected by viewModel.isOnline.collectAsState()
-    val gammes by viewModel.gammes.collectAsState()
-    val current by viewModel.currentGamme.collectAsState()
-    val desired by viewModel.desiredGamme.collectAsState()
-    val zone by viewModel.zoneDeTravail.collectAsState()
-    val intervention by viewModel.intervention.collectAsState()
+    // 2) États du ViewModel
+    val isConnected    by viewModel.isOnline.collectAsState()
+    val gammes         by viewModel.gammes.collectAsState()
+    val currentGamme   by viewModel.currentGamme.collectAsState()
+    val desiredGamme   by viewModel.desiredGamme.collectAsState()
+    val zone           by viewModel.zoneDeTravail.collectAsState()
+    val intervention   by viewModel.intervention.collectAsState()
 
+    // 3) UI
     BaseScreen(
-        title = "Type d’opération",
-        navController = navController,
-        viewModel = viewModel,
-        showBack = true,
-        showLogout = false,
-        connectionStatus = isConnected
-    ) { paddingValues ->
+        title             = "Type d’opération",
+        navController     = navController,
+        viewModel         = viewModel,
+        showBack          = true,
+        showLogout        = false,
+        connectionStatus  = isConnected
+    ) { padding ->
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(padding)
         ) {
             Column(
                 Modifier
@@ -116,30 +119,30 @@ fun TypeOperationScreen(
             ) {
                 Text(
                     "Sélectionnez vos gammes",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    style    = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
 
                 GammeGrid(
-                    title = "GAMME ACTUELLE",
-                    gammes = gammes,
-                    selected = current,
-                    onSelect = { viewModel.selectCurrentGamme(it) }
+                    title    = "GAMME ACTUELLE",
+                    gammes   = gammes,
+                    selected = currentGamme,
+                    onSelect = viewModel::selectCurrentGamme
                 )
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
 
                 GammeGrid(
-                    title = "GAMME VISÉE",
-                    gammes = gammes,
-                    selected = desired,
-                    onSelect = { viewModel.selectDesiredGamme(it) },
-                    restrict = current
+                    title    = "GAMME VISÉE",
+                    gammes   = gammes,
+                    selected = desiredGamme,
+                    onSelect = viewModel::selectDesiredGamme,
+                    restrict = currentGamme
                 )
 
                 Spacer(Modifier.height(24.dp))
 
-                AnimatedDetails(current = current, desired = desired)
+                DetailsRow(currentGamme, desiredGamme)
 
                 Spacer(Modifier.weight(1f))
 
@@ -148,23 +151,23 @@ fun TypeOperationScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     ElevatedButton(
-                        onClick = { navController.popBackStack() },
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier.width(140.dp)
+                        onClick   = { navController.popBackStack() },
+                        shape     = RoundedCornerShape(50),
+                        modifier  = Modifier.width(140.dp)
                     ) {
                         Icon(Icons.Default.WbSunny, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text("Retour")
                     }
                     ElevatedButton(
-                        onClick = {
+                        onClick   = {
                             viewModel.validateGammeChange { success, msg ->
-                                scope.launch { snackbarHostState.showSnackbar(msg) }
+                                scope.launch { snackbarHost.showSnackbar(msg) }
                             }
                         },
-                        enabled = current != null && desired != null,
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier.width(140.dp)
+                        enabled   = currentGamme != null && desiredGamme != null,
+                        shape     = RoundedCornerShape(50),
+                        modifier  = Modifier.width(140.dp)
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
@@ -176,8 +179,10 @@ fun TypeOperationScreen(
             }
 
             SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                hostState = snackbarHost,
+                modifier  = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 8.dp)
             )
         }
     }
@@ -193,57 +198,56 @@ private fun GammeGrid(
 ) {
     Text(title, style = MaterialTheme.typography.titleMedium)
     LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
+        columns               = GridCells.Fixed(3),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier
+        verticalArrangement   = Arrangement.spacedBy(8.dp),
+        modifier              = Modifier
             .fillMaxWidth()
             .height(100.dp)
     ) {
         items(gammes) { gamme ->
-            val isDisabled = restrict != null && gamme == restrict
+            val disabled = (restrict != null && gamme == restrict)
             val borderColor by animateColorAsState(
                 when {
-                    isDisabled         -> Color.LightGray
-                    gamme == selected  -> MaterialTheme.colorScheme.primary
-                    else               -> Color.Gray
+                    disabled         -> Color.LightGray
+                    gamme == selected-> MaterialTheme.colorScheme.primary
+                    else             -> Color.Gray
                 },
                 animationSpec = tween(500, easing = FastOutSlowInEasing)
             )
-            val backgroundColor by animateColorAsState(
+            val bgColor by animateColorAsState(
                 when {
-                    isDisabled         -> Color(0xFF2E2E2E)
-                    gamme == selected  -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                    else               -> Color(0xFF1E1E1E)
+                    disabled         -> Color(0xFF2E2E2E)
+                    gamme == selected-> MaterialTheme.colorScheme.primary.copy(alpha = .1f)
+                    else             -> Color(0xFF1E1E1E)
                 },
                 animationSpec = tween(500)
             )
-            val textColor = when {
-                isDisabled         -> Color.LightGray
-                gamme == selected  -> MaterialTheme.colorScheme.primary
-                else               -> Color.White
+            val txtColor = when {
+                disabled         -> Color.LightGray
+                gamme == selected-> MaterialTheme.colorScheme.primary
+                else             -> Color.White
             }
-            val fontWeight = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
+            val fw = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
             val scale by animateFloatAsState(
-                targetValue = if (gamme == selected) 1.05f else 1f,
-                animationSpec = tween(300)
+                targetValue    = if (gamme == selected) 1.05f else 1f,
+                animationSpec  = tween(300)
             )
 
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier
+                modifier         = Modifier
                     .scale(scale)
-                    .background(backgroundColor, RoundedCornerShape(20.dp))
+                    .background(bgColor, RoundedCornerShape(20.dp))
                     .border(BorderStroke(2.dp, borderColor), RoundedCornerShape(20.dp))
-                    .clickable(enabled = !isDisabled) { onSelect(gamme) }
+                    .clickable(enabled = !disabled) { onSelect(gamme) }
                     .padding(vertical = 8.dp, horizontal = 4.dp)
             ) {
                 Text(
-                    text = gamme.name,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = textColor,
-                        fontWeight = fontWeight
-                    )
+                    gamme.name,
+                    color      = txtColor,
+                    fontWeight = fw,
+                    style      = MaterialTheme.typography.bodyMedium
                 )
             }
         }
@@ -251,21 +255,21 @@ private fun GammeGrid(
 }
 
 @Composable
-private fun AnimatedDetails(current: Gamme?, desired: Gamme?) {
+private fun DetailsRow(current: Gamme?, desired: Gamme?) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         current?.let {
             Column {
                 Text("Actuelle : ${it.name}", fontWeight = FontWeight.SemiBold)
-                Text("Maille: ${it.meshSize} mm")
-                Text("Fil: ${it.wireDiameter} mm")
+                Text("Maille : ${it.meshSize} mm")
+                Text("Fil   : ${it.wireDiameter} mm")
                 Text("Chaîne: ${it.chainCount}")
             }
         }
         desired?.let {
             Column(horizontalAlignment = Alignment.End) {
                 Text("Souhait : ${it.name}", fontWeight = FontWeight.SemiBold)
-                Text("Maille: ${it.meshSize} mm")
-                Text("Fil: ${it.wireDiameter} mm")
+                Text("Maille : ${it.meshSize} mm")
+                Text("Fil   : ${it.wireDiameter} mm")
                 Text("Chaîne: ${it.chainCount}")
             }
         }
@@ -274,14 +278,16 @@ private fun AnimatedDetails(current: Gamme?, desired: Gamme?) {
 
 @Composable
 private fun Footer(zone: String, intervention: String) {
-    val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+    val now = LocalDateTime.now()
+        .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
     Row(
         Modifier
             .fillMaxWidth()
             .padding(top = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text("Zone: $zone | Interv: $intervention", style = MaterialTheme.typography.bodySmall)
+        Text("Zone : $zone  |  Interv. : $intervention",
+            style = MaterialTheme.typography.bodySmall)
         Text(now, style = MaterialTheme.typography.bodySmall)
     }
 }
