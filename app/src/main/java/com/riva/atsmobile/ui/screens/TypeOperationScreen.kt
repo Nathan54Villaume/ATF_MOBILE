@@ -444,6 +444,9 @@ fun TypeOperationScreen(
         finally { isLoading = false }
     }
 
+    var arrowOffset by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
+
     BaseScreen(
         title = "Type d’opération",
         navController = navController,
@@ -473,16 +476,87 @@ fun TypeOperationScreen(
             }
 
             val details = @Composable {
-                DetailsColumn(
-                    current = current,
-                    desired = desired,
-                    role = role,
-                    navController = navController,
-                    viewModel = viewModel,
-                    snackbarHost = snackbarHost,
-                    zone = zone,
-                    intervention = intervention
-                )
+                Box(Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Column(
+                            modifier = Modifier.onGloballyPositioned {
+                                val position = it.positionInParent().y + it.size.height
+                                arrowOffset = with(density) { position.toDp() }
+                            },
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "GAMME ACTUELLE",
+                                style = TextStyle(
+                                    color = Color(0xFFFF9800),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Serif
+                                )
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            DetailsCard(
+                                gamme = current,
+                                detailStyle = TextStyle(
+                                    color = Color(0xFFEEEEEE),
+                                    fontSize = 20.sp,
+                                    fontFamily = FontFamily.SansSerif
+                                ),
+                                noSelectionStyle = TextStyle(
+                                    color = Color.Red,
+                                    fontSize = 20.sp,
+                                    fontStyle = FontStyle.Italic
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "GAMME VISÉE",
+                                style = TextStyle(
+                                    color = Color(0xFFFF9800),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Serif
+                                )
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            DetailsCard(
+                                gamme = desired,
+                                detailStyle = TextStyle(
+                                    color = Color(0xFFEEEEEE),
+                                    fontSize = 20.sp,
+                                    fontFamily = FontFamily.SansSerif
+                                ),
+                                noSelectionStyle = TextStyle(
+                                    color = Color.Red,
+                                    fontSize = 20.sp,
+                                    fontStyle = FontStyle.Italic
+                                )
+                            )
+                        }
+
+                        ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
+                        Footer(zone, intervention)
+                    }
+
+                    TransitionArrow(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = arrowOffset)
+                            .zIndex(1f),
+                        width = 80.dp,
+                        height = 30.dp
+                    )
+                }
             }
 
             if (isPortrait) {
@@ -504,6 +578,7 @@ fun TypeOperationScreen(
         }
     }
 }
+
 
 
 
