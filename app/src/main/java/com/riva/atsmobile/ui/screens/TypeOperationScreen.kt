@@ -314,14 +314,12 @@ fun DetailsColumn(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier
-                .align(Alignment.CenterVertically as Alignment)
-                .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -349,8 +347,6 @@ fun DetailsColumn(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "GAMME VISÉE",
@@ -377,8 +373,6 @@ fun DetailsColumn(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
             ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
             Footer(zone, intervention)
         }
@@ -393,6 +387,7 @@ fun DetailsColumn(
         )
     }
 }
+
 
 
 
