@@ -322,12 +322,12 @@ fun TypeOperationScreen(
                                 ),
                                 detailStyle = TextStyle(
                                     color = Color(0xFFEEEEEE),
-                                    fontSize = 15.sp,
+                                    fontSize = 20.sp,
                                     fontFamily = FontFamily.SansSerif
                                 ),
                                 noSelectionStyle = TextStyle(
-                                    color = Color.Gray,
-                                    fontSize = 14.sp,
+                                    color = Color.Red,
+                                    fontSize = 20.sp,
                                     fontStyle = FontStyle.Italic
                                 )
                             )
@@ -352,11 +352,11 @@ fun TypeOperationScreen(
                                 ),
                                 detailStyle = TextStyle(
                                     color = Color(0xFFEEEEEE),
-                                    fontSize = 15.sp,
+                                    fontSize = 20.sp,
                                     fontFamily = FontFamily.SansSerif
                                 ),
                                 noSelectionStyle = TextStyle(
-                                    color = Color.Gray,
+                                    color = Color.Red,
                                     fontSize = 14.sp,
                                     fontStyle = FontStyle.Italic
                                 )
