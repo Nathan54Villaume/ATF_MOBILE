@@ -228,8 +228,8 @@ fun TypeOperationScreen(
                     TransitionArrow(
                         isPortrait = isPortrait,
                         modifier = Modifier
-                            
-                            .absoluteOffset(y = arrowOffsetDp)
+                            .align(Alignment.TopCenter)   // ← centre horizontalement
+                            .offset(y = arrowOffsetDp)     // ← décale verticalement au milieu des cards
                             .zIndex(1f),
                         width = 80.dp,    // ← largeur réglable
                         height = 30.dp   // ← hauteur réglable
