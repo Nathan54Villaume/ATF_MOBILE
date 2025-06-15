@@ -150,7 +150,7 @@ fun DetailsCard(title: String, gamme: Gamme?) {
 
     // Dimensions adaptées
     val mainSize = if (isPortrait) 150.dp else 140.dp
-    val secondarySize = if (isPortrait) 120.dp else 110.dp
+    val secondarySize = if (isPortrait) 120.dp else 90.dp
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
