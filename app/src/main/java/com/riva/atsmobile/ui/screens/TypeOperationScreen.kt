@@ -191,7 +191,7 @@ fun TypeOperationScreen(
                 val arrowOffsetDp by remember(topY, topHeight, bottomY) {
                     derivedStateOf {
                         val midPx = (topY + topHeight + bottomY) / 2f
-                        with(density) { midPx.toDp() - 0.dp } // centrer
+                        with(density) { midPx.toDp() - 1.dp } // centrer
                     }
                 }
 
