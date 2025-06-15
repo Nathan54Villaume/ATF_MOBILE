@@ -42,7 +42,6 @@ fun TypeOperationScreen(
     val context      = LocalContext.current
     val scope        = rememberCoroutineScope()
     val snackbarHost = remember { SnackbarHostState() }
-    val matricule    by viewModel.matricule.collectAsState()
 
     val isConnected  by viewModel.isOnline.collectAsState()
     val gammes       by viewModel.gammes.collectAsState()
@@ -50,6 +49,22 @@ fun TypeOperationScreen(
     val desired      by viewModel.desiredGamme.collectAsState()
     val zone         by viewModel.zoneDeTravail.collectAsState()
     val intervention by viewModel.intervention.collectAsState()
+
+    var isLoading by remember { mutableStateOf(true) }
+    var loadError by remember { mutableStateOf<String?>(null) }
+
+    // Chargement automatique des gammes depuis API au démarrage
+    LaunchedEffect(Unit) {
+        isLoading = true
+        loadError = null
+        try {
+            viewModel.chargerGammesDepuisApi(context)
+        } catch (e: Exception) {
+            loadError = "Erreur de chargement : ${e.message}"
+        } finally {
+            isLoading = false
+        }
+    }
 
     BaseScreen(
         title            = "Type d’opération",
@@ -72,33 +87,73 @@ fun TypeOperationScreen(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
-                if (gammes.isEmpty()) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Chargement...", style = MaterialTheme.typography.bodyMedium)
+                when {
+                    isLoading -> {
+                        Box(
+                            Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
-                } else {
-                    GammeGrid(
-                        title    = "GAMME ACTUELLE",
-                        gammes   = gammes,
-                        selected = current,
-                        onSelect = viewModel::selectCurrentGamme,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    GammeGrid(
-                        title    = "GAMME VISÉE",
-                        gammes   = gammes,
-                        selected = desired,
-                        onSelect = viewModel::selectDesiredGamme,
-                        restrict = current,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(Modifier.height(24.dp))
+
+                    loadError != null -> {
+                        Box(
+                            Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(loadError!!, color = Color.Red)
+                                Spacer(Modifier.height(12.dp))
+                                Button(onClick = {
+                                    scope.launch {
+                                        isLoading = true
+                                        loadError = null
+                                        try {
+                                            viewModel.chargerGammesDepuisApi(context)
+                                        } catch (e: Exception) {
+                                            loadError = "Erreur de chargement : ${e.message}"
+                                        } finally {
+                                            isLoading = false
+                                        }
+                                    }
+                                }) {
+                                    Text("Réessayer")
+                                }
+                            }
+                        }
+                    }
+
+                    gammes.isEmpty() -> {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Aucune gamme trouvée.", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+
+                    else -> {
+                        GammeGrid(
+                            title    = "GAMME ACTUELLE",
+                            gammes   = gammes,
+                            selected = current,
+                            onSelect = viewModel::selectCurrentGamme,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        GammeGrid(
+                            title    = "GAMME VISÉE",
+                            gammes   = gammes,
+                            selected = desired,
+                            onSelect = viewModel::selectDesiredGamme,
+                            restrict = current,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.height(24.dp))
+                    }
                 }
 
                 DetailsRow(current, desired)
@@ -143,8 +198,6 @@ fun TypeOperationScreen(
         }
     }
 }
-
-// Les fonctions GammeGrid, DetailsRow, Footer ne changent pas (elles sont déjà indépendantes de SignalR)
 
 
 @Composable
