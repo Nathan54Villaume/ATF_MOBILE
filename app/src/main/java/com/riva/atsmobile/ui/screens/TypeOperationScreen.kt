@@ -93,12 +93,12 @@ fun getImageForGamme(designation: String): GammeLogos {
 @Composable
 fun TransitionArrow(
     isPortrait: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    size: Dp = 60.dp           // ← taille par défaut, modifiable à l’appel
 ) {
     val infiniteTransition = rememberInfiniteTransition()
     val offsetFloat by infiniteTransition.animateFloat(
-        0f,
-        16f,
+        0f, 16f,
         infiniteRepeatable(
             animation = tween(800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -115,11 +115,12 @@ fun TransitionArrow(
                 x = if (!isPortrait) offset else 0.dp,
                 y = if (isPortrait) offset else 0.dp
             )
-            .size(60.dp)
+            .size(size)              // ← on applique la taille ici
             .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
             .padding(4.dp)
     )
 }
+
 
 @Composable
 fun TypeOperationScreen(
@@ -225,10 +226,12 @@ fun TypeOperationScreen(
                     TransitionArrow(
                         isPortrait = isPortrait,
                         modifier = Modifier
-                            .width(80.dp)
+                            .fillMaxWidth()
                             .absoluteOffset(y = arrowOffsetDp)
-                            .zIndex(1f)
+                            .zIndex(1f),
+                        size = 80.dp    // ← tu règles la taille ici
                     )
+
                 }
             }
 
