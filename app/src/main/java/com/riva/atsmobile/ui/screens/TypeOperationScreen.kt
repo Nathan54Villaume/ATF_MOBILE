@@ -94,10 +94,11 @@ fun getImageForGamme(gamme: Gamme?): GammeLogos {
             else -> null
         },
         dimension = when (gamme?.dimension?.trim()?: "") {
-            "4200x2400" -> R.drawable.u4200x2400
-            "6000x2400" -> R.drawable.u6000x2400
-            "3600x2400" -> R.drawable.u3600x2400
-            "3200x2400" -> R.drawable.u3200x2400
+            "4200x2400" -> R.drawable.us4200x2400
+            "6000x2400" -> R.drawable.us6000x2400
+            "3600x2400" -> R.drawable.us3600x2400
+            "3200x2400" -> R.drawable.us3200x2400
+            "4000x2400" -> R.drawable.us4000x2400
             else -> null
         },
         diametre = when (gamme?.diamChaineTrame?.trim() ?: "") {
