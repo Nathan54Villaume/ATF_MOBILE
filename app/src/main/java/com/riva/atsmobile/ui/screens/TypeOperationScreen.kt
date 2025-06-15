@@ -1,5 +1,6 @@
 package com.riva.atsmobile.ui.screens
 
+import android.content.res.Configuration
 import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -12,14 +13,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
@@ -30,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +40,7 @@ import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.navigation.Routes
 import com.riva.atsmobile.ui.shared.BaseScreen
 import com.riva.atsmobile.viewmodel.SelectionViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -82,6 +83,9 @@ fun TypeOperationScreen(
     val scope        = rememberCoroutineScope()
     val snackbarHost = remember { SnackbarHostState() }
 
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+
     val isConnected         by viewModel.isOnline.collectAsState()
     val gammes              by viewModel.gammes.collectAsState()
     val gammesSelectionnees by viewModel.gammesSelectionnees.collectAsState()
@@ -107,144 +111,216 @@ fun TypeOperationScreen(
     }
 
     BaseScreen(
-        title             = "Type d’opération",
-        navController     = navController,
-        viewModel         = viewModel,
-        showBack          = true,
-        showLogout        = false,
-        connectionStatus  = isConnected
+        title            = "Type d’opération",
+        navController    = navController,
+        viewModel        = viewModel,
+        showBack         = true,
+        showLogout       = false,
+        connectionStatus = isConnected
     ) { padding ->
         Box(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            Row(Modifier.fillMaxSize()) {
-                // ---- Gauche : Sélection ----
-                LazyColumn(
-                    modifier           = Modifier
-                        .weight(1f)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    item {
-                        Text(
-                            "Sélectionnez vos gammes",
-                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+            if (isPortrait) {
+                // Portrait: détails en dessous
+                Column(Modifier.fillMaxSize()) {
+                    SelectionColumn(
+                        gammes,
+                        gammesSelectionnees,
+                        current,
+                        desired,
+                        isLoading,
+                        loadError,
+                        viewModel,
+                        context,
+                        scope
+                    )
+                    DetailsColumn(
+                        current,
+                        desired,
+                        role,
+                        navController,
+                        viewModel,
+                        snackbarHost,
+                        zone,
+                        intervention,
+                        scope
+                    )
+                }
+            } else {
+                // Paysage: deux colonnes
+                Row(Modifier.fillMaxSize()) {
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .padding(16.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        SelectionColumn(
+                            gammes,
+                            gammesSelectionnees,
+                            current,
+                            desired,
+                            isLoading,
+                            loadError,
+                            viewModel,
+                            context,
+                            scope
                         )
                     }
-                    if (isLoading) {
-                        item {
-                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
-                            }
-                        }
-                    } else if (loadError != null) {
-                        item {
-                            Column(
-                                Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(loadError!!, color = Color.Red)
-                                Spacer(Modifier.height(12.dp))
-                                Button(onClick = {
-                                    scope.launch {
-                                        isLoading = true; loadError = null
-                                        try {
-                                            viewModel.chargerGammesDepuisApi(context)
-                                        } catch (e: Exception) {
-                                            loadError = "Erreur de chargement : ${e.message}"
-                                        } finally {
-                                            isLoading = false
-                                        }
-                                    }
-                                }) {
-                                    Text("Réessayer")
-                                }
-                            }
-                        }
-                    } else {
-                        val visibles = gammes.filter { gammesSelectionnees.contains(it.codeTreillis) }
-                        item {
-                            GammeGrid(
-                                title    = "GAMME ACTUELLE",
-                                gammes   = visibles,
-                                selected = current,
-                                onSelect = viewModel::selectCurrentGamme,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 100.dp, max = 300.dp)
-                            )
-                        }
-                        item {
-                            GammeGrid(
-                                title    = "GAMME VISÉE",
-                                gammes   = visibles,
-                                selected = desired,
-                                onSelect = viewModel::selectDesiredGamme,
-                                restrict = current,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 100.dp, max = 300.dp)
-                            )
-                        }
-                    }
-                }
-
-                // ---- Droite : Détails & Actions ----
-                Column(
-                    modifier            = Modifier
-                        .weight(1f)
-                        .padding(16.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    DetailsCard("Gamme actuelle", current)
-                    DetailsCard("Gamme visée", desired)
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .padding(16.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        ElevatedButton(
-                            onClick  = { navController.popBackStack() },
-                            modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
-                        ) {
-                            Icon(Icons.Default.WbSunny, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Retour")
-                        }
-                        if (role == "ADMIN") {
-                            ElevatedButton(
-                                onClick  = { navController.navigate(Routes.TypeOperationParametres) },
-                                modifier = Modifier.defaultMinSize(minWidth = 160.dp, minHeight = 56.dp)
-                            ) {
-                                Icon(Icons.Default.Settings, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Paramètres")
-                            }
-                        }
-                        ElevatedButton(
-                            onClick  = {
-                                viewModel.validateGammeChange { _, msg ->
-                                    scope.launch { snackbarHost.showSnackbar(msg) }
-                                }
-                            },
-                            enabled  = current != null && desired != null,
-                            modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
-                        ) {
-                            Icon(Icons.Default.Check, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Valider")
-                        }
+                        DetailsColumn(
+                            current,
+                            desired,
+                            role,
+                            navController,
+                            viewModel,
+                            snackbarHost,
+                            zone,
+                            intervention,
+                            scope
+                        )
                     }
-                    Footer(zone, intervention)
                 }
             }
 
             SnackbarHost(hostState = snackbarHost, modifier = Modifier.align(Alignment.BottomCenter))
         }
     }
+}
+
+@Composable
+private fun SelectionColumn(
+    gammes: List<Gamme>,
+    selectedCodes: Set<String>,
+    current: Gamme?,
+    desired: Gamme?,
+    isLoading: Boolean,
+    loadError: String?,
+    viewModel: SelectionViewModel,
+    context: android.content.Context,
+    scope: CoroutineScope
+) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item {
+            Text(
+                "Sélectionnez vos gammes",
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+            )
+        }
+        if (isLoading) {
+            item {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+        } else if (loadError != null) {
+            item {
+                Column(
+                    Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(loadError!!, color = Color.Red)
+                    Spacer(Modifier.height(12.dp))
+                    Button(onClick = {
+                        scope.launch {
+                            viewModel.chargerGammesDepuisApi(context)
+                        }
+                    }) {
+                        Text("Réessayer")
+                    }
+                }
+            }
+        } else {
+            val visibles = gammes.filter { selectedCodes.contains(it.codeTreillis) }
+            item {
+                GammeGrid(
+                    title    = "GAMME ACTUELLE",
+                    gammes   = visibles,
+                    selected = current,
+                    onSelect = viewModel::selectCurrentGamme,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp, max = 300.dp)
+                )
+            }
+            item {
+                GammeGrid(
+                    title    = "GAMME VISÉE",
+                    gammes   = visibles,
+                    selected = desired,
+                    onSelect = viewModel::selectDesiredGamme,
+                    restrict = current,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp, max = 300.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailsColumn(
+    current: Gamme?,
+    desired: Gamme?,
+    role: String,
+    navController: NavController,
+    viewModel: SelectionViewModel,
+    snackbarHost: SnackbarHostState,
+    zone: String,
+    intervention: String,
+    scope: CoroutineScope
+) {
+    DetailsCard("Gamme actuelle", current)
+    DetailsCard("Gamme visée", desired)
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        ElevatedButton(
+            onClick  = { navController.popBackStack() },
+            modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
+        ) {
+            Icon(Icons.Default.WbSunny, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Retour")
+        }
+        if (role == "ADMIN") {
+            ElevatedButton(
+                onClick  = { navController.navigate(Routes.TypeOperationParametres) },
+                modifier = Modifier.defaultMinSize(minWidth = 160.dp, minHeight = 56.dp)
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Paramètres")
+            }
+        }
+        ElevatedButton(
+            onClick  = {
+                viewModel.validateGammeChange { _, msg ->
+                    scope.launch { snackbarHost.showSnackbar(msg) }
+                }
+            },
+            enabled  = current != null && desired != null,
+            modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
+        ) {
+            Icon(Icons.Default.Check, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Valider")
+        }
+    }
+    Footer(zone, intervention)
 }
 
 @Composable
