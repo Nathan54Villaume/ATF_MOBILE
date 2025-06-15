@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.riva.atsmobile.model.Gamme
+import com.riva.atsmobile.navigation.Routes
 import com.riva.atsmobile.ui.shared.BaseScreen
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 import kotlinx.coroutines.launch
@@ -52,11 +54,11 @@ fun TypeOperationScreen(
     val desired      by viewModel.desiredGamme.collectAsState()
     val zone         by viewModel.zoneDeTravail.collectAsState()
     val intervention by viewModel.intervention.collectAsState()
+    val role         by viewModel.role.collectAsState()
 
     var isLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
 
-    // Chargement automatique des gammes depuis API au démarrage
     LaunchedEffect(Unit) {
         isLoading = true
         loadError = null
@@ -96,19 +98,12 @@ fun TypeOperationScreen(
 
                 when {
                     isLoading -> {
-                        Box(
-                            Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
                     }
-
                     loadError != null -> {
-                        Box(
-                            Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(loadError!!, color = Color.Red)
                                 Spacer(Modifier.height(12.dp))
@@ -130,34 +125,14 @@ fun TypeOperationScreen(
                             }
                         }
                     }
-
-                    gammes.isNullOrEmpty().not() -> {
-                        GammeGrid(
-                            title    = "GAMME ACTUELLE",
-                            gammes   = gammes,
-                            selected = current,
-                            onSelect = viewModel::selectCurrentGamme,
-                            modifier = Modifier.weight(1f)
-                        )
+                    gammes.isNotEmpty() -> {
+                        GammeGrid("GAMME ACTUELLE", gammes, current, viewModel::selectCurrentGamme, modifier = Modifier.weight(1f))
                         Spacer(Modifier.height(16.dp))
-                        GammeGrid(
-                            title    = "GAMME VISÉE",
-                            gammes   = gammes,
-                            selected = desired,
-                            onSelect = viewModel::selectDesiredGamme,
-                            restrict = current,
-                            modifier = Modifier.weight(1f)
-                        )
+                        GammeGrid("GAMME VISÉE", gammes, desired, viewModel::selectDesiredGamme, restrict = current, modifier = Modifier.weight(1f))
                         Spacer(Modifier.height(24.dp))
                     }
-
                     else -> {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                             Text("Aucune gamme trouvée.", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
@@ -171,23 +146,38 @@ fun TypeOperationScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     ElevatedButton(
-                        onClick  = { navController.popBackStack() },
-                        shape    = RoundedCornerShape(50),
-                        modifier = Modifier.width(140.dp)
+                        onClick = { navController.popBackStack() },
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.width(120.dp)
                     ) {
                         Icon(Icons.Default.WbSunny, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text("Retour")
                     }
+
+                    if (role == "ADMIN") {
+                        ElevatedButton(
+                            onClick = {
+                                navController.navigate(Routes.TypeOperationParametres)
+                            },
+                            shape = RoundedCornerShape(50),
+                            modifier = Modifier.width(140.dp)
+                        ) {
+                            Icon(Icons.Default.Settings, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Paramètres")
+                        }
+                    }
+
                     ElevatedButton(
-                        onClick  = {
+                        onClick = {
                             viewModel.validateGammeChange { _, msg ->
                                 scope.launch { snackbarHost.showSnackbar(msg) }
                             }
                         },
-                        enabled  = current != null && desired != null,
-                        shape    = RoundedCornerShape(50),
-                        modifier = Modifier.width(140.dp)
+                        enabled = current != null && desired != null,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.width(120.dp)
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
@@ -200,14 +190,11 @@ fun TypeOperationScreen(
 
             SnackbarHost(
                 hostState = snackbarHost,
-                modifier  = Modifier.align(Alignment.BottomCenter)
+                modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
     }
 }
-
-// Le reste du fichier (GammeGrid, DetailsRow, Footer) reste inchangé
-
 
 @Composable
 private fun GammeGrid(
@@ -219,7 +206,7 @@ private fun GammeGrid(
     modifier: Modifier = Modifier
 ) {
     Column(modifier) {
-        Text(title.safeText(), style = MaterialTheme.typography.titleMedium)
+        Text(title, style = MaterialTheme.typography.titleMedium)
         LazyVerticalGrid(
             columns               = GridCells.Fixed(3),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -265,11 +252,10 @@ private fun GammeGrid(
                         .padding(vertical = 8.dp, horizontal = 4.dp)
                 ) {
                     Text(
-                        text       = gamme.designation ?: "",
+                        gamme.designation.safeText(),
                         color      = txtColor,
                         fontWeight = fw,
-                        style      = MaterialTheme.typography.bodyMedium,
-                        maxLines   = 1
+                        style      = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
@@ -283,17 +269,17 @@ private fun DetailsRow(current: Gamme?, desired: Gamme?) {
         current?.let {
             Column {
                 Text("Actuelle : ${it.designation.safeText()}", fontWeight = FontWeight.SemiBold)
-                Text("Maille           : ${it.dimension.safeText()} mm")
-                Text("Chaîne/Trame     : ${it.diamChaineTrame.safeText()}")
-                Text("Esp. fil/chaîne  : ${it.espFilChaineTrame.safeText()} mm")
+                Text("Maille           : ${it.dimension} mm")
+                Text("Chaîne/Trame     : ${it.diamChaineTrame}")
+                Text("Esp. fil/chaîne  : ${it.espFilChaineTrame} mm")
             }
         }
         desired?.let {
             Column(horizontalAlignment = Alignment.End) {
                 Text("Souhait : ${it.designation.safeText()}", fontWeight = FontWeight.SemiBold)
-                Text("Maille           : ${it.dimension.safeText()} mm")
-                Text("Chaîne/Trame     : ${it.diamChaineTrame.safeText()}")
-                Text("Esp. fil/chaîne  : ${it.espFilChaineTrame.safeText()} mm")
+                Text("Maille           : ${it.dimension} mm")
+                Text("Chaîne/Trame     : ${it.diamChaineTrame}")
+                Text("Esp. fil/chaîne  : ${it.espFilChaineTrame} mm")
             }
         }
     }
@@ -308,7 +294,7 @@ private fun Footer(zone: String, intervention: String) {
             .padding(top = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text("Zone : ${zone.safeText()}  |  Interv. : ${intervention.safeText()}", style = MaterialTheme.typography.bodySmall)
+        Text("Zone : $zone  |  Interv. : $intervention", style = MaterialTheme.typography.bodySmall)
         Text(now, style = MaterialTheme.typography.bodySmall)
     }
 }

@@ -8,5 +8,6 @@ object Routes {
     const val ChangePassword = "change_password"
     const val ChangementGamme = "changement_gamme"
     const val TypeOperation = "type_operation"
+    const val TypeOperationParametres = "typeoperation_parametres"
 
 }

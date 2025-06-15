@@ -8,12 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.riva.atsmobile.ui.screens.ChangePasswordScreen
-import com.riva.atsmobile.ui.screens.ChangementGammeScreen
-import com.riva.atsmobile.ui.screens.HomeScreen
-import com.riva.atsmobile.ui.screens.LoginScreen
-import com.riva.atsmobile.ui.screens.ParametresScreen
-import com.riva.atsmobile.ui.screens.TypeOperationScreen
+import com.riva.atsmobile.ui.screens.*
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 
 @Composable
@@ -68,6 +63,11 @@ fun ATSMobileNavHost(
             }
         }
 
+        composable(Routes.TypeOperationParametres) {
+            requireRoleOrDev(role, devMode, navController) {
+                TypeOperationParamScreen(viewModel, navController)
+            }
+        }
     }
 }
 
