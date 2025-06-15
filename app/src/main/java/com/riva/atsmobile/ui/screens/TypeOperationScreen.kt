@@ -257,10 +257,11 @@ private fun GammeGrid(
                         .padding(vertical = 8.dp, horizontal = 4.dp)
                 ) {
                     Text(
-                        gamme.designation.safeText(),
+                        text       = gamme.designation.safeText().take(16),
                         color      = txtColor,
                         fontWeight = fw,
-                        style      = MaterialTheme.typography.bodyMedium
+                        style      = MaterialTheme.typography.bodyMedium,
+                        maxLines   = 1
                     )
                 }
             }
