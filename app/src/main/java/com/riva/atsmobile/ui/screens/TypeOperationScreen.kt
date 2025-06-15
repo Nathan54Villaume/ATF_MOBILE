@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
@@ -76,10 +78,11 @@ fun TypeOperationScreen(
     val context       = LocalContext.current
     val scope         = rememberCoroutineScope()
     val snackbarHost  = remember { SnackbarHostState() }
+    val scrollState   = rememberScrollState()
 
     val isConnected            by viewModel.isOnline.collectAsState()
     val gammes                 by viewModel.gammes.collectAsState()
-    val gammesSelectionnees     by viewModel.gammesSelectionnees.collectAsState()
+    val gammesSelectionnees    by viewModel.gammesSelectionnees.collectAsState()
     val current                by viewModel.currentGamme.collectAsState()
     val desired                by viewModel.desiredGamme.collectAsState()
     val zone                   by viewModel.zoneDeTravail.collectAsState()
@@ -116,7 +119,11 @@ fun TypeOperationScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            Column(Modifier.fillMaxSize()) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+            ) {
                 Text(
                     "Sélectionnez vos gammes",
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
@@ -153,7 +160,8 @@ fun TypeOperationScreen(
                             gammes = visibles,
                             selected = current,
                             onSelect = viewModel::selectCurrentGamme,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .fillMaxWidth()
                         )
                         Spacer(Modifier.height(16.dp))
                         GammeGrid(
@@ -162,14 +170,14 @@ fun TypeOperationScreen(
                             selected = desired,
                             onSelect = viewModel::selectDesiredGamme,
                             restrict = current,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .fillMaxWidth()
                         )
                         Spacer(Modifier.height(24.dp))
                     }
                     else -> Box(
                         Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
+                            .fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text("Aucune gamme trouvée.", style = MaterialTheme.typography.bodyMedium)
@@ -292,7 +300,9 @@ private fun GammeGrid(
             columns = GridCells.Fixed(3),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 100.dp)
         ) {
             items(gammes) { gamme ->
                 val disabled = restrict != null && gamme == restrict
