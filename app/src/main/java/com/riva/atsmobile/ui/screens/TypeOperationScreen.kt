@@ -318,7 +318,9 @@ fun DetailsColumn(
         contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxHeight(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -376,7 +378,7 @@ fun DetailsColumn(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            //Spacer(modifier = Modifier.height(24.dp))
 
             //ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
             //Footer(zone, intervention)
