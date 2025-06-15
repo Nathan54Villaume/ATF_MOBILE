@@ -219,6 +219,7 @@ fun TypeOperationScreen(
 /* Les autres Composables (SelectionColumn, ActionRow, DetailsCard, GammeGrid, Footer) restent inchangés */
 
 
+
 @Composable
 private fun SelectionColumn(
     gammes: List<Gamme>,
