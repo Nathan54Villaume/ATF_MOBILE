@@ -94,8 +94,8 @@ fun getImageForGamme(designation: String): GammeLogos {
 fun TransitionArrow(
     isPortrait: Boolean,
     modifier: Modifier = Modifier,
-    width: Dp = 60.dp,    // ← largeur par défaut
-    height: Dp = 60.dp    // ← hauteur par défaut
+    width: Dp = 60.dp,
+    height: Dp = 60.dp
 ) {
     val infiniteTransition = rememberInfiniteTransition()
     val offsetFloat by infiniteTransition.animateFloat(
@@ -106,7 +106,8 @@ fun TransitionArrow(
         )
     )
     val offset = offsetFloat.dp
-    val icon = if (isPortrait) Icons.Default.ArrowDownward else Icons.Default.ArrowForward
+    // Toujours flèche vers le bas, quel que soit isPortrait
+    val icon = Icons.Default.ArrowDownward
 
     Icon(
         imageVector = icon,
@@ -116,11 +117,12 @@ fun TransitionArrow(
                 x = if (!isPortrait) offset else 0.dp,
                 y = if (isPortrait) offset else 0.dp
             )
-            .size(width, height)          // ← appel correct de size()
+            .size(width, height)
             .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
             .padding(4.dp)
     )
 }
+
 
 
 
