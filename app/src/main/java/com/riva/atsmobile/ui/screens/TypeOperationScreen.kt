@@ -176,10 +176,10 @@ fun DetailsCard(title: String, gamme: Gamme?) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                logos.principale?.let { Image(painterResource(it), null, Modifier.size(80.dp)) }
-                logos.chaines?.let { Image(painterResource(it), null, Modifier.size(60.dp)) }
-                logos.dimension?.let { Image(painterResource(it), null, Modifier.size(60.dp)) }
-                logos.diametre?.let { Image(painterResource(it), null, Modifier.size(60.dp)) }
+                logos.principale?.let { Image(painterResource(it), null, Modifier.size(150.dp)) }
+                logos.chaines?.let { Image(painterResource(it), null, Modifier.size(120.dp)) }
+                logos.dimension?.let { Image(painterResource(it), null, Modifier.size(120.dp)) }
+                logos.diametre?.let { Image(painterResource(it), null, Modifier.size(120.dp)) }
             }
         }
     }
