@@ -49,6 +49,10 @@ fun getImageForGamme(designation: String): Int? = when(designation.trim().upperc
     "PAF R"  -> R.drawable.pafr
     "PAF V"  -> R.drawable.pafv
     "ST 15 C"  -> R.drawable.st15c
+    "ST 20"  -> R.drawable.st20
+    "ST 25"  -> R.drawable.st25
+    "ST 25 C"  -> R.drawable.st25c
+
     else       -> null
 }
 
