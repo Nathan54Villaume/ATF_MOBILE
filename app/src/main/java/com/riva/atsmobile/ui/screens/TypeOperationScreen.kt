@@ -456,8 +456,26 @@ private fun SelectionColumn(
                     restrict = null,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp)
+                        .heightIn(min = 100.dp, max = 300.dp),
+
+                    // ✨ Personnalisation
+                    titleStyle = TextStyle(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFFFC107), // orange vif
+                        fontFamily = FontFamily.Serif
+                    ),
+                    cardShape = RoundedCornerShape(16.dp),
+                    selectedColor = Color.Cyan,                   // texte/bordure sélectionnée
+                    selectedBgColor = Color(0xFF004D40),          // fond sélectionné
+                    defaultBgColor = Color(0xFF1C1C1C),           // fond par défaut
+                    defaultColor = Color.White,                   // texte par défaut
+                    disabledBgColor = Color(0xFF424242),          // fond désactivé
+                    disabledColor = Color.LightGray,              // bordure désactivée
+                    cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
                 )
+
+
             }
             item { }
             item {
@@ -469,8 +487,25 @@ private fun SelectionColumn(
                     restrict = current,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp)
+                        .heightIn(min = 100.dp, max = 300.dp),
+
+                    // ✨ Personnalisation
+                    titleStyle = TextStyle(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFF9800),
+                        fontFamily = FontFamily.Serif
+                    ),
+                    cardShape = RoundedCornerShape(16.dp),
+                    selectedColor = Color(0xFF4CAF50),           // Vert
+                    selectedBgColor = Color(0xFF1B5E20),         // Vert foncé (fond)
+                    defaultBgColor = Color(0xFF2C2C2C),          // fond normal
+                    defaultColor = Color(0xFFE0E0E0),            // texte normal
+                    disabledBgColor = Color(0xFF424242),         // fond désactivé
+                    disabledColor = Color(0xFF888888),           // bordures désactivées
+                    cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
                 )
+
             }
         }
     }
