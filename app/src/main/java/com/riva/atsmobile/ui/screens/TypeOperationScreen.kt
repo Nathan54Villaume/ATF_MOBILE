@@ -45,6 +45,7 @@ fun String?.safeText(): String = this?.trim().takeIf { !it.isNullOrEmpty() } ?: 
 // Map designation to drawable resource
 fun getImageForGamme(designation: String): Int? = when(designation.trim().uppercase()) {
     "PAF 10"  -> R.drawable.paf10
+    "PAF C"  -> R.drawable.pafc
 
 
     else       -> null
