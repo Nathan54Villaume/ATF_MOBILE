@@ -1,31 +1,25 @@
 package com.riva.atsmobile.model
 
+import com.google.gson.annotations.SerializedName
+
 /**
- * Data class representing the TreillisDto returned by the API.
+ * Data class représentant le TreillisDto retourné par l’API.
  */
 data class Gamme(
-    val designation: String,
-    val codeTreillis: String,
-    val codeProduit: String,
-    val cpElingues: String,
-    val nuance: String,
-    val diamChaine: Double,
-    val diamTrame: Double,
-    /** Avant/Arrière (ex. "AV", "AR") */
-    val aboutAVAR: String,
-    /** Ad/Ag (ex. "AD", "AG") */
-    val aboutAdAg: String,
-    /** Diamètre Chaîne/Trame combiné (ex. "4x5 mm") */
-    val diamChaineTrame: String,
-    /** Maille (ex. "10x10 mm") */
-    val dimension: String,
-    /** Espacement fil-chaîne/trame en mm */
-    val espFilChaineTrame: String,
-    val norme: String,
-    val colissage: String,
-    val massePanneau: Double,
-    val massePaquet: Double,
-    /** Horodatage au format ISO8601, parsé côté UI si besoin */
-    val horoMaj: String,
-    val valid: Boolean
+    @SerializedName("Designation") val designation: String,
+    @SerializedName("Code_Treillis") val codeTreillis: String,
+    @SerializedName("Code_Produit") val codeProduit: String,
+    @SerializedName("CP_Elingues") val cpElingues: String,
+    @SerializedName("Nuance") val nuance: String,
+    @SerializedName("DIAM_Chaine") val diamChaine: Double,
+    @SerializedName("diam_Trame") val diamTrame: Double,
+    @SerializedName("Diam_Chaine_Trame") val diamChaineTrame: String,
+    @SerializedName("Dimension") val dimension: String,
+    @SerializedName("EspFil_Chaine_Trame") val espFilChaineTrame: String,
+    @SerializedName("Norme") val norme: String,
+    @SerializedName("Colissage") val colissage: String,
+    @SerializedName("Masse_panneau") val massePanneau: Double,
+    @SerializedName("Masse_paquet") val massePaquet: Double,
+    @SerializedName("Horo_maj") val horoMaj: String,
+    @SerializedName("Valid") val valid: Boolean
 )
