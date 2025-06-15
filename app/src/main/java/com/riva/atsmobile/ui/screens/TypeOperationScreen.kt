@@ -16,7 +16,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
@@ -50,7 +53,7 @@ data class GammeLogos(val principale: Int?, val chaines: Int?)
 // Retourne à la fois le logo de la gamme et, si pertinent, le logo “chaines”
 fun getImageForGamme(designation: String): GammeLogos {
     val key = designation.trim().uppercase()
-    val principale = when(key) {
+    val principale = when (key) {
         "PAF 10"  -> R.drawable.paf10
         "PAF C"   -> R.drawable.pafc
         "PAF R"   -> R.drawable.pafr
@@ -61,7 +64,7 @@ fun getImageForGamme(designation: String): GammeLogos {
         "ST 25 C" -> R.drawable.st25c
         else      -> null
     }
-    val chaines = when(key) {
+    val chaines = when (key) {
         "ST 20", "ST 25", "ST 25 C" -> R.drawable.chaines16
         "PAF 10", "PAF C", "PAF R", "PAF V", "ST 15 C" -> R.drawable.chaines12
         else -> null
@@ -92,8 +95,7 @@ fun TypeOperationScreen(
     var loadError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        isLoading = true
-        loadError = null
+        isLoading = true; loadError = null
         try {
             viewModel.chargerGammesDepuisApi(context)
             Log.d("GAMMES", "Nombre de gammes reçues : ${viewModel.gammes.value.size}")
@@ -105,46 +107,25 @@ fun TypeOperationScreen(
     }
 
     BaseScreen(
-        title = "Type d’opération",
-        navController = navController,
-        viewModel = viewModel,
-        showBack = true,
-        showLogout = false,
-        connectionStatus = isConnected
+        title             = "Type d’opération",
+        navController     = navController,
+        viewModel         = viewModel,
+        showBack          = true,
+        showLogout        = false,
+        connectionStatus  = isConnected
     ) { padding ->
         Box(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
         ) {
-            when {
-                isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-                loadError != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(loadError!!, color = Color.Red)
-                        Spacer(Modifier.height(12.dp))
-                        Button(onClick = {
-                            scope.launch {
-                                isLoading = true
-                                loadError = null
-                                try {
-                                    viewModel.chargerGammesDepuisApi(context)
-                                } catch (e: Exception) {
-                                    loadError = "Erreur de chargement : ${e.message}"
-                                } finally {
-                                    isLoading = false
-                                }
-                            }
-                        }) { Text("Réessayer") }
-                    }
-                }
-                else -> LazyColumn(
-                    Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+            Row(Modifier.fillMaxSize()) {
+                // ---- Gauche : Sélection ----
+                LazyColumn(
+                    modifier           = Modifier
+                        .weight(1f)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {
                         Text(
@@ -152,81 +133,112 @@ fun TypeOperationScreen(
                             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
                         )
                     }
-                    item {
-                        val visibles = gammes.filter { gammesSelectionnees.contains(it.codeTreillis) }
-                        GammeGrid(
-                            title = "GAMME ACTUELLE",
-                            gammes = visibles,
-                            selected = current,
-                            onSelect = viewModel::selectCurrentGamme,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 100.dp, max = 300.dp)
-                        )
-                    }
-                    item {
-                        val visibles = gammes.filter { gammesSelectionnees.contains(it.codeTreillis) }
-                        GammeGrid(
-                            title = "GAMME VISÉE",
-                            gammes = visibles,
-                            selected = desired,
-                            onSelect = viewModel::selectDesiredGamme,
-                            restrict = current,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 100.dp, max = 300.dp)
-                        )
-                    }
-                    item {
-                        DetailsCard("Gamme actuelle", current)
-                    }
-                    item {
-                        DetailsCard("Gamme visée", desired)
-                    }
-                    item {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            ElevatedButton(
-                                onClick = { navController.popBackStack() },
-                                shape = RoundedCornerShape(50),
-                                modifier = Modifier.width(120.dp)
-                            ) {
-                                Icon(Icons.Default.WbSunny, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Retour")
-                            }
-                            if (role == "ADMIN") {
-                                ElevatedButton(
-                                    onClick = { navController.navigate(Routes.TypeOperationParametres) },
-                                    shape = RoundedCornerShape(50),
-                                    modifier = Modifier.width(140.dp)
-                                ) {
-                                    Icon(Icons.Default.Settings, contentDescription = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Paramètres")
-                                }
-                            }
-                            ElevatedButton(
-                                onClick = {
-                                    viewModel.validateGammeChange { _, msg ->
-                                        scope.launch { snackbarHost.showSnackbar(msg) }
-                                    }
-                                },
-                                enabled = current != null && desired != null,
-                                shape = RoundedCornerShape(50),
-                                modifier = Modifier.width(120.dp)
-                            ) {
-                                Icon(Icons.Default.Check, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Valider")
+                    if (isLoading) {
+                        item {
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
                             }
                         }
+                    } else if (loadError != null) {
+                        item {
+                            Column(
+                                Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(loadError!!, color = Color.Red)
+                                Spacer(Modifier.height(12.dp))
+                                Button(onClick = {
+                                    scope.launch {
+                                        isLoading = true; loadError = null
+                                        try {
+                                            viewModel.chargerGammesDepuisApi(context)
+                                        } catch (e: Exception) {
+                                            loadError = "Erreur de chargement : ${e.message}"
+                                        } finally {
+                                            isLoading = false
+                                        }
+                                    }
+                                }) {
+                                    Text("Réessayer")
+                                }
+                            }
+                        }
+                    } else {
+                        val visibles = gammes.filter { gammesSelectionnees.contains(it.codeTreillis) }
+                        item {
+                            GammeGrid(
+                                title    = "GAMME ACTUELLE",
+                                gammes   = visibles,
+                                selected = current,
+                                onSelect = viewModel::selectCurrentGamme,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 100.dp, max = 300.dp)
+                            )
+                        }
+                        item {
+                            GammeGrid(
+                                title    = "GAMME VISÉE",
+                                gammes   = visibles,
+                                selected = desired,
+                                onSelect = viewModel::selectDesiredGamme,
+                                restrict = current,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 100.dp, max = 300.dp)
+                            )
+                        }
                     }
-                    item {
-                        Footer(zone, intervention)
+                }
+
+                // ---- Droite : Détails & Actions ----
+                Column(
+                    modifier            = Modifier
+                        .weight(1f)
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    DetailsCard("Gamme actuelle", current)
+                    DetailsCard("Gamme visée", desired)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        ElevatedButton(
+                            onClick  = { navController.popBackStack() },
+                            modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
+                        ) {
+                            Icon(Icons.Default.WbSunny, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Retour")
+                        }
+                        if (role == "ADMIN") {
+                            ElevatedButton(
+                                onClick  = { navController.navigate(Routes.TypeOperationParametres) },
+                                modifier = Modifier.defaultMinSize(minWidth = 160.dp, minHeight = 56.dp)
+                            ) {
+                                Icon(Icons.Default.Settings, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Paramètres")
+                            }
+                        }
+                        ElevatedButton(
+                            onClick  = {
+                                viewModel.validateGammeChange { _, msg ->
+                                    scope.launch { snackbarHost.showSnackbar(msg) }
+                                }
+                            },
+                            enabled  = current != null && desired != null,
+                            modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Valider")
+                        }
                     }
+                    Footer(zone, intervention)
                 }
             }
 
@@ -240,12 +252,10 @@ private fun DetailsCard(title: String, gamme: Gamme?) {
     val logos = getImageForGamme(gamme?.designation ?: "")
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        colors   = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
+        modifier = Modifier.fillMaxWidth(),
+        shape    = RoundedCornerShape(20.dp),
+        elevation= CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Row(
             Modifier
@@ -266,17 +276,17 @@ private fun DetailsCard(title: String, gamme: Gamme?) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 logos.principale?.let { res ->
                     Image(
-                        painter = painterResource(res),
+                        painter            = painterResource(res),
                         contentDescription = "Logo $title",
-                        modifier = Modifier.size(200.dp)
+                        modifier           = Modifier.size(200.dp)
                     )
                 }
                 logos.chaines?.let { res ->
                     Spacer(Modifier.width(8.dp))
                     Image(
-                        painter = painterResource(res),
+                        painter            = painterResource(res),
                         contentDescription = "Logo chaines",
-                        modifier = Modifier.size(150.dp)
+                        modifier           = Modifier.size(150.dp)
                     )
                 }
             }
@@ -296,35 +306,37 @@ private fun GammeGrid(
     Column(modifier) {
         Text(title, style = MaterialTheme.typography.titleMedium)
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = modifier
+            columns              = GridCells.Fixed(3),
+            horizontalArrangement= Arrangement.spacedBy(8.dp),
+            verticalArrangement  = Arrangement.spacedBy(8.dp),
+            modifier             = modifier
         ) {
             items(gammes) { gamme ->
                 val disabled = restrict != null && gamme == restrict
                 val borderColor by animateColorAsState(
                     when {
-                        disabled -> Color.LightGray
+                        disabled          -> Color.LightGray
                         gamme == selected -> MaterialTheme.colorScheme.primary
-                        else -> Color.Gray
-                    }, animationSpec = tween(500, easing = FastOutSlowInEasing)
+                        else              -> Color.Gray
+                    },
+                    animationSpec = tween(500, easing = FastOutSlowInEasing)
                 )
                 val bgColor by animateColorAsState(
                     when {
-                        disabled -> Color(0xFF2E2E2E)
+                        disabled          -> Color(0xFF2E2E2E)
                         gamme == selected -> MaterialTheme.colorScheme.primary.copy(alpha = .1f)
-                        else -> Color(0xFF1E1E1E)
-                    }, animationSpec = tween(500)
+                        else              -> Color(0xFF1E1E1E)
+                    },
+                    animationSpec = tween(500)
                 )
                 val txtColor = when {
-                    disabled -> Color.LightGray
+                    disabled          -> Color.LightGray
                     gamme == selected -> MaterialTheme.colorScheme.primary
-                    else -> Color.White
+                    else              -> Color.White
                 }
                 val fw = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
                 val scale by animateFloatAsState(
-                    targetValue = if (gamme == selected) 1.05f else 1f,
+                    targetValue   = if (gamme == selected) 1.05f else 1f,
                     animationSpec = tween(300)
                 )
 
@@ -339,9 +351,9 @@ private fun GammeGrid(
                 ) {
                     Text(
                         gamme.designation.safeText(),
-                        color = txtColor,
+                        color      = txtColor,
                         fontWeight = fw,
-                        style = MaterialTheme.typography.bodyMedium
+                        style      = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
