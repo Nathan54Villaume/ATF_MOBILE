@@ -144,6 +144,12 @@ fun TransitionArrow(
 @Composable
 fun DetailsCard(title: String, gamme: Gamme?) {
     val logos = getImageForGamme(gamme)
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+
+    // Dimensions adaptées
+    val mainSize = if (isPortrait) 150.dp else 75.dp
+    val secondarySize = if (isPortrait) 120.dp else 60.dp
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
@@ -176,10 +182,10 @@ fun DetailsCard(title: String, gamme: Gamme?) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                logos.principale?.let { Image(painterResource(it), null, Modifier.size(150.dp)) }
-                logos.chaines?.let { Image(painterResource(it), null, Modifier.size(120.dp)) }
-                logos.dimension?.let { Image(painterResource(it), null, Modifier.size(120.dp)) }
-                logos.diametre?.let { Image(painterResource(it), null, Modifier.size(120.dp)) }
+                logos.principale?.let { Image(painterResource(it), null, Modifier.size(mainSize)) }
+                logos.chaines?.let { Image(painterResource(it), null, Modifier.size(secondarySize)) }
+                logos.dimension?.let { Image(painterResource(it), null, Modifier.size(secondarySize)) }
+                logos.diametre?.let { Image(painterResource(it), null, Modifier.size(secondarySize)) }
             }
         }
     }
