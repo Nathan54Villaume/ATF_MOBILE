@@ -116,11 +116,12 @@ fun TransitionArrow(
                 x = if (!isPortrait) offset else 0.dp,
                 y = if (isPortrait) offset else 0.dp
             )
-            .size(width = width, height = height)   // ← on applique largeur et hauteur
+            .size(width, height)          // ← appel correct de size()
             .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
             .padding(4.dp)
     )
 }
+
 
 
 
