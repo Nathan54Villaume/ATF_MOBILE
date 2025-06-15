@@ -184,9 +184,9 @@ fun TypeOperationScreen(
                         // Première carte avec logos
                         DetailsCard("Gamme actuelle", current)
                         // Flèche dynamiquement positionnée entre les logos
-                        Spacer(Modifier.height(2.dp))
+
                         TransitionArrow(isPortrait)
-                        Spacer(Modifier.height(2.dp))
+
                         // Deuxième carte avec logos
                         DetailsCard("Gamme visée", desired)
                         // Actions et footer
