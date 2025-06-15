@@ -433,133 +433,96 @@ fun TypeOperationScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            val selection = @Composable {
-                SelectionColumn(
-                    gammes = gammes,
-                    selectedCodes = gammesSelectionnees,
-                    current = current,
-                    desired = desired,
-                    isLoading = isLoading,
-                    loadError = loadError,
-                    viewModel = viewModel,
-                    context = context,
-                    scope = scope,
-                    isPortrait = isPortrait
-                )
-            }
-
-            val details = @Composable {
-                var topY by remember { mutableStateOf(0f) }
-                var topHeight by remember { mutableStateOf(0f) }
-                var bottomY by remember { mutableStateOf(0f) }
-                val density = LocalDensity.current
-                val arrowOffsetDp by remember(topY, topHeight, bottomY) {
-                    derivedStateOf {
-                        val midPx = (topY + topHeight + bottomY) / 2f
-                        with(density) { midPx.toDp() - 1.dp }
-                    }
-                }
-
-                Box(Modifier.fillMaxSize()) {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
-                            Modifier.onGloballyPositioned {
-                                topY = it.positionInParent().y
-                                topHeight = it.size.height.toFloat()
-                            }
-                        ) {
-                            Column {
-                                Text(
-                                    text = "GAMME ACTUELLE",
-                                    style = TextStyle(
-                                        color = Color(0xFFFF9800),
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = FontFamily.Serif
-                                    )
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                DetailsCard(
-                                    gamme = current,
-                                    detailStyle = TextStyle(
-                                        color = Color(0xFFEEEEEE),
-                                        fontSize = 20.sp,
-                                        fontFamily = FontFamily.SansSerif
-                                    ),
-                                    noSelectionStyle = TextStyle(
-                                        color = Color.Red,
-                                        fontSize = 20.sp,
-                                        fontStyle = FontStyle.Italic
-                                    )
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(16.dp))
-
-                        Box(
-                            Modifier.onGloballyPositioned {
-                                bottomY = it.positionInParent().y
-                            }
-                        ) {
-                            Column {
-                                Text(
-                                    text = "GAMME VISÉE",
-                                    style = TextStyle(
-                                        color = Color(0xFFFF9800),
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = FontFamily.Serif
-                                    )
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                DetailsCard(
-                                    gamme = desired,
-                                    detailStyle = TextStyle(
-                                        color = Color(0xFFEEEEEE),
-                                        fontSize = 20.sp,
-                                        fontFamily = FontFamily.SansSerif
-                                    ),
-                                    noSelectionStyle = TextStyle(
-                                        color = Color.Red,
-                                        fontSize = 20.sp,
-                                        fontStyle = FontStyle.Italic
-                                    )
-                                )
-                            }
-                        }
-
-                        //ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
-                        //Footer(zone, intervention)
-                    }
-
-                    TransitionArrow(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .offset(y = arrowOffsetDp)
-                            .zIndex(1f),
-                        width = 80.dp,
-                        height = 30.dp
-                    )
+            var topY by remember { mutableStateOf(0f) }
+            var topHeight by remember { mutableStateOf(0f) }
+            var bottomY by remember { mutableStateOf(0f) }
+            val density = LocalDensity.current
+            val arrowOffsetDp by remember(topY, topHeight, bottomY) {
+                derivedStateOf {
+                    val midPx = (topY + topHeight + bottomY) / 2f
+                    with(density) { midPx.toDp() - 1.dp }
                 }
             }
 
             if (isPortrait) {
                 Column(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f)) { selection() }
-                    Box(Modifier.weight(1f)) { details() }
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        SelectionColumn(
+                            gammes = gammes,
+                            selectedCodes = gammesSelectionnees,
+                            current = current,
+                            desired = desired,
+                            isLoading = isLoading,
+                            loadError = loadError,
+                            viewModel = viewModel,
+                            context = context,
+                            scope = scope,
+                            isPortrait = isPortrait
+                        )
+                    }
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        DetailsColumn(
+                            current = current,
+                            desired = desired,
+                            role = role,
+                            navController = navController,
+                            viewModel = viewModel,
+                            snackbarHost = snackbarHost,
+                            zone = zone,
+                            intervention = intervention,
+                            arrowOffsetDp = arrowOffsetDp
+                        )
+                    }
                 }
             } else {
                 Row(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f)) { selection() }
-                    Box(Modifier.weight(1f)) { details() }
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        SelectionColumn(
+                            gammes = gammes,
+                            selectedCodes = gammesSelectionnees,
+                            current = current,
+                            desired = desired,
+                            isLoading = isLoading,
+                            loadError = loadError,
+                            viewModel = viewModel,
+                            context = context,
+                            scope = scope,
+                            isPortrait = isPortrait
+                        )
+                    }
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        DetailsColumn(
+                            current = current,
+                            desired = desired,
+                            role = role,
+                            navController = navController,
+                            viewModel = viewModel,
+                            snackbarHost = snackbarHost,
+                            zone = zone,
+                            intervention = intervention,
+                            arrowOffsetDp = arrowOffsetDp
+                        )
+                    }
                 }
             }
 
