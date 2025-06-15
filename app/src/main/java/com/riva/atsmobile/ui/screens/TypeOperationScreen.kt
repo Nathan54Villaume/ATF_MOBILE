@@ -207,12 +207,6 @@ fun DetailsCard(
 
 
 
-
-
-
-
-
-
 @Composable
 fun TypeOperationScreen(
     viewModel: SelectionViewModel,
@@ -414,12 +408,7 @@ private fun SelectionColumn(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            Text(
-                "Sélectionnez vos gammes",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-            )
-        }
+        
         if (isLoading) {
             item {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
