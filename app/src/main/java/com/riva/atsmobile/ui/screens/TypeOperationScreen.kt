@@ -93,14 +93,14 @@ fun getImageForGamme(gamme: Gamme?): GammeLogos {
             "PAF 10", "PAF C", "PAF R", "PAF V", "ST 15 C" -> R.drawable.chaines12
             else -> null
         },
-        dimension = when (gamme?.dimension?.trim()?.uppercase() ?: "") {
+        dimension = when (gamme?.dimension?.trim()?: "") {
             "4200x2400" -> R.drawable.u4200x2400
             "6000x2400" -> R.drawable.u6000x2400
             "3600x2400" -> R.drawable.u3600x2400
             "3200x2400" -> R.drawable.u3200x2400
             else -> null
         },
-        diametre = when (gamme?.diamChaineTrame?.trim()?.uppercase() ?: "") {
+        diametre = when (gamme?.diamChaineTrame?.trim() ?: "") {
             "6x6" -> R.drawable.u6x6
             "7x7" -> R.drawable.u7x7
             "6x7" -> R.drawable.u6x7
