@@ -142,7 +142,7 @@ fun TypeOperationScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Détails en bas avec logo
+                // Détails en bas avec logo à côté
                 DetailsCard("Gamme actuelle", current)
                 DetailsCard("Gamme visée", desired)
 
@@ -201,24 +201,30 @@ private fun DetailsCard(title: String, gamme: Gamme?) {
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
-            gamme?.let {
-                Text("Désignation : ${it.designation.safeText()}")
-                Text("Maille : ${it.dimension} mm")
-                Text("Chaîne/Trame : ${it.diamChaineTrame}")
-                Text("Esp. fil/chaîne : ${it.espFilChaineTrame} mm")
-                getImageForGamme(it.designation)?.let { res ->
-                    Spacer(Modifier.height(8.dp))
-                    Image(
-                        painter = painterResource(res),
-                        contentDescription = "Logo ${it.designation}",
-                        modifier = Modifier
-                            .size(100.dp)
-                    )
-                }
-            } ?: Text("Aucune sélection")
+        Row(
+            Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                gamme?.let {
+                    Text("Désignation : ${it.designation.safeText()}")
+                    Text("Maille : ${it.dimension} mm")
+                    Text("Chaîne/Trame : ${it.diamChaineTrame}")
+                    Text("Esp. fil/chaîne : ${it.espFilChaineTrame} mm")
+                } ?: Text("Aucune sélection")
+            }
+            getImageForGamme(gamme?.designation ?: "")?.let { res ->
+                Spacer(Modifier.width(8.dp))
+                Image(
+                    painter = painterResource(res),
+                    contentDescription = "Logo $title",
+                    modifier = Modifier.size(200.dp)
+                )
+            }
         }
     }
 }
