@@ -26,11 +26,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.google.gson.Gson
 import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.ui.shared.BaseScreen
 import com.riva.atsmobile.viewmodel.SelectionViewModel
-import com.riva.atsmobile.websocket.SignalRClientAutoDetect
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -45,29 +43,6 @@ fun TypeOperationScreen(
     val scope        = rememberCoroutineScope()
     val snackbarHost = remember { SnackbarHostState() }
     val matricule    by viewModel.matricule.collectAsState()
-
-    // Pour debug du JSON brut
-    var rawJson by remember { mutableStateOf<String?>(null) }
-
-    // Création unique du client SignalR
-    val signalRClient = remember(context, matricule) {
-        SignalRClientAutoDetect(context, matricule)
-    }
-
-    LaunchedEffect(signalRClient) {
-        signalRClient.onReceiveGammesError = { err ->
-            scope.launch { snackbarHost.showSnackbar("Erreur gammes : $err") }
-        }
-        signalRClient.onReceiveGammes = { list ->
-            rawJson = Gson().toJson(list)
-            viewModel.setGammes(list)
-        }
-        signalRClient.connectAndFetchGammes(4.5, 7.0)
-    }
-
-    DisposableEffect(signalRClient) {
-        onDispose { signalRClient.disconnect() }
-    }
 
     val isConnected  by viewModel.isOnline.collectAsState()
     val gammes       by viewModel.gammes.collectAsState()
@@ -91,16 +66,6 @@ fun TypeOperationScreen(
                 .padding(16.dp)
         ) {
             Column(Modifier.fillMaxSize()) {
-                rawJson?.let {
-                    Text(
-                        "JSON brut reçu :\n$it",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp)
-                    )
-                }
-
                 Text(
                     "Sélectionnez vos gammes",
                     style    = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
@@ -178,6 +143,9 @@ fun TypeOperationScreen(
         }
     }
 }
+
+// Les fonctions GammeGrid, DetailsRow, Footer ne changent pas (elles sont déjà indépendantes de SignalR)
+
 
 @Composable
 private fun GammeGrid(
