@@ -151,30 +151,32 @@ fun DetailsCard(title: String, gamme: Gamme?) {
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                gamme?.let {
-                    Text("Désignation : ${it.designation.safeText()}", color = Color.White)
-                    Text("Dimension : ${it.dimension} mm", color = Color.White)
-                    Text("Diamètres : ${it.diamChaineTrame}", color = Color.White)
-                    Text("Espacement : ${it.espFilChaineTrame} mm", color = Color.White)
-                } ?: Text("Aucune sélection", color = Color.Gray)
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                logos.principale?.let { Image(painterResource(it), null, Modifier.size(100.dp)) }
-                logos.chaines?.let { Image(painterResource(it), null, Modifier.size(80.dp)) }
-                logos.dimension?.let { Image(painterResource(it), null, Modifier.size(80.dp)) }
-                logos.diametre?.let { Image(painterResource(it), null, Modifier.size(80.dp)) }
+            Text(title, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
+            gamme?.let {
+                Text("Désignation : ${it.designation.safeText()}", color = Color.White)
+                Text("Dimension : ${it.dimension} mm", color = Color.White)
+                Text("Diamètres : ${it.diamChaineTrame}", color = Color.White)
+                Text("Espacement : ${it.espFilChaineTrame} mm", color = Color.White)
+            } ?: Text("Aucune sélection", color = Color.Gray)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                logos.principale?.let { Image(painterResource(it), null, Modifier.size(80.dp)) }
+                logos.chaines?.let { Image(painterResource(it), null, Modifier.size(60.dp)) }
+                logos.dimension?.let { Image(painterResource(it), null, Modifier.size(60.dp)) }
+                logos.diametre?.let { Image(painterResource(it), null, Modifier.size(60.dp)) }
             }
         }
     }
 }
+
 
 
 
