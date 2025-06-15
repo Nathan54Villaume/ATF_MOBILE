@@ -11,12 +11,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
@@ -75,19 +75,18 @@ fun TypeOperationScreen(
     viewModel: SelectionViewModel,
     navController: NavController
 ) {
-    val context       = LocalContext.current
-    val scope         = rememberCoroutineScope()
-    val snackbarHost  = remember { SnackbarHostState() }
-    val scrollState   = rememberScrollState()
+    val context      = LocalContext.current
+    val scope        = rememberCoroutineScope()
+    val snackbarHost = remember { SnackbarHostState() }
 
-    val isConnected            by viewModel.isOnline.collectAsState()
-    val gammes                 by viewModel.gammes.collectAsState()
-    val gammesSelectionnees    by viewModel.gammesSelectionnees.collectAsState()
-    val current                by viewModel.currentGamme.collectAsState()
-    val desired                by viewModel.desiredGamme.collectAsState()
-    val zone                   by viewModel.zoneDeTravail.collectAsState()
-    val intervention           by viewModel.intervention.collectAsState()
-    val role                   by viewModel.role.collectAsState()
+    val isConnected         by viewModel.isOnline.collectAsState()
+    val gammes              by viewModel.gammes.collectAsState()
+    val gammesSelectionnees by viewModel.gammesSelectionnees.collectAsState()
+    val current             by viewModel.currentGamme.collectAsState()
+    val desired             by viewModel.desiredGamme.collectAsState()
+    val zone                by viewModel.zoneDeTravail.collectAsState()
+    val intervention        by viewModel.intervention.collectAsState()
+    val role                by viewModel.role.collectAsState()
 
     var isLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
@@ -119,41 +118,41 @@ fun TypeOperationScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-            ) {
-                Text(
-                    "Sélectionnez vos gammes",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                when {
-                    isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                    loadError != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(loadError!!, color = Color.Red)
-                            Spacer(Modifier.height(12.dp))
-                            Button(onClick = {
-                                scope.launch {
-                                    isLoading = true
-                                    loadError = null
-                                    try {
-                                        viewModel.chargerGammesDepuisApi(context)
-                                    } catch (e: Exception) {
-                                        loadError = "Erreur de chargement : ${e.message}"
-                                    } finally {
-                                        isLoading = false
-                                    }
+            when {
+                isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+                loadError != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(loadError!!, color = Color.Red)
+                        Spacer(Modifier.height(12.dp))
+                        Button(onClick = {
+                            scope.launch {
+                                isLoading = true
+                                loadError = null
+                                try {
+                                    viewModel.chargerGammesDepuisApi(context)
+                                } catch (e: Exception) {
+                                    loadError = "Erreur de chargement : ${e.message}"
+                                } finally {
+                                    isLoading = false
                                 }
-                            }) { Text("Réessayer") }
-                        }
+                            }
+                        }) { Text("Réessayer") }
                     }
-                    gammes.isNotEmpty() -> {
+                }
+                else -> LazyColumn(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    item {
+                        Text(
+                            "Sélectionnez vos gammes",
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+                    item {
                         val visibles = gammes.filter { gammesSelectionnees.contains(it.codeTreillis) }
                         GammeGrid(
                             title = "GAMME ACTUELLE",
@@ -162,8 +161,11 @@ fun TypeOperationScreen(
                             onSelect = viewModel::selectCurrentGamme,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .heightIn(min = 100.dp, max = 300.dp)
                         )
-                        Spacer(Modifier.height(16.dp))
+                    }
+                    item {
+                        val visibles = gammes.filter { gammesSelectionnees.contains(it.codeTreillis) }
                         GammeGrid(
                             title = "GAMME VISÉE",
                             gammes = visibles,
@@ -172,65 +174,62 @@ fun TypeOperationScreen(
                             restrict = current,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .heightIn(min = 100.dp, max = 300.dp)
                         )
-                        Spacer(Modifier.height(24.dp))
                     }
-                    else -> Box(
-                        Modifier
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Aucune gamme trouvée.", style = MaterialTheme.typography.bodyMedium)
+                    item {
+                        DetailsCard("Gamme actuelle", current)
                     }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                DetailsCard("Gamme actuelle", current)
-                DetailsCard("Gamme visée", desired)
-
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    ElevatedButton(
-                        onClick = { navController.popBackStack() },
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier.width(120.dp)
-                    ) {
-                        Icon(Icons.Default.WbSunny, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Retour")
+                    item {
+                        DetailsCard("Gamme visée", desired)
                     }
-                    if (role == "ADMIN") {
-                        ElevatedButton(
-                            onClick = { navController.navigate(Routes.TypeOperationParametres) },
-                            shape = RoundedCornerShape(50),
-                            modifier = Modifier.width(140.dp)
+                    item {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            Icon(Icons.Default.Settings, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Paramètres")
+                            ElevatedButton(
+                                onClick = { navController.popBackStack() },
+                                shape = RoundedCornerShape(50),
+                                modifier = Modifier.width(120.dp)
+                            ) {
+                                Icon(Icons.Default.WbSunny, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Retour")
+                            }
+                            if (role == "ADMIN") {
+                                ElevatedButton(
+                                    onClick = { navController.navigate(Routes.TypeOperationParametres) },
+                                    shape = RoundedCornerShape(50),
+                                    modifier = Modifier.width(140.dp)
+                                ) {
+                                    Icon(Icons.Default.Settings, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Paramètres")
+                                }
+                            }
+                            ElevatedButton(
+                                onClick = {
+                                    viewModel.validateGammeChange { _, msg ->
+                                        scope.launch { snackbarHost.showSnackbar(msg) }
+                                    }
+                                },
+                                enabled = current != null && desired != null,
+                                shape = RoundedCornerShape(50),
+                                modifier = Modifier.width(120.dp)
+                            ) {
+                                Icon(Icons.Default.Check, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Valider")
+                            }
                         }
                     }
-                    ElevatedButton(
-                        onClick = {
-                            viewModel.validateGammeChange { _, msg ->
-                                scope.launch { snackbarHost.showSnackbar(msg) }
-                            }
-                        },
-                        enabled = current != null && desired != null,
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier.width(120.dp)
-                    ) {
-                        Icon(Icons.Default.Check, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Valider")
+                    item {
+                        Footer(zone, intervention)
                     }
                 }
-
-                Footer(zone, intervention)
             }
+
             SnackbarHost(hostState = snackbarHost, modifier = Modifier.align(Alignment.BottomCenter))
         }
     }
@@ -300,9 +299,7 @@ private fun GammeGrid(
             columns = GridCells.Fixed(3),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 100.dp)
+            modifier = modifier
         ) {
             items(gammes) { gamme ->
                 val disabled = restrict != null && gamme == restrict
