@@ -17,7 +17,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven(url = "https://jitpack.io") // ✅ Pour signalr-kotlin
+        maven(url = "https://jitpack.io") // Pour bibliothèques type SignalR, MPAndroidChart, etc.
     }
 }
 
