@@ -318,6 +318,7 @@ fun DetailsColumn(
         contentAlignment = Alignment.Center
     ) {
         Column(
+            modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -373,8 +374,8 @@ fun DetailsColumn(
                 )
             }
 
-            //ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
-            //Footer(zone, intervention)
+            ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
+            Footer(zone, intervention)
         }
 
         TransitionArrow(
@@ -387,6 +388,7 @@ fun DetailsColumn(
         )
     }
 }
+
 
 @Composable
 fun TypeOperationScreen(
