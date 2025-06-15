@@ -557,8 +557,8 @@ fun DetailsColumn(
                 )
             }
 
-            ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
-            Footer(zone, intervention)
+            //ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
+            //Footer(zone, intervention)
         }
 
         TransitionArrow(
