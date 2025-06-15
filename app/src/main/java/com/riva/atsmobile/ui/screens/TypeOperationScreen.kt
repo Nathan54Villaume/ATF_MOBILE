@@ -42,18 +42,29 @@ import java.time.format.DateTimeFormatter
 // Trim or fallback
 fun String?.safeText(): String = this?.trim().takeIf { !it.isNullOrEmpty() } ?: "-"
 
-// Map designation to drawable resource
-fun getImageForGamme(designation: String): Int? = when(designation.trim().uppercase()) {
-    "PAF 10"  -> R.drawable.paf10
-    "PAF C"  -> R.drawable.pafc
-    "PAF R"  -> R.drawable.pafr
-    "PAF V"  -> R.drawable.pafv
-    "ST 15 C"  -> R.drawable.st15c
-    "ST 20"  -> R.drawable.st20
-    "ST 25"  -> R.drawable.st25
-    "ST 25 C"  -> R.drawable.st25c
+// Data class regroupant le logo principal et le logo “chaines”
+data class GammeLogos(val principale: Int?, val chaines: Int?)
 
-    else       -> null
+// Retourne à la fois le logo de la gamme et, si pertinent, le logo “chaines”
+fun getImageForGamme(designation: String): GammeLogos {
+    val key = designation.trim().uppercase()
+    val principale = when(key) {
+        "PAF 10"  -> R.drawable.paf10
+        "PAF C"   -> R.drawable.pafc
+        "PAF R"   -> R.drawable.pafr
+        "PAF V"   -> R.drawable.pafv
+        "ST 15 C" -> R.drawable.st15c
+        "ST 20"   -> R.drawable.st20
+        "ST 25"   -> R.drawable.st25
+        "ST 25 C" -> R.drawable.st25c
+        else      -> null
+    }
+    val chaines = when(key) {
+        "ST 20", "ST 25", "ST 25 C" -> R.drawable.chaines16
+        "PAF 10", "PAF C", "PAF R", "PAF V", "ST 15 C" -> R.drawable.chaines12
+        else -> null
+    }
+    return GammeLogos(principale, chaines)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,18 +73,18 @@ fun TypeOperationScreen(
     viewModel: SelectionViewModel,
     navController: NavController
 ) {
-    val context    = LocalContext.current
-    val scope      = rememberCoroutineScope()
-    val snackbarHost = remember { SnackbarHostState() }
+    val context       = LocalContext.current
+    val scope         = rememberCoroutineScope()
+    val snackbarHost  = remember { SnackbarHostState() }
 
-    val isConnected by viewModel.isOnline.collectAsState()
-    val gammes      by viewModel.gammes.collectAsState()
-    val gammesSelectionnees  by viewModel.gammesSelectionnees.collectAsState()
-    val current             by viewModel.currentGamme.collectAsState()
-    val desired             by viewModel.desiredGamme.collectAsState()
-    val zone                by viewModel.zoneDeTravail.collectAsState()
-    val intervention        by viewModel.intervention.collectAsState()
-    val role                by viewModel.role.collectAsState()
+    val isConnected            by viewModel.isOnline.collectAsState()
+    val gammes                 by viewModel.gammes.collectAsState()
+    val gammesSelectionnees     by viewModel.gammesSelectionnees.collectAsState()
+    val current                by viewModel.currentGamme.collectAsState()
+    val desired                by viewModel.desiredGamme.collectAsState()
+    val zone                   by viewModel.zoneDeTravail.collectAsState()
+    val intervention           by viewModel.intervention.collectAsState()
+    val role                   by viewModel.role.collectAsState()
 
     var isLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
@@ -137,19 +148,36 @@ fun TypeOperationScreen(
                     }
                     gammes.isNotEmpty() -> {
                         val visibles = gammes.filter { gammesSelectionnees.contains(it.codeTreillis) }
-                        GammeGrid("GAMME ACTUELLE", visibles, current, viewModel::selectCurrentGamme, modifier = Modifier.weight(1f))
+                        GammeGrid(
+                            title = "GAMME ACTUELLE",
+                            gammes = visibles,
+                            selected = current,
+                            onSelect = viewModel::selectCurrentGamme,
+                            modifier = Modifier.weight(1f)
+                        )
                         Spacer(Modifier.height(16.dp))
-                        GammeGrid("GAMME VISÉE", visibles, desired, viewModel::selectDesiredGamme, restrict = current, modifier = Modifier.weight(1f))
+                        GammeGrid(
+                            title = "GAMME VISÉE",
+                            gammes = visibles,
+                            selected = desired,
+                            onSelect = viewModel::selectDesiredGamme,
+                            restrict = current,
+                            modifier = Modifier.weight(1f)
+                        )
                         Spacer(Modifier.height(24.dp))
                     }
-                    else -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    else -> Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text("Aucune gamme trouvée.", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
 
                 Spacer(Modifier.height(16.dp))
 
-                // Détails en bas avec logo à côté
                 DetailsCard("Gamme actuelle", current)
                 DetailsCard("Gamme visée", desired)
 
@@ -179,7 +207,9 @@ fun TypeOperationScreen(
                     }
                     ElevatedButton(
                         onClick = {
-                            viewModel.validateGammeChange { _, msg -> scope.launch { snackbarHost.showSnackbar(msg) } }
+                            viewModel.validateGammeChange { _, msg ->
+                                scope.launch { snackbarHost.showSnackbar(msg) }
+                            }
                         },
                         enabled = current != null && desired != null,
                         shape = RoundedCornerShape(50),
@@ -200,6 +230,8 @@ fun TypeOperationScreen(
 
 @Composable
 private fun DetailsCard(title: String, gamme: Gamme?) {
+    val logos = getImageForGamme(gamme?.designation ?: "")
+
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
         modifier = Modifier
@@ -224,13 +256,22 @@ private fun DetailsCard(title: String, gamme: Gamme?) {
                     Text("Espacement : ${it.espFilChaineTrame} mm")
                 } ?: Text("Aucune sélection")
             }
-            getImageForGamme(gamme?.designation ?: "")?.let { res ->
-                Spacer(Modifier.width(2.dp))
-                Image(
-                    painter = painterResource(res),
-                    contentDescription = "Logo $title",
-                    modifier = Modifier.size(200.dp)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                logos.principale?.let { res ->
+                    Image(
+                        painter = painterResource(res),
+                        contentDescription = "Logo $title",
+                        modifier = Modifier.size(100.dp)
+                    )
+                }
+                logos.chaines?.let { res ->
+                    Spacer(Modifier.width(8.dp))
+                    Image(
+                        painter = painterResource(res),
+                        contentDescription = "Logo chaines",
+                        modifier = Modifier.size(100.dp)
+                    )
+                }
             }
         }
     }
@@ -250,7 +291,7 @@ private fun GammeGrid(
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement   = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxSize()
         ) {
             items(gammes) { gamme ->
