@@ -46,7 +46,7 @@ fun String?.safeText(): String = this?.trim().takeIf { !it.isNullOrEmpty() } ?: 
 fun getImageForGamme(designation: String): Int? = when(designation.trim().uppercase()) {
     "PAF 10"  -> R.drawable.paf10
 
-    
+
     else       -> null
 }
 
@@ -213,13 +213,13 @@ private fun DetailsCard(title: String, gamme: Gamme?) {
                 Spacer(Modifier.height(4.dp))
                 gamme?.let {
                     Text("Désignation : ${it.designation.safeText()}")
-                    Text("Maille : ${it.dimension} mm")
-                    Text("Chaîne/Trame : ${it.diamChaineTrame}")
-                    Text("Esp. fil/chaîne : ${it.espFilChaineTrame} mm")
+                    Text("Dimension : ${it.dimension} mm")
+                    Text("Diamètres : ${it.diamChaineTrame}")
+                    Text("Espacement : ${it.espFilChaineTrame} mm")
                 } ?: Text("Aucune sélection")
             }
             getImageForGamme(gamme?.designation ?: "")?.let { res ->
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(2.dp))
                 Image(
                     painter = painterResource(res),
                     contentDescription = "Logo $title",
