@@ -40,7 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import com.riva.atsmobile.R
 import com.riva.atsmobile.model.Gamme
@@ -81,7 +81,10 @@ fun getImageForGamme(designation: String): GammeLogos {
 }
 
 @Composable
-fun TransitionArrow(isPortrait: Boolean) {
+fun TransitionArrow(
+    isPortrait: Boolean,
+    modifier: Modifier = Modifier
+) {
     val infiniteTransition = rememberInfiniteTransition()
     val offsetFloat by infiniteTransition.animateFloat(
         0f,
@@ -94,25 +97,18 @@ fun TransitionArrow(isPortrait: Boolean) {
     val offset = offsetFloat.dp
     val icon = if (isPortrait) Icons.Default.ArrowDownward else Icons.Default.ArrowForward
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier
-                .offset(
-                    x = if (!isPortrait) offset else 0.dp,
-                    y = if (isPortrait) offset else 0.dp
-                )
-                .size(60.dp)
-                .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
-                .padding(4.dp)
-        )
-    }
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        modifier = modifier
+            .offset(
+                x = if (!isPortrait) offset else 0.dp,
+                y = if (isPortrait) offset else 0.dp
+            )
+            .size(60.dp)
+            .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
+            .padding(4.dp)
+    )
 }
 
 @Composable
@@ -171,6 +167,7 @@ fun TypeOperationScreen(
                     isPortrait = isPortrait
                 )
             }
+
             val details = @Composable {
                 Box(Modifier.fillMaxSize()) {
                     Column(
@@ -181,18 +178,18 @@ fun TypeOperationScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Première carte avec logos
                         DetailsCard("Gamme actuelle", current)
-                        // Flèche dynamiquement positionnée entre les logos
-
-                        TransitionArrow(isPortrait)
-
-                        // Deuxième carte avec logos
+                        Spacer(Modifier.height(32.dp))
                         DetailsCard("Gamme visée", desired)
-                        // Actions et footer
                         ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
                         Footer(zone, intervention)
                     }
+                    TransitionArrow(
+                        isPortrait = isPortrait,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .zIndex(1f)
+                    )
                 }
             }
 
@@ -217,8 +214,6 @@ fun TypeOperationScreen(
 }
 
 /* Les autres Composables (SelectionColumn, ActionRow, DetailsCard, GammeGrid, Footer) restent inchangés */
-
-
 
 @Composable
 private fun SelectionColumn(
@@ -279,9 +274,7 @@ private fun SelectionColumn(
                 )
             }
             item {
-                //Spacer(Modifier.height(2.dp))
-                //TransitionArrow(isPortrait)
-                //Spacer(Modifier.height(2.dp))
+                // espace réservé si besoin
             }
             item {
                 GammeGrid(
