@@ -279,9 +279,9 @@ private fun SelectionColumn(
                 )
             }
             item {
-                Spacer(Modifier.height(2.dp))
-                TransitionArrow(isPortrait)
-                Spacer(Modifier.height(2.dp))
+                //Spacer(Modifier.height(2.dp))
+                //TransitionArrow(isPortrait)
+                //Spacer(Modifier.height(2.dp))
             }
             item {
                 GammeGrid(
