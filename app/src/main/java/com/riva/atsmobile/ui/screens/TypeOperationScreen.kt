@@ -336,7 +336,7 @@ fun DetailsColumn(
                     topY = it.positionInParent().y
                     topHeight = it.size.height.toFloat()
                 },
-                horizontalAlignment = Alignment.CenterHorizontally
+                //horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = "GAMME ACTUELLE",
@@ -367,7 +367,7 @@ fun DetailsColumn(
                 modifier = Modifier.onGloballyPositioned {
                     bottomY = it.positionInParent().y
                 },
-                horizontalAlignment = Alignment.CenterHorizontally
+                //horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = "GAMME VISÉE",
