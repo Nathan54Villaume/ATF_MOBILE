@@ -148,8 +148,8 @@ fun DetailsCard(title: String, gamme: Gamme?) {
     val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
 
     // Dimensions adaptées
-    val mainSize = if (isPortrait) 150.dp else 75.dp
-    val secondarySize = if (isPortrait) 120.dp else 60.dp
+    val mainSize = if (isPortrait) 150.dp else 100.dp
+    val secondarySize = if (isPortrait) 120.dp else 80.dp
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
