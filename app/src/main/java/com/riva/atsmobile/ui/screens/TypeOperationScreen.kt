@@ -402,97 +402,96 @@ private fun SelectionColumn(
     scope: CoroutineScope,
     isPortrait: Boolean
 ) {
-    LazyColumn(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(16.dp)
     ) {
-        
-        if (isLoading) {
-            item {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+        when {
+            isLoading -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
-        } else if (loadError != null) {
-            item {
+
+            loadError != null -> {
                 Column(
-                    Modifier.fillMaxWidth(),
+                    modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(loadError!!, color = Color.Red)
+                    Text(loadError, color = Color.Red)
                     Spacer(Modifier.height(12.dp))
                     Button(onClick = { scope.launch { viewModel.chargerGammesDepuisApi(context) } }) {
                         Text("Réessayer")
                     }
                 }
             }
-        } else {
-            val visibles = gammes.filter { selectedCodes.contains(it.codeTreillis) }
-            item {
-                GammeGrid(
-                    title = "GAMME ACTUELLE",
-                    gammes = visibles,
-                    selected = current,
-                    onSelect = viewModel::selectCurrentGamme,
-                    restrict = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp),
 
-                    // ✨ Personnalisation
-                    titleStyle = TextStyle(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFFF9800), // orange vif
-                        fontFamily = FontFamily.Serif
-                    ),
-                    cardShape = RoundedCornerShape(16.dp),
-                    selectedColor = Color(0xFFFF9800),           // orange
-                    selectedBgColor = Color(0xFF2C2C2C),         // Vert normal (fond)
-                    defaultBgColor = Color(0xFF2C2C2C),          // fond normal
-                    defaultColor = Color(0xFFE0E0E0),            // texte normal
-                    disabledBgColor = Color(0xFF424242),         // fond désactivé
-                    disabledColor = Color(0xFF888888),           // bordures désactivées
-                    cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
-                )
+            else -> {
+                val visibles = gammes.filter { selectedCodes.contains(it.codeTreillis) }
 
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    GammeGrid(
+                        title = "GAMME ACTUELLE",
+                        gammes = visibles,
+                        selected = current,
+                        onSelect = viewModel::selectCurrentGamme,
+                        restrict = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 100.dp, max = 300.dp),
 
-            }
-            item { }
-            item {
-                GammeGrid(
-                    title = "GAMME VISÉE",
-                    gammes = visibles,
-                    selected = desired,
-                    onSelect = viewModel::selectDesiredGamme,
-                    restrict = current,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp),
+                        // Personnalisation
+                        titleStyle = TextStyle(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFFFF9800),
+                            fontFamily = FontFamily.Serif
+                        ),
+                        cardShape = RoundedCornerShape(16.dp),
+                        selectedColor = Color(0xFFFF9800),
+                        selectedBgColor = Color(0xFF2C2C2C),
+                        defaultBgColor = Color(0xFF2C2C2C),
+                        defaultColor = Color(0xFFE0E0E0),
+                        disabledBgColor = Color(0xFF424242),
+                        disabledColor = Color(0xFF888888),
+                        cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
+                    )
 
-                    // ✨ Personnalisation
-                    titleStyle = TextStyle(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFF9800),
-                        fontFamily = FontFamily.Serif
-                    ),
-                    cardShape = RoundedCornerShape(16.dp),
-                    selectedColor = Color(0xFFFF9800),           // orange
-                    selectedBgColor = Color(0xFF2C2C2C),         // Vert foncé (fond)
-                    defaultBgColor = Color(0xFF2C2C2C),          // fond normal
-                    defaultColor = Color(0xFFE0E0E0),            // texte normal
-                    disabledBgColor = Color(0xFF424242),         // fond désactivé
-                    disabledColor = Color(0xFF888888),           // bordures désactivées
-                    cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
-                )
+                    GammeGrid(
+                        title = "GAMME VISÉE",
+                        gammes = visibles,
+                        selected = desired,
+                        onSelect = viewModel::selectDesiredGamme,
+                        restrict = current,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 100.dp, max = 300.dp),
 
+                        // Personnalisation
+                        titleStyle = TextStyle(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFF9800),
+                            fontFamily = FontFamily.Serif
+                        ),
+                        cardShape = RoundedCornerShape(16.dp),
+                        selectedColor = Color(0xFFFF9800),
+                        selectedBgColor = Color(0xFF2C2C2C),
+                        defaultBgColor = Color(0xFF2C2C2C),
+                        defaultColor = Color(0xFFE0E0E0),
+                        disabledBgColor = Color(0xFF424242),
+                        disabledColor = Color(0xFF888888),
+                        cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
+                    )
+                }
             }
         }
     }
 }
+
 
 @Composable
 private fun ActionRow(
