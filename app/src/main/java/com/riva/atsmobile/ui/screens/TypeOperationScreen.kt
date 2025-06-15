@@ -575,6 +575,7 @@ fun DetailsColumn(
 }
 
 
+
 @Composable
 private fun ActionRow(
     current: Gamme?,
