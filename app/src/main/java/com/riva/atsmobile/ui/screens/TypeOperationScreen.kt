@@ -108,7 +108,7 @@ fun TransitionArrow(isPortrait: Boolean) {
                     x = if (!isPortrait) offset else 0.dp,
                     y = if (isPortrait) offset else 0.dp
                 )
-                .size(40.dp)
+                .size(60.dp)
                 .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
                 .padding(4.dp)
         )
