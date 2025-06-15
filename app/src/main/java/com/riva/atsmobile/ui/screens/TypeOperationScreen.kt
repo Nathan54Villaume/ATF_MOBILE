@@ -314,18 +314,19 @@ fun TypeOperationScreen(
                                 title = "Gamme actuelle",
                                 gamme = current,
                                 titleStyle = TextStyle(
-                                    color = Color(0xFF64B5F6), // bleu clair
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontFamily = FontFamily.SansSerif
+                                    color = Color(0xFFFF9800), // orange vif
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Serif,
+                                    letterSpacing = 1.sp
                                 ),
                                 detailStyle = TextStyle(
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
+                                    color = Color(0xFFEEEEEE),
+                                    fontSize = 15.sp,
+                                    fontFamily = FontFamily.SansSerif
                                 ),
                                 noSelectionStyle = TextStyle(
-                                    color = Color.Red,
+                                    color = Color.Gray,
                                     fontSize = 14.sp,
                                     fontStyle = FontStyle.Italic
                                 )
