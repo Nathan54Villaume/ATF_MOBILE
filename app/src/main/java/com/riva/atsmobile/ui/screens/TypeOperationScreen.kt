@@ -261,7 +261,7 @@ private fun DetailsCard(title: String, gamme: Gamme?) {
                     Image(
                         painter = painterResource(res),
                         contentDescription = "Logo $title",
-                        modifier = Modifier.size(100.dp)
+                        modifier = Modifier.size(150.dp)
                     )
                 }
                 logos.chaines?.let { res ->
@@ -269,7 +269,7 @@ private fun DetailsCard(title: String, gamme: Gamme?) {
                     Image(
                         painter = painterResource(res),
                         contentDescription = "Logo chaines",
-                        modifier = Modifier.size(100.dp)
+                        modifier = Modifier.size(150.dp)
                     )
                 }
             }
