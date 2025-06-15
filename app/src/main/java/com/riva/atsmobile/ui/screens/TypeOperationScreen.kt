@@ -237,9 +237,9 @@ fun SelectionColumn(
         } else {
             val visibles = gammes.filter { selectedCodes.contains(it.codeTreillis) }
             Column(
-                modifier = Modifier.align(Alignment.Center),
                 verticalArrangement = Arrangement.spacedBy(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.align(Alignment.Center)
             ) {
                 Text(
                     "Sélectionnez vos gammes",
@@ -320,7 +320,7 @@ fun DetailsColumn(
         Column(
             modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -348,6 +348,8 @@ fun DetailsColumn(
                 )
             }
 
+            Spacer(modifier = Modifier.height(24.dp))
+
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "GAMME VISÉE",
@@ -374,8 +376,10 @@ fun DetailsColumn(
                 )
             }
 
-            ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
-            Footer(zone, intervention)
+            Spacer(modifier = Modifier.height(24.dp))
+
+            //ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
+            //Footer(zone, intervention)
         }
 
         TransitionArrow(
@@ -388,6 +392,7 @@ fun DetailsColumn(
         )
     }
 }
+
 
 
 @Composable
