@@ -148,15 +148,7 @@ fun TransitionArrow(
 
 @Composable
 fun DetailsCard(
-    title: String,
     gamme: Gamme?,
-    titleStyle: TextStyle = TextStyle(
-        color = Color(0xFFFFC107),
-        fontSize = 24.sp,
-        fontWeight = FontWeight.ExtraBold,
-        fontFamily = FontFamily.Serif,
-        letterSpacing = 1.sp
-    ),
     detailStyle: TextStyle = TextStyle(
         color = Color.White,
         fontSize = 16.sp,
@@ -191,9 +183,6 @@ fun DetailsCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, style = titleStyle)
-                Spacer(modifier = Modifier.height(8.dp))
-
                 gamme?.let {
                     Text(" ${it.designation.safeText()}", style = detailStyle)
                     Text(" ${it.dimension} mm", style = detailStyle)
@@ -215,6 +204,7 @@ fun DetailsCard(
         }
     }
 }
+
 
 
 
@@ -310,71 +300,72 @@ fun TypeOperationScreen(
                                     topHeight = coords.size.height.toFloat()
                                 }
                         ) {
-                            DetailsCard(
-                                title = "Gamme actuelle",
-                                gamme = current,
-                                titleStyle = TextStyle(
-                                    color = Color(0xFFFF9800), // orange vif
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Serif,
-                                    letterSpacing = 1.sp
-                                ),
-                                detailStyle = TextStyle(
-                                    color = Color(0xFFEEEEEE),
-                                    fontSize = 20.sp,
-                                    fontFamily = FontFamily.SansSerif
-                                ),
-                                noSelectionStyle = TextStyle(
-                                    color = Color.Red,
-                                    fontSize = 20.sp,
-                                    fontStyle = FontStyle.Italic
+                            Column {
+                                Text(
+                                    text = "GAMME ACTUELLE",
+                                    style = TextStyle(
+                                        color = Color(0xFFFF9800),
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Serif
+                                    )
                                 )
-                            )
-
+                                Spacer(Modifier.height(8.dp))
+                                DetailsCard(
+                                    gamme = current,
+                                    detailStyle = TextStyle(
+                                        color = Color(0xFFEEEEEE),
+                                        fontSize = 20.sp,
+                                        fontFamily = FontFamily.SansSerif
+                                    ),
+                                    noSelectionStyle = TextStyle(
+                                        color = Color.Red,
+                                        fontSize = 20.sp,
+                                        fontStyle = FontStyle.Italic
+                                    )
+                                )
+                            }
                         }
+
                         Spacer(Modifier.height(16.dp))
+
                         Box(
                             Modifier
                                 .onGloballyPositioned { coords ->
                                     bottomY = coords.positionInParent().y
                                 }
                         ) {
-                            DetailsCard(
-                                title = "Gamme visée",
-                                gamme = desired,
-                                titleStyle = TextStyle(
-                                    color = Color(0xFFFF9800), // orange vif
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Serif,
-                                    letterSpacing = 2.sp
-                                ),
-                                detailStyle = TextStyle(
-                                    color = Color(0xFFEEEEEE),
-                                    fontSize = 20.sp,
-                                    fontFamily = FontFamily.SansSerif
-                                ),
-                                noSelectionStyle = TextStyle(
-                                    color = Color.Red,
-                                    fontSize = 20.sp,
-                                    fontStyle = FontStyle.Italic
+                            Column {
+                                Text(
+                                    text = "GAMME VISÉE",
+                                    style = TextStyle(
+                                        color = Color(0xFFFF9800),
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Serif
+                                    )
                                 )
-                            )
-
+                                Spacer(Modifier.height(8.dp))
+                                DetailsCard(
+                                    gamme = desired,
+                                    detailStyle = TextStyle(
+                                        color = Color(0xFFEEEEEE),
+                                        fontSize = 20.sp,
+                                        fontFamily = FontFamily.SansSerif
+                                    ),
+                                    noSelectionStyle = TextStyle(
+                                        color = Color.Red,
+                                        fontSize = 20.sp,
+                                        fontStyle = FontStyle.Italic
+                                    )
+                                )
+                            }
                         }
+
                         ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
                         Footer(zone, intervention)
                     }
 
-                    TransitionArrow(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .offset(y = arrowOffsetDp)
-                            .zIndex(1f),
-                        width  = 80.dp,
-                        height = 30.dp
-                    )
 
 
                 }
