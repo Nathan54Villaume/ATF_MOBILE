@@ -382,6 +382,7 @@ private fun ActionRow(
 @Composable
 private fun DetailsCard(title: String, gamme: Gamme?) {
     val logos = getImageForGamme(gamme?.designation ?: "")
+
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
         modifier = Modifier.fillMaxWidth(),
@@ -389,33 +390,55 @@ private fun DetailsCard(title: String, gamme: Gamme?) {
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Row(
-            Modifier
-                .padding(12.dp)
+            modifier = Modifier
+                .padding(16.dp)
                 .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(8.dp))
                 gamme?.let {
-                    Text("Désignation : ${it.designation.safeText()}")
-                    Text("Dimension : ${it.dimension} mm")
-                    Text("Diamètres : ${it.diamChaineTrame}")
-                    Text("Espacement : ${it.espFilChaineTrame} mm")
-                } ?: Text("Aucune sélection")
+                    Text("Désignation : ${it.designation.safeText()}", color = Color.White)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Dimension : ${it.dimension} mm", color = Color.White)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Diamètres : ${it.diamChaineTrame}", color = Color.White)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Espacement : ${it.espFilChaineTrame} mm", color = Color.White)
+                } ?: Text("Aucune sélection", color = Color.Gray)
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 logos.principale?.let { res ->
-                    Image(painterResource(res), contentDescription = "Logo $title", modifier = Modifier.size(200.dp))
+                    Image(
+                        painter = painterResource(res),
+                        contentDescription = "Logo $title",
+                        modifier = Modifier.size(120.dp)
+                    )
                 }
                 logos.chaines?.let { res ->
-                    Spacer(Modifier.width(8.dp))
-                    Image(painterResource(res), contentDescription = "Logo chaines", modifier = Modifier.size(150.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Image(
+                        painter = painterResource(res),
+                        contentDescription = "Logo chaines",
+                        modifier = Modifier.size(80.dp)
+                    )
                 }
             }
         }
     }
 }
+
 
 @Composable
 private fun GammeGrid(
