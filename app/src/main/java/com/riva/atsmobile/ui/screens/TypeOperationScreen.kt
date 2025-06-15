@@ -1,5 +1,6 @@
 package com.riva.atsmobile.ui.screens
 
+import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -61,6 +62,10 @@ fun TypeOperationScreen(
         loadError = null
         try {
             viewModel.chargerGammesDepuisApi(context)
+            Log.d("GAMMES", "Nombre de gammes reçues : ${viewModel.gammes.value.size}")
+            viewModel.gammes.value.forEach {
+                Log.d("GAMMES", "→ ${it.designation}")
+            }
         } catch (e: Exception) {
             loadError = "Erreur de chargement : ${e.message}"
         } finally {
@@ -200,6 +205,9 @@ fun TypeOperationScreen(
         }
     }
 }
+
+// Le reste du fichier (GammeGrid, DetailsRow, Footer) reste inchangé
+
 
 @Composable
 private fun GammeGrid(
