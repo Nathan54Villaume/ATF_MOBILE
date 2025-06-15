@@ -462,7 +462,7 @@ private fun SelectionColumn(
                     titleStyle = TextStyle(
                         fontSize = 20.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFFFC107), // orange vif
+                        color = Color(0xFFFF9800), // orange vif
                         fontFamily = FontFamily.Serif
                     ),
                     cardShape = RoundedCornerShape(16.dp),
@@ -481,7 +481,6 @@ private fun SelectionColumn(
             item {
                 GammeGrid(
                     title = "GAMME VISÉE",
-
                     gammes = visibles,
                     selected = desired,
                     onSelect = viewModel::selectDesiredGamme,
@@ -580,7 +579,7 @@ private fun GammeGrid(
 ) {
     Column {
         Text(title, style = titleStyle)
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             modifier = modifier,
