@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -48,13 +49,13 @@ import java.time.format.DateTimeFormatter
 // Trim or fallback
 fun String?.safeText(): String = this?.trim().takeIf { !it.isNullOrEmpty() } ?: "-"
 
-// Data class regroupant le logo principal et le logo “chaines”
+// Logos principal + chaines
 data class GammeLogos(val principale: Int?, val chaines: Int?)
 
-// Retourne à la fois le logo de la gamme et, si pertinent, le logo “chaines”
+// Associe désignation → logos
 fun getImageForGamme(designation: String): GammeLogos {
     val key = designation.trim().uppercase()
-    val principale = when (key) {
+    val principale = when(key) {
         "PAF 10"  -> R.drawable.paf10
         "PAF C"   -> R.drawable.pafc
         "PAF R"   -> R.drawable.pafr
@@ -63,9 +64,9 @@ fun getImageForGamme(designation: String): GammeLogos {
         "ST 20"   -> R.drawable.st20
         "ST 25"   -> R.drawable.st25
         "ST 25 C" -> R.drawable.st25c
-        else      -> null
+        else       -> null
     }
-    val chaines = when (key) {
+    val chaines = when(key) {
         "ST 20", "ST 25", "ST 25 C" -> R.drawable.chaines16
         "PAF 10", "PAF C", "PAF R", "PAF V", "ST 15 C" -> R.drawable.chaines12
         else -> null
@@ -79,13 +80,15 @@ fun TypeOperationScreen(
     viewModel: SelectionViewModel,
     navController: NavController
 ) {
-    val context      = LocalContext.current
-    val scope        = rememberCoroutineScope()
-    val snackbarHost = remember { SnackbarHostState() }
+    val context       = LocalContext.current
+    val scope         = rememberCoroutineScope()
+    val snackbarHost  = remember { SnackbarHostState() }
 
+    // Orientation
     val configuration = LocalConfiguration.current
-    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+    val isPortrait    = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
 
+    // État données
     val isConnected         by viewModel.isOnline.collectAsState()
     val gammes              by viewModel.gammes.collectAsState()
     val gammesSelectionnees by viewModel.gammesSelectionnees.collectAsState()
@@ -95,15 +98,14 @@ fun TypeOperationScreen(
     val intervention        by viewModel.intervention.collectAsState()
     val role                by viewModel.role.collectAsState()
 
+    // Chargement
     var isLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
-
     LaunchedEffect(Unit) {
         isLoading = true; loadError = null
         try {
             viewModel.chargerGammesDepuisApi(context)
-            Log.d("GAMMES", "Nombre de gammes reçues : ${viewModel.gammes.value.size}")
-        } catch (e: Exception) {
+        } catch(e: Exception) {
             loadError = "Erreur de chargement : ${e.message}"
         } finally {
             isLoading = false
@@ -111,25 +113,19 @@ fun TypeOperationScreen(
     }
 
     BaseScreen(
-        title            = "Type d’opération",
-        navController    = navController,
-        viewModel        = viewModel,
-        showBack         = true,
-        showLogout       = false,
-        connectionStatus = isConnected
+        title              = "Type d’opération",
+        navController      = navController,
+        viewModel          = viewModel,
+        showBack           = true,
+        showLogout         = false,
+        connectionStatus   = isConnected
     ) { padding ->
-        Box(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
+        Box(Modifier
+            .fillMaxSize()
+            .padding(padding)) {
             if (isPortrait) {
-                // Portrait: deux sections scrollables empilées
                 Column(Modifier.fillMaxSize()) {
-                    Box(
-                        Modifier
-                            .weight(1f)
-                    ) {
+                    Box(Modifier.weight(1f)) {
                         SelectionColumn(
                             gammes,
                             gammesSelectionnees,
@@ -142,11 +138,7 @@ fun TypeOperationScreen(
                             scope
                         )
                     }
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                    ) {
+                    Box(Modifier.weight(1f)) {
                         DetailsColumn(
                             current,
                             desired,
@@ -161,15 +153,8 @@ fun TypeOperationScreen(
                     }
                 }
             } else {
-                // Paysage: deux colonnes
                 Row(Modifier.fillMaxSize()) {
-                    Column(
-                        Modifier
-                            .weight(1f)
-                            .padding(16.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
+                    Box(Modifier.weight(1f)) {
                         SelectionColumn(
                             gammes,
                             gammesSelectionnees,
@@ -182,14 +167,7 @@ fun TypeOperationScreen(
                             scope
                         )
                     }
-                    Column(
-                        Modifier
-                            .weight(1f)
-                            .padding(16.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                    Box(Modifier.weight(1f)) {
                         DetailsColumn(
                             current,
                             desired,
@@ -205,7 +183,10 @@ fun TypeOperationScreen(
                 }
             }
 
-            SnackbarHost(hostState = snackbarHost, modifier = Modifier.align(Alignment.BottomCenter))
+            SnackbarHost(
+                hostState = snackbarHost,
+                modifier  = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }
@@ -222,11 +203,14 @@ private fun SelectionColumn(
     context: android.content.Context,
     scope: CoroutineScope
 ) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(
+        modifier           = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         item {
             Text(
                 "Sélectionnez vos gammes",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                style    = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
             )
         }
         if (isLoading) {
@@ -243,11 +227,7 @@ private fun SelectionColumn(
                 ) {
                     Text(loadError!!, color = Color.Red)
                     Spacer(Modifier.height(12.dp))
-                    Button(onClick = {
-                        scope.launch {
-                            viewModel.chargerGammesDepuisApi(context)
-                        }
-                    }) {
+                    Button(onClick = { scope.launch { viewModel.chargerGammesDepuisApi(context) } }) {
                         Text("Réessayer")
                     }
                 }
@@ -260,9 +240,7 @@ private fun SelectionColumn(
                     gammes   = visibles,
                     selected = current,
                     onSelect = viewModel::selectCurrentGamme,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp)
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp, max = 300.dp)
                 )
             }
             item {
@@ -272,9 +250,7 @@ private fun SelectionColumn(
                     selected = desired,
                     onSelect = viewModel::selectDesiredGamme,
                     restrict = current,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp)
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp, max = 300.dp)
                 )
             }
         }
@@ -293,51 +269,55 @@ private fun DetailsColumn(
     intervention: String,
     scope: CoroutineScope
 ) {
-    DetailsCard("Gamme actuelle", current)
-    DetailsCard("Gamme visée", desired)
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        ElevatedButton(
-            onClick  = { navController.popBackStack() },
-            modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
+        DetailsCard("Gamme actuelle", current)
+        DetailsCard("Gamme visée", desired)
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Icon(Icons.Default.WbSunny, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Retour")
-        }
-        if (role == "ADMIN") {
             ElevatedButton(
-                onClick  = { navController.navigate(Routes.TypeOperationParametres) },
-                modifier = Modifier.defaultMinSize(minWidth = 160.dp, minHeight = 56.dp)
+                onClick  = { navController.popBackStack() },
+                modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
             ) {
-                Icon(Icons.Default.Settings, contentDescription = null)
+                Icon(Icons.Default.WbSunny, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Paramètres")
+                Text("Retour")
+            }
+            if (role == "ADMIN") {
+                ElevatedButton(
+                    onClick  = { navController.navigate(Routes.TypeOperationParametres) },
+                    modifier = Modifier.defaultMinSize(minWidth = 160.dp, minHeight = 56.dp)
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Paramètres")
+                }
+            }
+            ElevatedButton(
+                onClick  = { viewModel.validateGammeChange { _, msg -> scope.launch { snackbarHost.showSnackbar(msg) } } },
+                enabled  = current != null && desired != null,
+                modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
+            ) {
+                Icon(Icons.Default.Check, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Valider")
             }
         }
-        ElevatedButton(
-            onClick  = {
-                viewModel.validateGammeChange { _, msg ->
-                    scope.launch { snackbarHost.showSnackbar(msg) }
-                }
-            },
-            enabled  = current != null && desired != null,
-            modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
-        ) {
-            Icon(Icons.Default.Check, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Valider")
-        }
+        Footer(zone, intervention)
     }
-    Footer(zone, intervention)
 }
 
 @Composable
 private fun DetailsCard(title: String, gamme: Gamme?) {
     val logos = getImageForGamme(gamme?.designation ?: "")
-
     Card(
         colors   = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
         modifier = Modifier.fillMaxWidth(),
@@ -402,31 +382,28 @@ private fun GammeGrid(
                 val disabled = restrict != null && gamme == restrict
                 val borderColor by animateColorAsState(
                     when {
-                        disabled          -> Color.LightGray
-                        gamme == selected -> MaterialTheme.colorScheme.primary
-                        else              -> Color.Gray
-                    },
-                    animationSpec = tween(500, easing = FastOutSlowInEasing)
+                        disabled           -> Color.LightGray
+                        gamme == selected  -> MaterialTheme.colorScheme.primary
+                        else               -> Color.Gray
+                    }, animationSpec = tween(500, easing = FastOutSlowInEasing)
                 )
                 val bgColor by animateColorAsState(
                     when {
-                        disabled          -> Color(0xFF2E2E2E)
-                        gamme == selected -> MaterialTheme.colorScheme.primary.copy(alpha = .1f)
-                        else              -> Color(0xFF1E1E1E)
-                    },
-                    animationSpec = tween(500)
+                        disabled           -> Color(0xFF2E2E2E)
+                        gamme == selected  -> MaterialTheme.colorScheme.primary.copy(alpha = .1f)
+                        else               -> Color(0xFF1E1E1E)
+                    }, animationSpec = tween(500)
                 )
                 val txtColor = when {
-                    disabled          -> Color.LightGray
-                    gamme == selected -> MaterialTheme.colorScheme.primary
-                    else              -> Color.White
+                    disabled           -> Color.LightGray
+                    gamme == selected  -> MaterialTheme.colorScheme.primary
+                    else               -> Color.White
                 }
                 val fw = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
                 val scale by animateFloatAsState(
                     targetValue   = if (gamme == selected) 1.05f else 1f,
                     animationSpec = tween(300)
                 )
-
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
