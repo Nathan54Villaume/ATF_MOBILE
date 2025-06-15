@@ -2,9 +2,6 @@ package com.riva.atsmobile.model
 
 import com.google.gson.annotations.SerializedName
 
-/**
- * Data class représentant le TreillisDto retourné par l’API.
- */
 data class Gamme(
     @SerializedName("Designation") val designation: String,
     @SerializedName("Code_Treillis") val codeTreillis: String,
