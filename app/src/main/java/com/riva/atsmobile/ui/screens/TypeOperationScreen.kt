@@ -195,10 +195,10 @@ fun DetailsCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 gamme?.let {
-                    Text("Désignation : ${it.designation.safeText()}", style = detailStyle)
-                    Text("Dimension : ${it.dimension} mm", style = detailStyle)
-                    Text("Diamètres : ${it.diamChaineTrame}", style = detailStyle)
-                    Text("Espacement : ${it.espFilChaineTrame} mm", style = detailStyle)
+                    Text(" ${it.designation.safeText()}", style = detailStyle)
+                    Text(" ${it.dimension} mm", style = detailStyle)
+                    Text(" ${it.diamChaine} mm x ${it.diamTrame} mm ", style = detailStyle)
+                    Text(" ${it.espFilChaineTrame} mm", style = detailStyle)
                 } ?: Text("Aucune sélection", style = noSelectionStyle)
             }
 
