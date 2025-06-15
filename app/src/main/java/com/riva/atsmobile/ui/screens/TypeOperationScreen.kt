@@ -33,6 +33,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+fun String?.safeText(): String = this?.trim().takeIf { !it.isNullOrEmpty() } ?: "-"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TypeOperationScreen(
@@ -199,7 +201,6 @@ fun TypeOperationScreen(
     }
 }
 
-
 @Composable
 private fun GammeGrid(
     title: String,
@@ -210,7 +211,7 @@ private fun GammeGrid(
     modifier: Modifier = Modifier
 ) {
     Column(modifier) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
+        Text(title.safeText(), style = MaterialTheme.typography.titleMedium)
         LazyVerticalGrid(
             columns               = GridCells.Fixed(3),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -256,7 +257,7 @@ private fun GammeGrid(
                         .padding(vertical = 8.dp, horizontal = 4.dp)
                 ) {
                     Text(
-                        gamme.designation,
+                        gamme.designation.safeText(),
                         color      = txtColor,
                         fontWeight = fw,
                         style      = MaterialTheme.typography.bodyMedium
@@ -272,18 +273,18 @@ private fun DetailsRow(current: Gamme?, desired: Gamme?) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         current?.let {
             Column {
-                Text("Actuelle : ${it.designation}", fontWeight = FontWeight.SemiBold)
-                Text("Maille           : ${it.dimension} mm")
-                Text("Chaîne/Trame     : ${it.diamChaineTrame}")
-                Text("Esp. fil/chaîne  : ${it.espFilChaineTrame} mm")
+                Text("Actuelle : ${it.designation.safeText()}", fontWeight = FontWeight.SemiBold)
+                Text("Maille           : ${it.dimension.safeText()} mm")
+                Text("Chaîne/Trame     : ${it.diamChaineTrame.safeText()}")
+                Text("Esp. fil/chaîne  : ${it.espFilChaineTrame.safeText()} mm")
             }
         }
         desired?.let {
             Column(horizontalAlignment = Alignment.End) {
-                Text("Souhait : ${it.designation}", fontWeight = FontWeight.SemiBold)
-                Text("Maille           : ${it.dimension} mm")
-                Text("Chaîne/Trame     : ${it.diamChaineTrame}")
-                Text("Esp. fil/chaîne  : ${it.espFilChaineTrame} mm")
+                Text("Souhait : ${it.designation.safeText()}", fontWeight = FontWeight.SemiBold)
+                Text("Maille           : ${it.dimension.safeText()} mm")
+                Text("Chaîne/Trame     : ${it.diamChaineTrame.safeText()}")
+                Text("Esp. fil/chaîne  : ${it.espFilChaineTrame.safeText()} mm")
             }
         }
     }
@@ -291,15 +292,14 @@ private fun DetailsRow(current: Gamme?, desired: Gamme?) {
 
 @Composable
 private fun Footer(zone: String, intervention: String) {
-    val now = LocalDateTime.now()
-        .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+    val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
     Row(
         Modifier
             .fillMaxWidth()
             .padding(top = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text("Zone : $zone  |  Interv. : $intervention", style = MaterialTheme.typography.bodySmall)
+        Text("Zone : ${zone.safeText()}  |  Interv. : ${intervention.safeText()}", style = MaterialTheme.typography.bodySmall)
         Text(now, style = MaterialTheme.typography.bodySmall)
     }
 }
