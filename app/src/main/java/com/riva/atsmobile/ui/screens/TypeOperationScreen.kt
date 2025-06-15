@@ -3,12 +3,12 @@ package com.riva.atsmobile.ui.screens
 import android.content.res.Configuration
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -157,55 +157,36 @@ fun TypeOperationScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            val selection = @Composable {
-                SelectionColumn(
-                    gammes = gammes,
-                    selectedCodes = gammesSelectionnees,
-                    current = current,
-                    desired = desired,
-                    isLoading = isLoading,
-                    loadError = loadError,
-                    viewModel = viewModel,
-                    context = context,
-                    scope = scope,
-                    isPortrait = isPortrait
-                )
-            }
-            val details = @Composable {
-                Box(Modifier.fillMaxSize()) {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Première carte avec logos
-                        DetailsCard("Gamme actuelle", current)
-                        // Flèche dynamiquement positionnée entre les logos
-                        Spacer(Modifier.height(2.dp))
-                        TransitionArrow(isPortrait)
-                        Spacer(Modifier.height(2.dp))
-                        // Deuxième carte avec logos
-                        DetailsCard("Gamme visée", desired)
-                        // Actions et footer
-                        ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
-                        Footer(zone, intervention)
-                    }
-                }
-            }
+            // Section sélection
+            SelectionColumn(
+                gammes = gammes,
+                selectedCodes = gammesSelectionnees,
+                current = current,
+                desired = desired,
+                isLoading = isLoading,
+                loadError = loadError,
+                viewModel = viewModel,
+                context = context,
+                scope = scope,
+                isPortrait = isPortrait
+            )
 
-            if (isPortrait) {
-                Column(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f)) { selection() }
-                    Box(Modifier.weight(1f)) { details() }
-                }
-            } else {
-                Row(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f)) { selection() }
-                    Box(Modifier.weight(1f)) { details() }
-                }
+            // Section détails
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                DetailsCard("Gamme actuelle", current)
+                Spacer(Modifier.height(2.dp))
+                TransitionArrow(isPortrait)
+                Spacer(Modifier.height(2.dp))
+                DetailsCard("Gamme visée", desired)
+                ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
+                Footer(zone, intervention)
             }
 
             SnackbarHost(
@@ -215,10 +196,6 @@ fun TypeOperationScreen(
         }
     }
 }
-
-/* Les autres Composables (SelectionColumn, ActionRow, DetailsCard, GammeGrid, Footer) restent inchangés */
-
-
 
 @Composable
 private fun SelectionColumn(
@@ -265,11 +242,10 @@ private fun SelectionColumn(
                 }
             }
         } else {
-            val visibles = gammes.filter { selectedCodes.contains(it.codeTreillis) }
             item {
                 GammeGrid(
                     title = "GAMME ACTUELLE",
-                    gammes = visibles,
+                    gammes = gammes.filter { selectedCodes.contains(it.codeTreillis) },
                     selected = current,
                     onSelect = viewModel::selectCurrentGamme,
                     restrict = null,
@@ -280,13 +256,11 @@ private fun SelectionColumn(
             }
             item {
                 Spacer(Modifier.height(2.dp))
-                TransitionArrow(isPortrait)
-                Spacer(Modifier.height(2.dp))
             }
             item {
                 GammeGrid(
                     title = "GAMME VISÉE",
-                    gammes = visibles,
+                    gammes = gammes.filter { selectedCodes.contains(it.codeTreillis) },
                     selected = desired,
                     onSelect = viewModel::selectDesiredGamme,
                     restrict = current,
