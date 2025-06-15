@@ -126,18 +126,7 @@ fun TypeOperationScreen(
                         }
                     }
 
-                    gammes.isEmpty() -> {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Aucune gamme trouvée.", style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-
-                    else -> {
+                    gammes.isNullOrEmpty().not() -> {
                         GammeGrid(
                             title    = "GAMME ACTUELLE",
                             gammes   = gammes,
@@ -155,6 +144,17 @@ fun TypeOperationScreen(
                             modifier = Modifier.weight(1f)
                         )
                         Spacer(Modifier.height(24.dp))
+                    }
+
+                    else -> {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Aucune gamme trouvée.", style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
 
@@ -257,7 +257,7 @@ private fun GammeGrid(
                         .padding(vertical = 8.dp, horizontal = 4.dp)
                 ) {
                     Text(
-                        text       = gamme.designation.safeText().take(16),
+                        text       = gamme.designation ?: "",
                         color      = txtColor,
                         fontWeight = fw,
                         style      = MaterialTheme.typography.bodyMedium,
