@@ -89,15 +89,26 @@ class SelectionViewModel : ViewModel() {
                     val body = response.body?.string()
                     if (response.isSuccessful && body != null) {
                         val listType = object : TypeToken<List<Gamme>>() {}.type
-                        val gammes = Gson().fromJson<List<Gamme>>(body, listType)
-                        _gammes.value = gammes
-                        gammes.apply {
-                            _gammes.value = this
-                            if (_gammesSelectionnees.value.isEmpty()) {
-                                _gammesSelectionnees.value = this.map { it.codeTreillis }.toSet()
-                            }
-                        }
+                        val gammesLoaded = Gson().fromJson<List<Gamme>>(body, listType)
+                        _gammes.value = gammesLoaded
 
+                        // Sélection par défaut
+                        if (_gammesSelectionnees.value.isEmpty()) {
+                            // liste des désignations par défaut
+                            val defaultDesignations = setOf(
+                                "PAF R", "PAF C", "PAF V", "PAF 10",
+                                "ST 15 C", "ST 20", "ST 25", "ST 25 C"
+                            ).map { it.trim().uppercase() }.toSet()
+
+                            // on filtre les gammes reçues pour ne garder que celles-ci
+                            val defaultCodes = gammesLoaded
+                                .filter { defaultDesignations.contains(it.designation.trim().uppercase()) }
+                                .map { it.codeTreillis }
+                                .toSet()
+
+                            // on les applique
+                            _gammesSelectionnees.value = defaultCodes
+                        }
                     } else {
                         Log.e("GAMMES", "Réponse non valide : $body")
                     }
