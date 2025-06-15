@@ -1,14 +1,14 @@
 package com.riva.atsmobile.ui.screens
 
 import android.content.res.Configuration
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -97,15 +97,17 @@ fun TransitionArrow(isPortrait: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(24.dp), // sufficient height for arrow + padding
+            .height(24.dp),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier
-                .offset(x = if (!isPortrait) offset else 0.dp,
-                    y = if (isPortrait) offset else 0.dp)
+                .offset(
+                    x = if (!isPortrait) offset else 0.dp,
+                    y = if (isPortrait) offset else 0.dp
+                )
                 .size(40.dp)
                 .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
                 .padding(4.dp)
@@ -179,8 +181,15 @@ fun TypeOperationScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        // Première carte avec logos
                         DetailsCard("Gamme actuelle", current)
+                        // Flèche dynamiquement positionnée entre les logos
+                        Spacer(Modifier.height(2.dp))
+                        TransitionArrow(isPortrait)
+                        Spacer(Modifier.height(2.dp))
+                        // Deuxième carte avec logos
                         DetailsCard("Gamme visée", desired)
+                        // Actions et footer
                         ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
                         Footer(zone, intervention)
                     }
@@ -206,6 +215,9 @@ fun TypeOperationScreen(
         }
     }
 }
+
+/* Les autres Composables (SelectionColumn, ActionRow, DetailsCard, GammeGrid, Footer) restent inchangés */
+
 
 @Composable
 private fun SelectionColumn(
