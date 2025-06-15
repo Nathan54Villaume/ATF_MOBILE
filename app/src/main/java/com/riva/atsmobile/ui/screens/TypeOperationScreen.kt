@@ -205,7 +205,188 @@ fun DetailsCard(
     }
 }
 
+@Composable
+fun SelectionColumn(
+    gammes: List<Gamme>,
+    selectedCodes: Set<String>,
+    current: Gamme?,
+    desired: Gamme?,
+    isLoading: Boolean,
+    loadError: String?,
+    viewModel: SelectionViewModel,
+    context: android.content.Context,
+    scope: CoroutineScope,
+    isPortrait: Boolean
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator()
+        } else if (loadError != null) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(loadError, color = Color.Red)
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = { scope.launch { viewModel.chargerGammesDepuisApi(context) } }) {
+                    Text("Réessayer")
+                }
+            }
+        } else {
+            val visibles = gammes.filter { selectedCodes.contains(it.codeTreillis) }
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "Sélectionnez vos gammes",
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                )
+                GammeGrid(
+                    title = "GAMME ACTUELLE",
+                    gammes = visibles,
+                    selected = current,
+                    onSelect = viewModel::selectCurrentGamme,
+                    restrict = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp, max = 300.dp),
+                    titleStyle = TextStyle(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFFF9800),
+                        fontFamily = FontFamily.Serif
+                    ),
+                    cardShape = RoundedCornerShape(16.dp),
+                    selectedColor = Color(0xFFFF9800),
+                    selectedBgColor = Color(0xFF2C2C2C),
+                    defaultBgColor = Color(0xFF2C2C2C),
+                    defaultColor = Color(0xFFE0E0E0),
+                    disabledBgColor = Color(0xFF424242),
+                    disabledColor = Color(0xFF888888),
+                    cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
+                )
+                GammeGrid(
+                    title = "GAMME VISÉE",
+                    gammes = visibles,
+                    selected = desired,
+                    onSelect = viewModel::selectDesiredGamme,
+                    restrict = current,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp, max = 300.dp),
+                    titleStyle = TextStyle(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFF9800),
+                        fontFamily = FontFamily.Serif
+                    ),
+                    cardShape = RoundedCornerShape(16.dp),
+                    selectedColor = Color(0xFFFF9800),
+                    selectedBgColor = Color(0xFF2C2C2C),
+                    defaultBgColor = Color(0xFF2C2C2C),
+                    defaultColor = Color(0xFFE0E0E0),
+                    disabledBgColor = Color(0xFF424242),
+                    disabledColor = Color(0xFF888888),
+                    cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
+                )
+            }
+        }
+    }
+}
 
+
+@Composable
+fun DetailsColumn(
+    current: Gamme?,
+    desired: Gamme?,
+    role: String,
+    navController: NavController,
+    viewModel: SelectionViewModel,
+    snackbarHost: SnackbarHostState,
+    zone: String,
+    intervention: String,
+    arrowOffsetDp: Dp
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "GAMME ACTUELLE",
+                    style = TextStyle(
+                        color = Color(0xFFFF9800),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Serif
+                    )
+                )
+                Spacer(Modifier.height(8.dp))
+                DetailsCard(
+                    gamme = current,
+                    detailStyle = TextStyle(
+                        color = Color(0xFFEEEEEE),
+                        fontSize = 20.sp,
+                        fontFamily = FontFamily.SansSerif
+                    ),
+                    noSelectionStyle = TextStyle(
+                        color = Color.Red,
+                        fontSize = 20.sp,
+                        fontStyle = FontStyle.Italic
+                    )
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "GAMME VISÉE",
+                    style = TextStyle(
+                        color = Color(0xFFFF9800),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Serif
+                    )
+                )
+                Spacer(Modifier.height(8.dp))
+                DetailsCard(
+                    gamme = desired,
+                    detailStyle = TextStyle(
+                        color = Color(0xFFEEEEEE),
+                        fontSize = 20.sp,
+                        fontFamily = FontFamily.SansSerif
+                    ),
+                    noSelectionStyle = TextStyle(
+                        color = Color.Red,
+                        fontSize = 20.sp,
+                        fontStyle = FontStyle.Italic
+                    )
+                )
+            }
+
+            //ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
+            //Footer(zone, intervention)
+        }
+
+        TransitionArrow(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = arrowOffsetDp)
+                .zIndex(1f),
+            width = 80.dp,
+            height = 30.dp
+        )
+    }
+}
 
 @Composable
 fun TypeOperationScreen(
@@ -389,188 +570,7 @@ fun TypeOperationScreen(
 
 
 
-@Composable
-fun SelectionColumn(
-    gammes: List<Gamme>,
-    selectedCodes: Set<String>,
-    current: Gamme?,
-    desired: Gamme?,
-    isLoading: Boolean,
-    loadError: String?,
-    viewModel: SelectionViewModel,
-    context: android.content.Context,
-    scope: CoroutineScope,
-    isPortrait: Boolean
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator()
-        } else if (loadError != null) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(loadError, color = Color.Red)
-                Spacer(Modifier.height(12.dp))
-                Button(onClick = { scope.launch { viewModel.chargerGammesDepuisApi(context) } }) {
-                    Text("Réessayer")
-                }
-            }
-        } else {
-            val visibles = gammes.filter { selectedCodes.contains(it.codeTreillis) }
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    "Sélectionnez vos gammes",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-                )
-                GammeGrid(
-                    title = "GAMME ACTUELLE",
-                    gammes = visibles,
-                    selected = current,
-                    onSelect = viewModel::selectCurrentGamme,
-                    restrict = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp),
-                    titleStyle = TextStyle(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFFF9800),
-                        fontFamily = FontFamily.Serif
-                    ),
-                    cardShape = RoundedCornerShape(16.dp),
-                    selectedColor = Color(0xFFFF9800),
-                    selectedBgColor = Color(0xFF2C2C2C),
-                    defaultBgColor = Color(0xFF2C2C2C),
-                    defaultColor = Color(0xFFE0E0E0),
-                    disabledBgColor = Color(0xFF424242),
-                    disabledColor = Color(0xFF888888),
-                    cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
-                )
-                GammeGrid(
-                    title = "GAMME VISÉE",
-                    gammes = visibles,
-                    selected = desired,
-                    onSelect = viewModel::selectDesiredGamme,
-                    restrict = current,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp),
-                    titleStyle = TextStyle(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFF9800),
-                        fontFamily = FontFamily.Serif
-                    ),
-                    cardShape = RoundedCornerShape(16.dp),
-                    selectedColor = Color(0xFFFF9800),
-                    selectedBgColor = Color(0xFF2C2C2C),
-                    defaultBgColor = Color(0xFF2C2C2C),
-                    defaultColor = Color(0xFFE0E0E0),
-                    disabledBgColor = Color(0xFF424242),
-                    disabledColor = Color(0xFF888888),
-                    cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
-                )
-            }
-        }
-    }
-}
 
-
-@Composable
-fun DetailsColumn(
-    current: Gamme?,
-    desired: Gamme?,
-    role: String,
-    navController: NavController,
-    viewModel: SelectionViewModel,
-    snackbarHost: SnackbarHostState,
-    zone: String,
-    intervention: String,
-    arrowOffsetDp: Dp
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "GAMME ACTUELLE",
-                    style = TextStyle(
-                        color = Color(0xFFFF9800),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Serif
-                    )
-                )
-                Spacer(Modifier.height(8.dp))
-                DetailsCard(
-                    gamme = current,
-                    detailStyle = TextStyle(
-                        color = Color(0xFFEEEEEE),
-                        fontSize = 20.sp,
-                        fontFamily = FontFamily.SansSerif
-                    ),
-                    noSelectionStyle = TextStyle(
-                        color = Color.Red,
-                        fontSize = 20.sp,
-                        fontStyle = FontStyle.Italic
-                    )
-                )
-            }
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "GAMME VISÉE",
-                    style = TextStyle(
-                        color = Color(0xFFFF9800),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Serif
-                    )
-                )
-                Spacer(Modifier.height(8.dp))
-                DetailsCard(
-                    gamme = desired,
-                    detailStyle = TextStyle(
-                        color = Color(0xFFEEEEEE),
-                        fontSize = 20.sp,
-                        fontFamily = FontFamily.SansSerif
-                    ),
-                    noSelectionStyle = TextStyle(
-                        color = Color.Red,
-                        fontSize = 20.sp,
-                        fontStyle = FontStyle.Italic
-                    )
-                )
-            }
-
-            //ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
-            //Footer(zone, intervention)
-        }
-
-        TransitionArrow(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = arrowOffsetDp)
-                .zIndex(1f),
-            width = 80.dp,
-            height = 30.dp
-        )
-    }
-}
 
 
 
