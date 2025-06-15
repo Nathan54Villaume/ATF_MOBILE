@@ -228,7 +228,7 @@ fun TypeOperationScreen(
                     TransitionArrow(
                         isPortrait = isPortrait,
                         modifier = Modifier
-                            .fillMaxWidth()
+                            
                             .absoluteOffset(y = arrowOffsetDp)
                             .zIndex(1f),
                         width = 80.dp,    // ← largeur réglable
