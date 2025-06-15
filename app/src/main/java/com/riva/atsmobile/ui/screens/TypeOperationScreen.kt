@@ -348,7 +348,7 @@ fun TypeOperationScreen(
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Serif,
-                                    letterSpacing = 1.sp
+                                    letterSpacing = 2.sp
                                 ),
                                 detailStyle = TextStyle(
                                     color = Color(0xFFEEEEEE),
@@ -357,7 +357,7 @@ fun TypeOperationScreen(
                                 ),
                                 noSelectionStyle = TextStyle(
                                     color = Color.Red,
-                                    fontSize = 14.sp,
+                                    fontSize = 20.sp,
                                     fontStyle = FontStyle.Italic
                                 )
                             )
