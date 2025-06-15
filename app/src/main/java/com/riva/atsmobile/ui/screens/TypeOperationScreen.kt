@@ -125,6 +125,41 @@ fun TypeOperationScreen(
                     }
                     gammes.isNotEmpty() -> {
                         val gammesVisibles = gammes.filter { gammesSelectionnees.contains(it.codeTreillis) }
+
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text("Gamme actuelle", style = MaterialTheme.typography.titleMedium)
+                                current?.let {
+                                    Text("Désignation : ${it.designation.safeText()}")
+                                    Text("Maille : ${it.dimension} mm")
+                                    Text("Chaîne/Trame : ${it.diamChaineTrame}")
+                                    Text("Esp. fil/chaîne : ${it.espFilChaineTrame} mm")
+                                } ?: Text("Aucune sélection")
+                            }
+                        }
+
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text("Gamme visée", style = MaterialTheme.typography.titleMedium)
+                                desired?.let {
+                                    Text("Désignation : ${it.designation.safeText()}")
+                                    Text("Maille : ${it.dimension} mm")
+                                    Text("Chaîne/Trame : ${it.diamChaineTrame}")
+                                    Text("Esp. fil/chaîne : ${it.espFilChaineTrame} mm")
+                                } ?: Text("Aucune sélection")
+                            }
+                        }
+
                         GammeGrid("GAMME ACTUELLE", gammesVisibles, current, viewModel::selectCurrentGamme, modifier = Modifier.weight(1f))
                         Spacer(Modifier.height(16.dp))
                         GammeGrid("GAMME VISÉE", gammesVisibles, desired, viewModel::selectDesiredGamme, restrict = current, modifier = Modifier.weight(1f))
@@ -137,7 +172,6 @@ fun TypeOperationScreen(
                     }
                 }
 
-                DetailsRow(current, desired)
                 Spacer(Modifier.weight(1f))
 
                 Row(
@@ -194,6 +228,7 @@ fun TypeOperationScreen(
         }
     }
 }
+
 
 
 @Composable
