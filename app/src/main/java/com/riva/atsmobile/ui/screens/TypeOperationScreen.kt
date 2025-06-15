@@ -191,7 +191,7 @@ fun TypeOperationScreen(
                 val arrowOffsetDp by remember(topY, topHeight, bottomY) {
                     derivedStateOf {
                         val midPx = (topY + topHeight + bottomY) / 2f
-                        with(density) { midPx.toDp() - 30.dp } // centrer
+                        with(density) { midPx.toDp() - 10.dp } // centrer
                     }
                 }
 
@@ -225,6 +225,7 @@ fun TypeOperationScreen(
                         ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
                         Footer(zone, intervention)
                     }
+
                     TransitionArrow(
                         isPortrait = isPortrait,
                         modifier = Modifier
@@ -234,7 +235,6 @@ fun TypeOperationScreen(
                         width = 80.dp,    // ← largeur réglable
                         height = 30.dp   // ← hauteur réglable
                     )
-
 
                 }
             }
@@ -259,7 +259,6 @@ fun TypeOperationScreen(
     }
 }
 
-/* Les autres Composables (SelectionColumn, ActionRow, DetailsCard, GammeGrid, Footer) restent inchangés */
 
 @Composable
 private fun SelectionColumn(
