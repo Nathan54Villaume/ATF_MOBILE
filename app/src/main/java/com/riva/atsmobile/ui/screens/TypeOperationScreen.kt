@@ -352,8 +352,8 @@ fun TypeOperationScreen(
                             }
                         }
 
-                        ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
-                        Footer(zone, intervention)
+                        //ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
+                        //Footer(zone, intervention)
                     }
 
                     TransitionArrow(
