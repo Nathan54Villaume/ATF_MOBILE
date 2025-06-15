@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.model.LoginResponse
 import com.riva.atsmobile.utils.ApiConfig
@@ -47,33 +48,52 @@ class SelectionViewModel : ViewModel() {
     val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
     private var isNetworkLoopStarted = false
 
-    // === Flux & méthodes pour l’écran “Type d’opération” ===
-
-    // Liste des gammes disponibles
+    // === Données de l’écran “Type d’opération” ===
     private val _gammes = MutableStateFlow<List<Gamme>>(emptyList())
     val gammes: StateFlow<List<Gamme>> = _gammes.asStateFlow()
 
-    // Sélection de la gamme actuelle
     private val _currentGamme = MutableStateFlow<Gamme?>(null)
     val currentGamme: StateFlow<Gamme?> = _currentGamme.asStateFlow()
 
-    // Sélection de la gamme souhaitée
     private val _desiredGamme = MutableStateFlow<Gamme?>(null)
     val desiredGamme: StateFlow<Gamme?> = _desiredGamme.asStateFlow()
 
-    // Zone de travail et intervention
     private val _zoneDeTravail = MutableStateFlow("")
     val zoneDeTravail: StateFlow<String> = _zoneDeTravail.asStateFlow()
 
     private val _intervention = MutableStateFlow("")
     val intervention: StateFlow<String> = _intervention.asStateFlow()
 
-    /** Initialise la liste des gammes (depuis API ou locale) */
-    fun setGammes(list: List<Gamme>) {
-        _gammes.value = list
+    /** Charge les gammes depuis l’API */
+    fun chargerGammesDepuisApi(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val baseUrl = ApiConfig.getBaseUrl(context)
+                val url = "$baseUrl/api/gammes"
+
+                val client = OkHttpClient()
+                val request = Request.Builder()
+                    .url(url)
+                    .get()
+                    .addHeader("Accept", "application/json")
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    val body = response.body?.string()
+                    if (response.isSuccessful && body != null) {
+                        val listType = object : TypeToken<List<Gamme>>() {}.type
+                        val gammes = Gson().fromJson<List<Gamme>>(body, listType)
+                        _gammes.value = gammes
+                    } else {
+                        Log.e("GAMMES", "Réponse non valide : $body")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("GAMMES", "Erreur lors du chargement des gammes", e)
+            }
+        }
     }
 
-    /** Définit la gamme actuelle et réinitialise la gamme souhaitée si identique */
     fun selectCurrentGamme(g: Gamme) {
         _currentGamme.value = g
         if (_desiredGamme.value == g) {
@@ -81,7 +101,6 @@ class SelectionViewModel : ViewModel() {
         }
     }
 
-    /** Définit la gamme souhaitée (différente de la gamme actuelle) */
     fun selectDesiredGamme(g: Gamme) {
         if (_currentGamme.value != g) {
             _desiredGamme.value = g
@@ -96,20 +115,10 @@ class SelectionViewModel : ViewModel() {
         _intervention.value = inter
     }
 
-    /**
-     * Valide le changement de gamme.
-     * @param onResult callback avec (success, message)
-     */
     fun validateGammeChange(onResult: (success: Boolean, msg: String) -> Unit) {
         viewModelScope.launch {
             try {
-                // TODO : remplacer par ton appel réel à l’API
-                // ex. api.changeGamme(
-                //      currentGamme.value!!.id,
-                //      desiredGamme.value!!.id,
-                //      zoneDeTravail.value,
-                //      intervention.value
-                // )
+                // TODO : Remplacer cette partie par un POST réel si besoin
                 onResult(true, "Validation OK")
             } catch (e: Exception) {
                 Log.e("SelectionViewModel", "Erreur validation gamme", e)
@@ -118,14 +127,12 @@ class SelectionViewModel : ViewModel() {
         }
     }
 
-    // --- Fonctions existantes ---
-
+    // --- Fonctions générales ---
     fun setMatricule(value: String) { _matricule.value = value }
     fun setNom(value: String) { _nom.value = value }
     fun setRole(value: String) { _role.value = value }
     fun setAnnee(value: Int) { _annee.value = value }
     fun setMois(value: Int) { _mois.value = value }
-
     fun activateDevMode() { _devModeEnabled.value = true }
     fun setDevMode(enabled: Boolean) { _devModeEnabled.value = enabled }
 

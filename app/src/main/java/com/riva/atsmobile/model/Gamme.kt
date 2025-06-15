@@ -11,6 +11,10 @@ data class Gamme(
     val nuance: String,
     val diamChaine: Double,
     val diamTrame: Double,
+    /** Avant/Arrière (ex. "AV", "AR") */
+    val aboutAVAR: String,
+    /** Ad/Ag (ex. "AD", "AG") */
+    val aboutAdAg: String,
     /** Diamètre Chaîne/Trame combiné (ex. "4x5 mm") */
     val diamChaineTrame: String,
     /** Maille (ex. "10x10 mm") */
