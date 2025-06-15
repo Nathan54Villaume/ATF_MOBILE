@@ -308,11 +308,19 @@ fun DetailsColumn(
     viewModel: SelectionViewModel,
     snackbarHost: SnackbarHostState,
     zone: String,
-    intervention: String,
-    arrowOffsetDp: Dp,
-    onTopPositioned: (LayoutCoordinates) -> Unit,
-    onBottomPositioned: (LayoutCoordinates) -> Unit
+    intervention: String
 ) {
+    var topY by remember { mutableStateOf(0f) }
+    var topHeight by remember { mutableStateOf(0f) }
+    var bottomY by remember { mutableStateOf(0f) }
+    val density = LocalDensity.current
+    val arrowOffset by remember(topY, topHeight, bottomY) {
+        derivedStateOf {
+            val midPx = (topY + topHeight + bottomY) / 2f
+            with(density) { midPx.toDp() - 1.dp }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -324,7 +332,10 @@ fun DetailsColumn(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             Column(
-                modifier = Modifier.onGloballyPositioned { onTopPositioned(it) },
+                modifier = Modifier.onGloballyPositioned {
+                    topY = it.positionInParent().y
+                    topHeight = it.size.height.toFloat()
+                },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -353,7 +364,9 @@ fun DetailsColumn(
             }
 
             Column(
-                modifier = Modifier.onGloballyPositioned { onBottomPositioned(it) },
+                modifier = Modifier.onGloballyPositioned {
+                    bottomY = it.positionInParent().y
+                },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -388,13 +401,15 @@ fun DetailsColumn(
         TransitionArrow(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = arrowOffsetDp)
+                .offset(y = arrowOffset)
                 .zIndex(1f),
             width = 80.dp,
             height = 30.dp
         )
     }
 }
+
+
 
 
 
@@ -442,112 +457,43 @@ fun TypeOperationScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            var topY by remember { mutableStateOf(0f) }
-            var topHeight by remember { mutableStateOf(0f) }
-            var bottomY by remember { mutableStateOf(0f) }
-            val density = LocalDensity.current
-            val arrowOffsetDp by remember(topY, topHeight, bottomY) {
-                derivedStateOf {
-                    val base = topY + topHeight
-                    val target = bottomY
-                    val center = (base + target) / 2f
-                    with(density) { center.toDp() - 15.dp }
-                }
+            val selection = @Composable {
+                SelectionColumn(
+                    gammes = gammes,
+                    selectedCodes = gammesSelectionnees,
+                    current = current,
+                    desired = desired,
+                    isLoading = isLoading,
+                    loadError = loadError,
+                    viewModel = viewModel,
+                    context = context,
+                    scope = scope,
+                    isPortrait = isPortrait
+                )
+            }
+
+            val details = @Composable {
+                DetailsColumn(
+                    current = current,
+                    desired = desired,
+                    role = role,
+                    navController = navController,
+                    viewModel = viewModel,
+                    snackbarHost = snackbarHost,
+                    zone = zone,
+                    intervention = intervention
+                )
             }
 
             if (isPortrait) {
                 Column(Modifier.fillMaxSize()) {
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        SelectionColumn(
-                            gammes = gammes,
-                            selectedCodes = gammesSelectionnees,
-                            current = current,
-                            desired = desired,
-                            isLoading = isLoading,
-                            loadError = loadError,
-                            viewModel = viewModel,
-                            context = context,
-                            scope = scope,
-                            isPortrait = isPortrait
-                        )
-                    }
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        DetailsColumn(
-                            current = current,
-                            desired = desired,
-                            role = role,
-                            navController = navController,
-                            viewModel = viewModel,
-                            snackbarHost = snackbarHost,
-                            zone = zone,
-                            intervention = intervention,
-                            arrowOffsetDp = arrowOffsetDp,
-                            onTopPositioned = { coords ->
-                                topY = coords.positionInParent().y
-                                topHeight = coords.size.height.toFloat()
-                            },
-                            onBottomPositioned = { coords ->
-                                bottomY = coords.positionInParent().y
-                            }
-                        )
-                    }
+                    Box(Modifier.weight(1f)) { selection() }
+                    Box(Modifier.weight(1f)) { details() }
                 }
             } else {
                 Row(Modifier.fillMaxSize()) {
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        SelectionColumn(
-                            gammes = gammes,
-                            selectedCodes = gammesSelectionnees,
-                            current = current,
-                            desired = desired,
-                            isLoading = isLoading,
-                            loadError = loadError,
-                            viewModel = viewModel,
-                            context = context,
-                            scope = scope,
-                            isPortrait = isPortrait
-                        )
-                    }
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        DetailsColumn(
-                            current = current,
-                            desired = desired,
-                            role = role,
-                            navController = navController,
-                            viewModel = viewModel,
-                            snackbarHost = snackbarHost,
-                            zone = zone,
-                            intervention = intervention,
-                            arrowOffsetDp = arrowOffsetDp,
-                            onTopPositioned = { coords ->
-                                topY = coords.positionInParent().y
-                                topHeight = coords.size.height.toFloat()
-                            },
-                            onBottomPositioned = { coords ->
-                                bottomY = coords.positionInParent().y
-                            }
-                        )
-                    }
+                    Box(Modifier.weight(1f)) { selection() }
+                    Box(Modifier.weight(1f)) { details() }
                 }
             }
 
@@ -558,13 +504,6 @@ fun TypeOperationScreen(
         }
     }
 }
-
-
-
-
-
-
-
 
 
 
