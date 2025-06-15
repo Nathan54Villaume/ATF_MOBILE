@@ -560,7 +560,7 @@ fun DetailsColumn(
             }
 
             ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
-            Footer(zone, intervention)
+
         }
 
         TransitionArrow(
@@ -572,6 +572,7 @@ fun DetailsColumn(
             height = 30.dp
         )
     }
+    Footer(zone, intervention)
 }
 
 
