@@ -466,7 +466,7 @@ private fun SelectionColumn(
                         fontFamily = FontFamily.Serif
                     ),
                     cardShape = RoundedCornerShape(16.dp),
-                    selectedColor = Color(0xFF4CAF50),           // Vert
+                    selectedColor = Color(0xFFE0E0E0),           // Vert
                     selectedBgColor = Color(0xFF2C2C2C),         // Vert foncé (fond)
                     defaultBgColor = Color(0xFF2C2C2C),          // fond normal
                     defaultColor = Color(0xFFE0E0E0),            // texte normal
@@ -481,6 +481,7 @@ private fun SelectionColumn(
             item {
                 GammeGrid(
                     title = "GAMME VISÉE",
+
                     gammes = visibles,
                     selected = desired,
                     onSelect = viewModel::selectDesiredGamme,
@@ -497,7 +498,7 @@ private fun SelectionColumn(
                         fontFamily = FontFamily.Serif
                     ),
                     cardShape = RoundedCornerShape(16.dp),
-                    selectedColor = Color(0xFF4CAF50),           // Vert
+                    selectedColor = Color(0xFFE0E0E0),           // Vert
                     selectedBgColor = Color(0xFF2C2C2C),         // Vert foncé (fond)
                     defaultBgColor = Color(0xFF2C2C2C),          // fond normal
                     defaultColor = Color(0xFFE0E0E0),            // texte normal
@@ -579,6 +580,7 @@ private fun GammeGrid(
 ) {
     Column {
         Text(title, style = titleStyle)
+        Spacer(modifier = Modifier.height(4.dp))
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             modifier = modifier,
