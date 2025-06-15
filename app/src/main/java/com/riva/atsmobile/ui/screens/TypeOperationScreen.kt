@@ -225,7 +225,7 @@ fun TypeOperationScreen(
                     TransitionArrow(
                         isPortrait = isPortrait,
                         modifier = Modifier
-                            .width(30.dp)
+                            .width(80.dp)
                             .absoluteOffset(y = arrowOffsetDp)
                             .zIndex(1f)
                     )
