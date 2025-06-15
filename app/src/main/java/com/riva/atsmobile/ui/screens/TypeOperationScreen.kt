@@ -405,15 +405,13 @@ fun SelectionColumn(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
     ) {
         if (isLoading) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            CircularProgressIndicator()
         } else if (loadError != null) {
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(loadError, color = Color.Red)
                 Spacer(Modifier.height(12.dp))
                 Button(onClick = { scope.launch { viewModel.chargerGammesDepuisApi(context) } }) {
@@ -500,14 +498,14 @@ fun DetailsColumn(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier.align(Alignment.Center),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "GAMME ACTUELLE",
                     style = TextStyle(
@@ -533,7 +531,7 @@ fun DetailsColumn(
                 )
             }
 
-            Column {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "GAMME VISÉE",
                     style = TextStyle(
@@ -560,7 +558,7 @@ fun DetailsColumn(
             }
 
             ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
-
+            Footer(zone, intervention)
         }
 
         TransitionArrow(
@@ -572,7 +570,6 @@ fun DetailsColumn(
             height = 30.dp
         )
     }
-    Footer(zone, intervention)
 }
 
 
