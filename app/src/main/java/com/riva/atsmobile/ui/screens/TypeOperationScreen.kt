@@ -151,21 +151,29 @@ fun DetailsCard(title: String, gamme: Gamme?) {
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
-            gamme?.let {
-                Text("Désignation : ${it.designation.safeText()}", color = Color.White)
-                Text("Dimension : ${it.dimension} mm", color = Color.White)
-                Text("Diamètres : ${it.diamChaineTrame}", color = Color.White)
-                Text("Espacement : ${it.espFilChaineTrame} mm", color = Color.White)
-            } ?: Text("Aucune sélection", color = Color.Gray)
+            // Texte à gauche
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                gamme?.let {
+                    Text("Désignation : ${it.designation.safeText()}", color = Color.White)
+                    Text("Dimension : ${it.dimension} mm", color = Color.White)
+                    Text("Diamètres : ${it.diamChaineTrame}", color = Color.White)
+                    Text("Espacement : ${it.espFilChaineTrame} mm", color = Color.White)
+                } ?: Text("Aucune sélection", color = Color.Gray)
+            }
 
+            // Logos à droite, côte à côte
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                modifier = Modifier.padding(start = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 logos.principale?.let { Image(painterResource(it), null, Modifier.size(80.dp)) }
@@ -176,6 +184,7 @@ fun DetailsCard(title: String, gamme: Gamme?) {
         }
     }
 }
+
 
 
 
