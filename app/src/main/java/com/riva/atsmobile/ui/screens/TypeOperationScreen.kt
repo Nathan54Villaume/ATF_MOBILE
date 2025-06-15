@@ -51,6 +51,8 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.riva.atsmobile.R
 import com.riva.atsmobile.model.Gamme
@@ -165,10 +167,20 @@ fun DetailsCard(title: String, gamme: Gamme?) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Texte à gauche
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                // ➤ Texte principal personnalisé
+                Text(
+                    text = title,
+                    color = Color(0xFFFFC107), // jaune doré
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = FontFamily.Serif,
+                    letterSpacing = 1.sp
+                )
+
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // ➤ Données gamme ou texte d’absence
                 gamme?.let {
                     Text("Désignation : ${it.designation.safeText()}", color = Color.White)
                     Text("Dimension : ${it.dimension} mm", color = Color.White)
@@ -177,7 +189,7 @@ fun DetailsCard(title: String, gamme: Gamme?) {
                 } ?: Text("Aucune sélection", color = Color.Gray)
             }
 
-            // Logos à droite, côte à côte
+            // ➤ Logos à droite
             Row(
                 modifier = Modifier.padding(start = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -191,6 +203,7 @@ fun DetailsCard(title: String, gamme: Gamme?) {
         }
     }
 }
+
 
 
 
