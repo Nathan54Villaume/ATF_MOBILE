@@ -48,13 +48,14 @@ fun TypeOperationScreen(
     val scope        = rememberCoroutineScope()
     val snackbarHost = remember { SnackbarHostState() }
 
-    val isConnected  by viewModel.isOnline.collectAsState()
-    val gammes       by viewModel.gammes.collectAsState()
-    val current      by viewModel.currentGamme.collectAsState()
-    val desired      by viewModel.desiredGamme.collectAsState()
-    val zone         by viewModel.zoneDeTravail.collectAsState()
-    val intervention by viewModel.intervention.collectAsState()
-    val role         by viewModel.role.collectAsState()
+    val isConnected           by viewModel.isOnline.collectAsState()
+    val gammes                by viewModel.gammes.collectAsState()
+    val gammesSelectionnees   by viewModel.gammesSelectionnees.collectAsState()
+    val current               by viewModel.currentGamme.collectAsState()
+    val desired               by viewModel.desiredGamme.collectAsState()
+    val zone                  by viewModel.zoneDeTravail.collectAsState()
+    val intervention          by viewModel.intervention.collectAsState()
+    val role                  by viewModel.role.collectAsState()
 
     var isLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
@@ -65,9 +66,6 @@ fun TypeOperationScreen(
         try {
             viewModel.chargerGammesDepuisApi(context)
             Log.d("GAMMES", "Nombre de gammes reçues : ${viewModel.gammes.value.size}")
-            viewModel.gammes.value.forEach {
-                Log.d("GAMMES", "→ ${it.designation}")
-            }
         } catch (e: Exception) {
             loadError = "Erreur de chargement : ${e.message}"
         } finally {
@@ -126,9 +124,10 @@ fun TypeOperationScreen(
                         }
                     }
                     gammes.isNotEmpty() -> {
-                        GammeGrid("GAMME ACTUELLE", gammes, current, viewModel::selectCurrentGamme, modifier = Modifier.weight(1f))
+                        val gammesVisibles = gammes.filter { gammesSelectionnees.contains(it.codeTreillis) }
+                        GammeGrid("GAMME ACTUELLE", gammesVisibles, current, viewModel::selectCurrentGamme, modifier = Modifier.weight(1f))
                         Spacer(Modifier.height(16.dp))
-                        GammeGrid("GAMME VISÉE", gammes, desired, viewModel::selectDesiredGamme, restrict = current, modifier = Modifier.weight(1f))
+                        GammeGrid("GAMME VISÉE", gammesVisibles, desired, viewModel::selectDesiredGamme, restrict = current, modifier = Modifier.weight(1f))
                         Spacer(Modifier.height(24.dp))
                     }
                     else -> {
@@ -195,6 +194,7 @@ fun TypeOperationScreen(
         }
     }
 }
+
 
 @Composable
 private fun GammeGrid(

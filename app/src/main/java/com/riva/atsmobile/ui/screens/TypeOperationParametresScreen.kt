@@ -18,7 +18,8 @@ fun TypeOperationParamScreen(
     navController: NavController
 ) {
     val gammes by viewModel.gammes.collectAsState()
-    val selectedGammes = remember { mutableStateListOf<String>() }
+    val gammesSelectionnees by viewModel.gammesSelectionnees.collectAsState()
+    val selectedGammes = remember { mutableStateListOf<String>().apply { addAll(gammesSelectionnees) } }
 
     BaseScreen(
         title = "Paramétrage Gammes",
@@ -64,7 +65,7 @@ fun TypeOperationParamScreen(
                 horizontalArrangement = Arrangement.End
             ) {
                 Button(onClick = {
-                    // TODO : sauvegarder cette liste si besoin
+                    viewModel.setGammesSelectionnees(selectedGammes.toSet())
                     navController.popBackStack()
                 }) {
                     Text("Enregistrer")

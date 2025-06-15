@@ -64,6 +64,13 @@ class SelectionViewModel : ViewModel() {
     private val _intervention = MutableStateFlow("")
     val intervention: StateFlow<String> = _intervention.asStateFlow()
 
+    private val _gammesSelectionnees = MutableStateFlow<Set<String>>(emptySet())
+    val gammesSelectionnees: StateFlow<Set<String>> = _gammesSelectionnees.asStateFlow()
+
+    fun setGammesSelectionnees(codes: Set<String>) {
+        _gammesSelectionnees.value = codes
+    }
+
     /** Charge les gammes depuis l’API */
     fun chargerGammesDepuisApi(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -84,6 +91,13 @@ class SelectionViewModel : ViewModel() {
                         val listType = object : TypeToken<List<Gamme>>() {}.type
                         val gammes = Gson().fromJson<List<Gamme>>(body, listType)
                         _gammes.value = gammes
+                        gammes.apply {
+                            _gammes.value = this
+                            if (_gammesSelectionnees.value.isEmpty()) {
+                                _gammesSelectionnees.value = this.map { it.codeTreillis }.toSet()
+                            }
+                        }
+
                     } else {
                         Log.e("GAMMES", "Réponse non valide : $body")
                     }
