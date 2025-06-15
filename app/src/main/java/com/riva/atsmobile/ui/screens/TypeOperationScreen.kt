@@ -531,10 +531,19 @@ private fun GammeGrid(
     selected: Gamme?,
     onSelect: (Gamme) -> Unit,
     restrict: Gamme?,
-    modifier: Modifier
+    modifier: Modifier,
+    titleStyle: TextStyle = MaterialTheme.typography.titleMedium,
+    cardShape: RoundedCornerShape = RoundedCornerShape(20.dp),
+    selectedColor: Color = MaterialTheme.colorScheme.primary,
+    selectedBgColor: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+    defaultBgColor: Color = Color(0xFF1E1E1E),
+    disabledBgColor: Color = Color(0xFF2E2E2E),
+    disabledColor: Color = Color.LightGray,
+    defaultColor: Color = Color.White,
+    cardPadding: PaddingValues = PaddingValues(vertical = 8.dp, horizontal = 4.dp)
 ) {
     Column {
-        Text(title, style = MaterialTheme.typography.titleMedium)
+        Text(title, style = titleStyle)
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             modifier = modifier,
@@ -545,43 +554,41 @@ private fun GammeGrid(
                 val disabled = restrict != null && gamme == restrict
                 val borderColor by animateColorAsState(
                     when {
-                        disabled -> Color.LightGray
-                        gamme == selected -> MaterialTheme.colorScheme.primary
+                        disabled -> disabledColor
+                        gamme == selected -> selectedColor
                         else -> Color.Gray
-                    },
-                    tween(500, easing = FastOutSlowInEasing)
-                )
-                val bgColor by animateColorAsState(
-                    when {
-                        disabled -> Color(0xFF2E2E2E)
-                        gamme == selected -> MaterialTheme.colorScheme.primary.copy(alpha = .1f)
-                        else -> Color(0xFF1E1E1E)
                     },
                     tween(500)
                 )
-                val txtColor = when {
-                    disabled -> Color.LightGray
-                    gamme == selected -> MaterialTheme.colorScheme.primary
-                    else -> Color.White
-                }
-                val fw = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
-                val scale by animateFloatAsState(
-                    if (gamme == selected) 1.05f else 1f,
-                    tween(300)
+                val bgColor by animateColorAsState(
+                    when {
+                        disabled -> disabledBgColor
+                        gamme == selected -> selectedBgColor
+                        else -> defaultBgColor
+                    },
+                    tween(500)
                 )
+                val textColor = when {
+                    disabled -> disabledColor
+                    gamme == selected -> selectedColor
+                    else -> defaultColor
+                }
+                val fontWeight = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
+                val scale by animateFloatAsState(if (gamme == selected) 1.05f else 1f, tween(300))
+
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .scale(scale)
-                        .background(bgColor, RoundedCornerShape(20.dp))
-                        .border(BorderStroke(2.dp, borderColor), RoundedCornerShape(20.dp))
+                        .background(bgColor, cardShape)
+                        .border(BorderStroke(2.dp, borderColor), cardShape)
                         .clickable(enabled = !disabled) { onSelect(gamme) }
-                        .padding(vertical = 8.dp, horizontal = 4.dp)
+                        .padding(cardPadding)
                 ) {
                     Text(
-                        gamme.designation.safeText(),
-                        color = txtColor,
-                        fontWeight = fw,
+                        text = gamme.designation.safeText(),
+                        color = textColor,
+                        fontWeight = fontWeight,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -589,6 +596,7 @@ private fun GammeGrid(
         }
     }
 }
+
 
 @Composable
 private fun Footer(zone: String, intervention: String) {
