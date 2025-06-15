@@ -457,8 +457,8 @@ private fun SelectionColumn(
                         fontFamily = FontFamily.Serif
                     ),
                     cardShape = RoundedCornerShape(16.dp),
-                    selectedColor = Color(0xFF1B5E20),           // Vert
-                    selectedBgColor = Color(0xFF2C2C2C),         // Vert foncé (fond)
+                    selectedColor = Color(0xFFFF9800),           // orange
+                    selectedBgColor = Color(0xFF2C2C2C),         // Vert normal (fond)
                     defaultBgColor = Color(0xFF2C2C2C),          // fond normal
                     defaultColor = Color(0xFFE0E0E0),            // texte normal
                     disabledBgColor = Color(0xFF424242),         // fond désactivé
@@ -488,7 +488,7 @@ private fun SelectionColumn(
                         fontFamily = FontFamily.Serif
                     ),
                     cardShape = RoundedCornerShape(16.dp),
-                    selectedColor = Color(0xFF1B5E20),           // Vert
+                    selectedColor = Color(0xFFFF9800),           // orange
                     selectedBgColor = Color(0xFF2C2C2C),         // Vert foncé (fond)
                     defaultBgColor = Color(0xFF2C2C2C),          // fond normal
                     defaultColor = Color(0xFFE0E0E0),            // texte normal
