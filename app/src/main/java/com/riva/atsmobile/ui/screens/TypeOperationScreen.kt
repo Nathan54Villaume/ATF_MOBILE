@@ -1,8 +1,14 @@
 package com.riva.atsmobile.ui.screens
 
 import android.content.res.Configuration
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -19,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WbSunny
@@ -29,14 +36,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.toSize
+
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalDensity
 import androidx.navigation.NavController
 import com.riva.atsmobile.R
 import com.riva.atsmobile.model.Gamme
@@ -48,22 +62,25 @@ import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+// Trim or fallback
 fun String?.safeText(): String = this?.trim().takeIf { !it.isNullOrEmpty() } ?: "-"
 
+// Logos principal + chaines
 data class GammeLogos(val principale: Int?, val chaines: Int?)
 
+// Associe désignation → logos
 fun getImageForGamme(designation: String): GammeLogos {
     val key = designation.trim().uppercase()
     val principale = when (key) {
-        "PAF 10" -> R.drawable.paf10
-        "PAF C" -> R.drawable.pafc
-        "PAF R" -> R.drawable.pafr
-        "PAF V" -> R.drawable.pafv
+        "PAF 10"  -> R.drawable.paf10
+        "PAF C"   -> R.drawable.pafc
+        "PAF R"   -> R.drawable.pafr
+        "PAF V"   -> R.drawable.pafv
         "ST 15 C" -> R.drawable.st15c
-        "ST 20" -> R.drawable.st20
-        "ST 25" -> R.drawable.st25
+        "ST 20"   -> R.drawable.st20
+        "ST 25"   -> R.drawable.st25
         "ST 25 C" -> R.drawable.st25c
-        else -> null
+        else       -> null
     }
     val chaines = when (key) {
         "ST 20", "ST 25", "ST 25 C" -> R.drawable.chaines16
@@ -74,58 +91,31 @@ fun getImageForGamme(designation: String): GammeLogos {
 }
 
 @Composable
-fun TransitionArrow(modifier: Modifier = Modifier, width: Dp = 60.dp, height: Dp = 60.dp) {
+fun TransitionArrow(
+    modifier: Modifier = Modifier,
+    width: Dp = 60.dp,
+    height: Dp = 60.dp
+) {
     val infiniteTransition = rememberInfiniteTransition()
     val offsetFloat by infiniteTransition.animateFloat(
         0f, 16f,
-        infiniteRepeatable(animation = tween(800, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse)
+        infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
     )
+    val offset = offsetFloat.dp
+
     Icon(
-        imageVector = Icons.Default.ArrowDownward,
+        imageVector = Icons.Default.ArrowDownward, // toujours vers le bas
         contentDescription = null,
         modifier = modifier
-            .offset(y = offsetFloat.dp)
+            .offset(y = offset)      // plus d’axe X
             .size(width, height)
             .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
             .padding(4.dp)
     )
 }
-
-@Composable
-fun DetailsCard(title: String, gamme: Gamme?, modifier: Modifier = Modifier) {
-    val logos = getImageForGamme(gamme?.designation ?: "")
-    Card(
-        modifier = modifier.padding(8.dp),
-        shape = RoundedCornerShape(10.dp),
-        elevation = CardDefaults.cardElevation(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E2E))
-    ) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = Color.White)
-            gamme?.let {
-                Spacer(Modifier.height(8.dp))
-                Text("Désignation : ${it.designation.safeText()}", color = Color.White)
-                Text("Dimension : ${it.dimension} mm", color = Color.White)
-                Text("Diamètres : ${it.diamChaineTrame}", color = Color.White)
-                Text("Espacement : ${it.espFilChaineTrame} mm", color = Color.White)
-            } ?: Text("Aucune sélection", color = Color.Gray)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            logos.principale?.let { Image(painterResource(it), null, Modifier.size(120.dp)) }
-            logos.chaines?.let {
-                Spacer(Modifier.height(8.dp))
-                Image(painterResource(it), null, Modifier.size(80.dp))
-            }
-        }
-    }
-}
-
-// Continue avec le reste de tes fonctions sans modifications
-// (TypeOperationScreen, SelectionColumn, ActionRow, GammeGrid, Footer)
-
-// Le reste du fichier étant inchangé et correct, tu peux reprendre exactement ce que tu avais précédemment.
-
 
 
 
@@ -390,77 +380,64 @@ private fun ActionRow(
 }
 
 @Composable
-fun DetailsCard(
-    dimension: String,
-    diametre: String,
-    modifier: Modifier = Modifier
-) {
-    val dimensionImageResId = when (dimension) {
-        "4200x2400" -> R.drawable.u4200x2400
-        "6000x2400" -> R.drawable.u6000x2400
-        "3600x2400" -> R.drawable.u3600x2400
-        "3200x2400" -> R.drawable.u3200x2400
-        else -> null
-    }
-
-    val diametreImageResId = when (diametre) {
-        "6x6" -> R.drawable.u6x6
-        "7x7" -> R.drawable.u7x7
-        "6x7" -> R.drawable.u6x7
-        "5,5x5,5" -> R.drawable.u55x55
-        "4.5x4.5" -> R.drawable.u45x45
-        else -> null
-    }
+private fun DetailsCard(title: String, gamme: Gamme?) {
+    val logos = getImageForGamme(gamme?.designation ?: "")
 
     Card(
-        modifier = modifier.padding(8.dp),
-        shape = RoundedCornerShape(10.dp),
-        elevation = CardDefaults.cardElevation(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E2E))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-
-            dimensionImageResId?.let { resId ->
-                Image(
-                    painter = painterResource(id = resId),
-                    contentDescription = "Logo Dimension",
-                    modifier = Modifier
-                        .size(120.dp)
-                        .padding(bottom = 8.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                gamme?.let {
+                    Text("Désignation : ${it.designation.safeText()}", color = Color.White)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Dimension : ${it.dimension} mm", color = Color.White)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Diamètres : ${it.diamChaineTrame}", color = Color.White)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Espacement : ${it.espFilChaineTrame} mm", color = Color.White)
+                } ?: Text("Aucune sélection", color = Color.Gray)
             }
 
-            Text(
-                text = "Dimension : $dimension mm",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White
-            )
+            Spacer(modifier = Modifier.width(12.dp))
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            diametreImageResId?.let { resId ->
-                Image(
-                    painter = painterResource(id = resId),
-                    contentDescription = "Logo Diamètre",
-                    modifier = Modifier
-                        .size(120.dp)
-                        .padding(bottom = 8.dp)
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                logos.principale?.let { res ->
+                    Image(
+                        painter = painterResource(res),
+                        contentDescription = "Logo $title",
+                        modifier = Modifier.size(120.dp)
+                    )
+                }
+                logos.chaines?.let { res ->
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Image(
+                        painter = painterResource(res),
+                        contentDescription = "Logo chaines",
+                        modifier = Modifier.size(80.dp)
+                    )
+                }
             }
-
-            Text(
-                text = "Diamètres : $diametre",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White
-            )
         }
     }
 }
-
-
 
 
 @Composable
