@@ -51,7 +51,9 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.riva.atsmobile.R
@@ -145,12 +147,33 @@ fun TransitionArrow(
 }
 
 @Composable
-fun DetailsCard(title: String, gamme: Gamme?) {
+fun DetailsCard(
+    title: String,
+    gamme: Gamme?,
+    titleStyle: TextStyle = TextStyle(
+        color = Color(0xFFFFC107),
+        fontSize = 24.sp,
+        fontWeight = FontWeight.ExtraBold,
+        fontFamily = FontFamily.Serif,
+        letterSpacing = 1.sp
+    ),
+    detailStyle: TextStyle = TextStyle(
+        color = Color.White,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Normal,
+        fontFamily = FontFamily.SansSerif
+    ),
+    noSelectionStyle: TextStyle = TextStyle(
+        color = Color.Gray,
+        fontSize = 16.sp,
+        fontStyle = FontStyle.Italic,
+        fontFamily = FontFamily.SansSerif
+    )
+) {
     val logos = getImageForGamme(gamme)
     val configuration = LocalConfiguration.current
     val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
 
-    // Dimensions adaptées
     val mainSize = if (isPortrait) 150.dp else 140.dp
     val secondarySize = if (isPortrait) 120.dp else 90.dp
 
@@ -168,28 +191,17 @@ fun DetailsCard(title: String, gamme: Gamme?) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                // ➤ Texte principal personnalisé
-                Text(
-                    text = title,
-                    color = Color(0xFFFFC107), // jaune doré
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontFamily = FontFamily.Serif,
-                    letterSpacing = 1.sp
-                )
-
+                Text(text = title, style = titleStyle)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // ➤ Données gamme ou texte d’absence
                 gamme?.let {
-                    Text("Désignation : ${it.designation.safeText()}", color = Color.White)
-                    Text("Dimension : ${it.dimension} mm", color = Color.White)
-                    Text("Diamètres : ${it.diamChaineTrame}", color = Color.White)
-                    Text("Espacement : ${it.espFilChaineTrame} mm", color = Color.White)
-                } ?: Text("Aucune sélection", color = Color.Gray)
+                    Text("Désignation : ${it.designation.safeText()}", style = detailStyle)
+                    Text("Dimension : ${it.dimension} mm", style = detailStyle)
+                    Text("Diamètres : ${it.diamChaineTrame}", style = detailStyle)
+                    Text("Espacement : ${it.espFilChaineTrame} mm", style = detailStyle)
+                } ?: Text("Aucune sélection", style = noSelectionStyle)
             }
 
-            // ➤ Logos à droite
             Row(
                 modifier = Modifier.padding(start = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -203,6 +215,7 @@ fun DetailsCard(title: String, gamme: Gamme?) {
         }
     }
 }
+
 
 
 
@@ -297,7 +310,27 @@ fun TypeOperationScreen(
                                     topHeight = coords.size.height.toFloat()
                                 }
                         ) {
-                            DetailsCard("Gamme actuelle", current)
+                            DetailsCard(
+                                title = "Gamme actuelle",
+                                gamme = current,
+                                titleStyle = TextStyle(
+                                    color = Color(0xFF64B5F6), // bleu clair
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontFamily = FontFamily.SansSerif
+                                ),
+                                detailStyle = TextStyle(
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                noSelectionStyle = TextStyle(
+                                    color = Color.Red,
+                                    fontSize = 14.sp,
+                                    fontStyle = FontStyle.Italic
+                                )
+                            )
+
                         }
                         Spacer(Modifier.height(16.dp))
                         Box(
@@ -306,7 +339,28 @@ fun TypeOperationScreen(
                                     bottomY = coords.positionInParent().y
                                 }
                         ) {
-                            DetailsCard("Gamme visée", desired)
+                            DetailsCard(
+                                title = "Gamme visée",
+                                gamme = desired,
+                                titleStyle = TextStyle(
+                                    color = Color(0xFFFF9800), // orange vif
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Serif,
+                                    letterSpacing = 1.sp
+                                ),
+                                detailStyle = TextStyle(
+                                    color = Color(0xFFEEEEEE),
+                                    fontSize = 15.sp,
+                                    fontFamily = FontFamily.SansSerif
+                                ),
+                                noSelectionStyle = TextStyle(
+                                    color = Color.Gray,
+                                    fontSize = 14.sp,
+                                    fontStyle = FontStyle.Italic
+                                )
+                            )
+
                         }
                         ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
                         Footer(zone, intervention)
