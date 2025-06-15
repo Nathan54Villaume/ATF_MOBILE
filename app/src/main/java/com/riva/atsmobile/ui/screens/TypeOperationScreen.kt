@@ -271,16 +271,14 @@ fun TypeOperationScreen(
             }
 
             val details = @Composable {
-                // états pour récupérer les positions
                 var topY by remember { mutableStateOf(0f) }
                 var topHeight by remember { mutableStateOf(0f) }
                 var bottomY by remember { mutableStateOf(0f) }
                 val density = LocalDensity.current
-                // calcul dynamique de la position de la flèche
                 val arrowOffsetDp by remember(topY, topHeight, bottomY) {
                     derivedStateOf {
                         val midPx = (topY + topHeight + bottomY) / 2f
-                        with(density) { midPx.toDp() - 1.dp } // centrer
+                        with(density) { midPx.toDp() - 1.dp }
                     }
                 }
 
@@ -294,11 +292,10 @@ fun TypeOperationScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Box(
-                            Modifier
-                                .onGloballyPositioned { coords ->
-                                    topY = coords.positionInParent().y
-                                    topHeight = coords.size.height.toFloat()
-                                }
+                            Modifier.onGloballyPositioned {
+                                topY = it.positionInParent().y
+                                topHeight = it.size.height.toFloat()
+                            }
                         ) {
                             Column {
                                 Text(
@@ -330,10 +327,9 @@ fun TypeOperationScreen(
                         Spacer(Modifier.height(16.dp))
 
                         Box(
-                            Modifier
-                                .onGloballyPositioned { coords ->
-                                    bottomY = coords.positionInParent().y
-                                }
+                            Modifier.onGloballyPositioned {
+                                bottomY = it.positionInParent().y
+                            }
                         ) {
                             Column {
                                 Text(
@@ -366,8 +362,14 @@ fun TypeOperationScreen(
                         Footer(zone, intervention)
                     }
 
-
-
+                    TransitionArrow(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = arrowOffsetDp)
+                            .zIndex(1f),
+                        width = 80.dp,
+                        height = 30.dp
+                    )
                 }
             }
 
@@ -390,6 +392,7 @@ fun TypeOperationScreen(
         }
     }
 }
+
 
 
 @Composable
