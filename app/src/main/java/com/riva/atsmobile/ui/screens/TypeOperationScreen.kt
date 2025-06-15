@@ -46,6 +46,7 @@ fun String?.safeText(): String = this?.trim().takeIf { !it.isNullOrEmpty() } ?: 
 fun getImageForGamme(designation: String): Int? = when(designation.trim().uppercase()) {
     "PAF 10"  -> R.drawable.paf10
 
+    
     else       -> null
 }
 
