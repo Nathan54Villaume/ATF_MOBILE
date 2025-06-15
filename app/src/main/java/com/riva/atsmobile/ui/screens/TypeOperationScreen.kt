@@ -43,7 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.toSize
-
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Density
@@ -309,7 +309,9 @@ fun DetailsColumn(
     snackbarHost: SnackbarHostState,
     zone: String,
     intervention: String,
-    arrowOffsetDp: Dp
+    arrowOffsetDp: Dp,
+    onTopPositioned: (LayoutCoordinates) -> Unit,
+    onBottomPositioned: (LayoutCoordinates) -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -321,7 +323,10 @@ fun DetailsColumn(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = Modifier.onGloballyPositioned { onTopPositioned(it) },
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
                     text = "GAMME ACTUELLE",
                     style = TextStyle(
@@ -347,7 +352,10 @@ fun DetailsColumn(
                 )
             }
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = Modifier.onGloballyPositioned { onBottomPositioned(it) },
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
                     text = "GAMME VISÉE",
                     style = TextStyle(
@@ -387,6 +395,7 @@ fun DetailsColumn(
         )
     }
 }
+
 
 
 
@@ -439,8 +448,10 @@ fun TypeOperationScreen(
             val density = LocalDensity.current
             val arrowOffsetDp by remember(topY, topHeight, bottomY) {
                 derivedStateOf {
-                    val midPx = (topY + topHeight + bottomY) / 2f
-                    with(density) { midPx.toDp() - 1.dp }
+                    val base = topY + topHeight
+                    val target = bottomY
+                    val center = (base + target) / 2f
+                    with(density) { center.toDp() - 15.dp }
                 }
             }
 
@@ -480,7 +491,14 @@ fun TypeOperationScreen(
                             snackbarHost = snackbarHost,
                             zone = zone,
                             intervention = intervention,
-                            arrowOffsetDp = arrowOffsetDp
+                            arrowOffsetDp = arrowOffsetDp,
+                            onTopPositioned = { coords ->
+                                topY = coords.positionInParent().y
+                                topHeight = coords.size.height.toFloat()
+                            },
+                            onBottomPositioned = { coords ->
+                                bottomY = coords.positionInParent().y
+                            }
                         )
                     }
                 }
@@ -520,7 +538,14 @@ fun TypeOperationScreen(
                             snackbarHost = snackbarHost,
                             zone = zone,
                             intervention = intervention,
-                            arrowOffsetDp = arrowOffsetDp
+                            arrowOffsetDp = arrowOffsetDp,
+                            onTopPositioned = { coords ->
+                                topY = coords.positionInParent().y
+                                topHeight = coords.size.height.toFloat()
+                            },
+                            onBottomPositioned = { coords ->
+                                bottomY = coords.positionInParent().y
+                            }
                         )
                     }
                 }
@@ -533,6 +558,9 @@ fun TypeOperationScreen(
         }
     }
 }
+
+
+
 
 
 
