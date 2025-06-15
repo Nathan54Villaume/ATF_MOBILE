@@ -3,11 +3,11 @@ package com.riva.atsmobile.ui.screens
 import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.navigation.NavController
 import com.riva.atsmobile.R
 import com.riva.atsmobile.model.Gamme
@@ -50,11 +51,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.ui.unit.Dp
 
 // Trim or fallback
 fun String?.safeText(): String = this?.trim().takeIf { !it.isNullOrEmpty() } ?: "-"
@@ -84,11 +80,39 @@ fun getImageForGamme(designation: String): GammeLogos {
     return GammeLogos(principale, chaines)
 }
 
-@OptIn(
-    ExperimentalAnimationApi::class,
-    ExperimentalFoundationApi::class,
-    ExperimentalMaterial3Api::class
-)
+@Composable
+fun TransitionArrow(isPortrait: Boolean) {
+    val infiniteTransition = rememberInfiniteTransition()
+    val offsetFloat by infiniteTransition.animateFloat(
+        0f,
+        16f,
+        infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+    val offset = offsetFloat.dp
+    val icon = if (isPortrait) Icons.Default.ArrowDownward else Icons.Default.ArrowForward
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(24.dp), // sufficient height for arrow + padding
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier
+                .offset(x = if (!isPortrait) offset else 0.dp,
+                    y = if (isPortrait) offset else 0.dp)
+                .size(40.dp)
+                .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
+                .padding(4.dp)
+        )
+    }
+}
+
 @Composable
 fun TypeOperationScreen(
     viewModel: SelectionViewModel,
@@ -133,8 +157,16 @@ fun TypeOperationScreen(
         ) {
             val selection = @Composable {
                 SelectionColumn(
-                    gammes, gammesSelectionnees, current, desired,
-                    isLoading, loadError, viewModel, context, scope
+                    gammes = gammes,
+                    selectedCodes = gammesSelectionnees,
+                    current = current,
+                    desired = desired,
+                    isLoading = isLoading,
+                    loadError = loadError,
+                    viewModel = viewModel,
+                    context = context,
+                    scope = scope,
+                    isPortrait = isPortrait
                 )
             }
             val details = @Composable {
@@ -152,7 +184,6 @@ fun TypeOperationScreen(
                         ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
                         Footer(zone, intervention)
                     }
-                    TransitionArrow(isPortrait)
                 }
             }
 
@@ -177,46 +208,6 @@ fun TypeOperationScreen(
 }
 
 @Composable
-fun TransitionArrow(isPortrait: Boolean) {
-    val infiniteTransition = rememberInfiniteTransition()
-
-    // On anime un Float de 0f à 16f, sans avoir à préciser de générique
-    val offsetFloat by infiniteTransition.animateFloat(
-        0f,
-        16f,
-        infiniteRepeatable(
-            animation = tween(800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        )
-    )
-    // Puis on convertit en Dp
-    val offset = offsetFloat.dp
-
-    val icon = if (isPortrait) Icons.Default.ArrowDownward else Icons.Default.ArrowForward
-
-    Box(
-        Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier
-                .offset(
-                    x = if (!isPortrait) offset else 0.dp,
-                    y = if (isPortrait) offset else 0.dp
-                )
-                .size(40.dp)
-                .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
-                .padding(4.dp)
-        )
-    }
-}
-
-
-
-
-@Composable
 private fun SelectionColumn(
     gammes: List<Gamme>,
     selectedCodes: Set<String>,
@@ -226,7 +217,8 @@ private fun SelectionColumn(
     loadError: String?,
     viewModel: SelectionViewModel,
     context: android.content.Context,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    isPortrait: Boolean
 ) {
     LazyColumn(
         modifier = Modifier
@@ -272,6 +264,11 @@ private fun SelectionColumn(
                         .fillMaxWidth()
                         .heightIn(min = 100.dp, max = 300.dp)
                 )
+            }
+            item {
+                Spacer(Modifier.height(2.dp))
+                TransitionArrow(isPortrait)
+                Spacer(Modifier.height(2.dp))
             }
             item {
                 GammeGrid(
