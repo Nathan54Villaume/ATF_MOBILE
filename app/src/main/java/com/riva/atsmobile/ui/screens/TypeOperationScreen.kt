@@ -35,12 +35,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.toSize
+
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalDensity
 import androidx.navigation.NavController
 import com.riva.atsmobile.R
 import com.riva.atsmobile.model.Gamme
@@ -169,6 +179,19 @@ fun TypeOperationScreen(
             }
 
             val details = @Composable {
+                // états pour récupérer les positions
+                var topY by remember { mutableStateOf(0f) }
+                var topHeight by remember { mutableStateOf(0f) }
+                var bottomY by remember { mutableStateOf(0f) }
+                val density = LocalDensity.current
+                // calcul dynamique de la position de la flèche
+                val arrowOffsetDp by remember(topY, topHeight, bottomY) {
+                    derivedStateOf {
+                        val midPx = (topY + topHeight + bottomY) / 2f
+                        with(density) { midPx.toDp() - 30.dp } // centrer
+                    }
+                }
+
                 Box(Modifier.fillMaxSize()) {
                     Column(
                         Modifier
@@ -178,16 +201,32 @@ fun TypeOperationScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        DetailsCard("Gamme actuelle", current)
-                        Spacer(Modifier.height(32.dp))
-                        DetailsCard("Gamme visée", desired)
+                        Box(
+                            Modifier
+                                .onGloballyPositioned { coords ->
+                                    topY = coords.positionInParent().y
+                                    topHeight = coords.size.height.toFloat()
+                                }
+                        ) {
+                            DetailsCard("Gamme actuelle", current)
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Box(
+                            Modifier
+                                .onGloballyPositioned { coords ->
+                                    bottomY = coords.positionInParent().y
+                                }
+                        ) {
+                            DetailsCard("Gamme visée", desired)
+                        }
                         ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, scope)
                         Footer(zone, intervention)
                     }
                     TransitionArrow(
                         isPortrait = isPortrait,
                         modifier = Modifier
-                            .align(Alignment.Center)
+                            .fillMaxWidth()
+                            .absoluteOffset(y = arrowOffsetDp)
                             .zIndex(1f)
                     )
                 }
@@ -273,9 +312,7 @@ private fun SelectionColumn(
                         .heightIn(min = 100.dp, max = 300.dp)
                 )
             }
-            item {
-                // espace réservé si besoin
-            }
+            item { }
             item {
                 GammeGrid(
                     title = "GAMME VISÉE",
