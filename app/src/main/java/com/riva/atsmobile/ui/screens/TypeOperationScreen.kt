@@ -569,7 +569,7 @@ private fun GammeGrid(
     cardPadding: PaddingValues = PaddingValues(vertical = 8.dp, horizontal = 4.dp)
 ) {
     Column {
-        Text(title, style = titleStyle)
+        Text(title, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
         Spacer(modifier = Modifier.height(8.dp))
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
