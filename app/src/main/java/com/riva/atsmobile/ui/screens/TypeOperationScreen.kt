@@ -124,30 +124,41 @@ fun TypeOperationScreen(
                 .padding(padding)
         ) {
             if (isPortrait) {
-                // Portrait: détails en dessous
+                // Portrait: deux sections scrollables empilées
                 Column(Modifier.fillMaxSize()) {
-                    SelectionColumn(
-                        gammes,
-                        gammesSelectionnees,
-                        current,
-                        desired,
-                        isLoading,
-                        loadError,
-                        viewModel,
-                        context,
-                        scope
-                    )
-                    DetailsColumn(
-                        current,
-                        desired,
-                        role,
-                        navController,
-                        viewModel,
-                        snackbarHost,
-                        zone,
-                        intervention,
-                        scope
-                    )
+                    Box(
+                        Modifier
+                            .weight(1f)
+                    ) {
+                        SelectionColumn(
+                            gammes,
+                            gammesSelectionnees,
+                            current,
+                            desired,
+                            isLoading,
+                            loadError,
+                            viewModel,
+                            context,
+                            scope
+                        )
+                    }
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        DetailsColumn(
+                            current,
+                            desired,
+                            role,
+                            navController,
+                            viewModel,
+                            snackbarHost,
+                            zone,
+                            intervention,
+                            scope
+                        )
+                    }
                 }
             } else {
                 // Paysage: deux colonnes
