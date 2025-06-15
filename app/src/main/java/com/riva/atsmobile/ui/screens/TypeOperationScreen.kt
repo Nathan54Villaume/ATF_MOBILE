@@ -66,29 +66,51 @@ import java.time.format.DateTimeFormatter
 fun String?.safeText(): String = this?.trim().takeIf { !it.isNullOrEmpty() } ?: "-"
 
 // Logos principal + chaines
-data class GammeLogos(val principale: Int?, val chaines: Int?)
+data class GammeLogos(
+    val principale: Int?,
+    val chaines: Int?,
+    val dimension: Int?,
+    val diametre: Int?
+)
 
 // Associe désignation → logos
-fun getImageForGamme(designation: String): GammeLogos {
-    val key = designation.trim().uppercase()
-    val principale = when (key) {
-        "PAF 10"  -> R.drawable.paf10
-        "PAF C"   -> R.drawable.pafc
-        "PAF R"   -> R.drawable.pafr
-        "PAF V"   -> R.drawable.pafv
-        "ST 15 C" -> R.drawable.st15c
-        "ST 20"   -> R.drawable.st20
-        "ST 25"   -> R.drawable.st25
-        "ST 25 C" -> R.drawable.st25c
-        else       -> null
-    }
-    val chaines = when (key) {
-        "ST 20", "ST 25", "ST 25 C" -> R.drawable.chaines16
-        "PAF 10", "PAF C", "PAF R", "PAF V", "ST 15 C" -> R.drawable.chaines12
-        else -> null
-    }
-    return GammeLogos(principale, chaines)
+fun getImageForGamme(gamme: Gamme?): GammeLogos {
+    val key = gamme?.designation?.trim()?.uppercase() ?: ""
+    return GammeLogos(
+        principale = when (key) {
+            "PAF 10" -> R.drawable.paf10
+            "PAF C" -> R.drawable.pafc
+            "PAF R" -> R.drawable.pafr
+            "PAF V" -> R.drawable.pafv
+            "ST 15 C" -> R.drawable.st15c
+            "ST 20" -> R.drawable.st20
+            "ST 25" -> R.drawable.st25
+            "ST 25 C" -> R.drawable.st25c
+            else -> null
+        },
+        chaines = when (key) {
+            "ST 20", "ST 25", "ST 25 C" -> R.drawable.chaines16
+            "PAF 10", "PAF C", "PAF R", "PAF V", "ST 15 C" -> R.drawable.chaines12
+            else -> null
+        },
+        dimension = when (gamme?.dimension) {
+            "4200x2400" -> R.drawable.u4200x2400
+            "6000x2400" -> R.drawable.u6000x2400
+            "3600x2400" -> R.drawable.u3600x2400
+            "3200x2400" -> R.drawable.u3200x2400
+            else -> null
+        },
+        diametre = when (gamme?.diamChaineTrame) {
+            "6x6" -> R.drawable.u6x6
+            "7x7" -> R.drawable.u7x7
+            "6x7" -> R.drawable.u6x7
+            "5,5x5,5" -> R.drawable.u55x55
+            "4.5x4.5" -> R.drawable.u45x45
+            else -> null
+        }
+    )
 }
+
 
 @Composable
 fun TransitionArrow(
@@ -117,7 +139,40 @@ fun TransitionArrow(
     )
 }
 
+@Composable
+fun DetailsCard(title: String, gamme: Gamme?) {
+    val logos = getImageForGamme(gamme)
 
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                gamme?.let {
+                    Text("Désignation : ${it.designation.safeText()}", color = Color.White)
+                    Text("Dimension : ${it.dimension} mm", color = Color.White)
+                    Text("Diamètres : ${it.diamChaineTrame}", color = Color.White)
+                    Text("Espacement : ${it.espFilChaineTrame} mm", color = Color.White)
+                } ?: Text("Aucune sélection", color = Color.Gray)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                logos.principale?.let { Image(painterResource(it), null, Modifier.size(100.dp)) }
+                logos.chaines?.let { Image(painterResource(it), null, Modifier.size(80.dp)) }
+                logos.dimension?.let { Image(painterResource(it), null, Modifier.size(80.dp)) }
+                logos.diametre?.let { Image(painterResource(it), null, Modifier.size(80.dp)) }
+            }
+        }
+    }
+}
 
 
 
@@ -379,65 +434,6 @@ private fun ActionRow(
     }
 }
 
-@Composable
-private fun DetailsCard(title: String, gamme: Gamme?) {
-    val logos = getImageForGamme(gamme?.designation ?: "")
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1B)),
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                gamme?.let {
-                    Text("Désignation : ${it.designation.safeText()}", color = Color.White)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("Dimension : ${it.dimension} mm", color = Color.White)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("Diamètres : ${it.diamChaineTrame}", color = Color.White)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("Espacement : ${it.espFilChaineTrame} mm", color = Color.White)
-                } ?: Text("Aucune sélection", color = Color.Gray)
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                logos.principale?.let { res ->
-                    Image(
-                        painter = painterResource(res),
-                        contentDescription = "Logo $title",
-                        modifier = Modifier.size(120.dp)
-                    )
-                }
-                logos.chaines?.let { res ->
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Image(
-                        painter = painterResource(res),
-                        contentDescription = "Logo chaines",
-                        modifier = Modifier.size(80.dp)
-                    )
-                }
-            }
-        }
-    }
-}
 
 
 @Composable
