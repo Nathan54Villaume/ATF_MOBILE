@@ -229,7 +229,7 @@ fun TypeOperationScreen(
                             .fillMaxWidth()
                             .absoluteOffset(y = arrowOffsetDp)
                             .zIndex(1f),
-                        size = 80.dp    // ← tu règles la taille ici
+                        size = 30.dp    // ← tu règles la taille ici
                     )
 
                 }
