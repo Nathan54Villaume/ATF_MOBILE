@@ -92,7 +92,6 @@ fun getImageForGamme(designation: String): GammeLogos {
 
 @Composable
 fun TransitionArrow(
-    isPortrait: Boolean,
     modifier: Modifier = Modifier,
     width: Dp = 60.dp,
     height: Dp = 60.dp
@@ -106,22 +105,18 @@ fun TransitionArrow(
         )
     )
     val offset = offsetFloat.dp
-    // Toujours flèche vers le bas, quel que soit isPortrait
-    val icon = Icons.Default.ArrowDownward
 
     Icon(
-        imageVector = icon,
+        imageVector = Icons.Default.ArrowDownward, // toujours vers le bas
         contentDescription = null,
         modifier = modifier
-            .offset(
-                x = if (!isPortrait) offset else 0.dp,
-                y = if (isPortrait) offset else 0.dp
-            )
+            .offset(y = offset)      // plus d’axe X
             .size(width, height)
             .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
             .padding(4.dp)
     )
 }
+
 
 
 
@@ -230,14 +225,14 @@ fun TypeOperationScreen(
                     }
 
                     TransitionArrow(
-                        isPortrait = isPortrait,
                         modifier = Modifier
-                            .align(Alignment.TopCenter)   // ← centre horizontalement
-                            .offset(y = arrowOffsetDp)     // ← décale verticalement au milieu des cards
+                            .align(Alignment.TopCenter)
+                            .offset(y = arrowOffsetDp)
                             .zIndex(1f),
-                        width = 80.dp,    // ← largeur réglable
-                        height = 30.dp   // ← hauteur réglable
+                        width  = 80.dp,
+                        height = 30.dp
                     )
+
 
                 }
             }
