@@ -1,6 +1,6 @@
 package com.riva.atsmobile.ui.screens
 
-import com.riva.atsmobile.utils.verifierConnexionEtEventuellementLancerVpn
+import com.riva.atsmobile.utils.NetworkUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -62,14 +62,14 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
 
     // Déclencher le VPN si nécessaire dès l'affichage de l'écran
     LaunchedEffect(Unit) {
-        verifierConnexionEtEventuellementLancerVpn(context)
+        NetworkUtils.verifierConnexionEtEventuellementLancerVpn(context)
     }
 
     // Bloc de connexion réutilisable
     val doLogin: () -> Unit = {
         message = "Connexion en cours..."
         scope.launch {
-            verifierConnexionEtEventuellementLancerVpn(context)
+            NetworkUtils.verifierConnexionEtEventuellementLancerVpn(context)
             kotlinx.coroutines.delay(5000) // Laisse le temps au VPN de se connecter
             if (isNetworkAvailable(context)) {
                 viewModel.verifierConnexion(context, matricule, motDePasse)

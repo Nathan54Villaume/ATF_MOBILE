@@ -162,13 +162,14 @@ dependencies {
     implementation("androidx.media3:media3-common-ktx:1.5.0")
     // Sécurité
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
-
+    implementation ("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
     // Tests
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.3")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
 }
 
 // --- PUSH AUTO CROSS-PLATFORM APRÈS BUILD ---
