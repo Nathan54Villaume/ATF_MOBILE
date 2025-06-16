@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Permission requise pour VpnService -->
     <uses-permission android:name="android.permission.BIND_VPN_SERVICE" />
+    <!-- Permission requise pour startForeground() -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <!-- Permissions optionnelles (⚠️ vérifier l'utilité sur Android 10+) -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -38,7 +40,8 @@
         <service
             android:name=".vpn.MyVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
-            android:exported="true">
+            android:exported="true"
+            >
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
