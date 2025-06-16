@@ -7,11 +7,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
-import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.net.Uri
 import android.net.wifi.WifiManager
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
@@ -34,7 +34,6 @@ object NetworkUtils {
             return false
         }
 
-        // Utilisation de var pour pouvoir réassigner
         var ssid = wifiManager.connectionInfo.ssid
         if (ssid.startsWith("\"") && ssid.endsWith("\"")) {
             ssid = ssid.substring(1, ssid.length - 1)
@@ -68,27 +67,7 @@ object NetworkUtils {
     }
 
     fun lancerVpnCisco(context: Context, host: String, profile: String) {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        // 1) On s'abonne aux événements VPN
-        val vpnRequest = NetworkRequest.Builder()
-            .addTransportType(NetworkCapabilities.TRANSPORT_VPN)
-            .build()
-        val vpnCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                super.onAvailable(network)
-                cm.unregisterNetworkCallback(this)
-                // 2) On ramène notre appli au premier plan
-                context.packageManager.getLaunchIntentForPackage(context.packageName)
-                    ?.apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                        context.startActivity(this)
-                    }
-            }
-        }
-        cm.registerNetworkCallback(vpnRequest, vpnCallback)
-
-        // 3) On lance Cisco AnyConnect
+        // 1) On lance l'app Cisco AnyConnect
         val uri = "anyconnect://connect?host=$host&profile=$profile"
         Log.d(TAG, "→ lancerVpnCisco(): uri = $uri")
 
@@ -98,7 +77,7 @@ object NetworkUtils {
         )
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
             setComponent(component)
-            setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
 
         val resolved = intent.resolveActivity(context.packageManager)
@@ -106,6 +85,25 @@ object NetworkUtils {
         if (resolved != null) {
             Log.i(TAG, "Démarrage Cisco AnyConnect")
             context.startActivity(intent)
+
+            // 2) Surveillance du VPN via polling
+            val handler = Handler(Looper.getMainLooper())
+            val checkVpn = object : Runnable {
+                override fun run() {
+                    if (isVpnConnected(context)) {
+                        Log.i(TAG, "VPN détecté, retour automatique à l'appli")
+                        val launchIntent = context.packageManager
+                            .getLaunchIntentForPackage(context.packageName)
+                        launchIntent?.apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                            context.startActivity(this)
+                        }
+                    } else {
+                        handler.postDelayed(this, 1000)
+                    }
+                }
+            }
+            handler.postDelayed(checkVpn, 1000)
         } else {
             Log.e(TAG, "Impossible de résoudre l’Intent pour Cisco AnyConnect")
             Toast.makeText(
@@ -113,7 +111,6 @@ object NetworkUtils {
                 "Cisco AnyConnect introuvable. Vérifiez l’installation.",
                 Toast.LENGTH_LONG
             ).show()
-            cm.unregisterNetworkCallback(vpnCallback)
         }
     }
 
@@ -131,7 +128,11 @@ object NetworkUtils {
             }
             else -> {
                 Log.w(TAG, "Branch: ni VPN ni Wi-Fi autorisé → lancement VPN Cisco")
-                lancerVpnCisco(context, host = "gate.elmec.com/rivagroup", profile = "Riva")
+                lancerVpnCisco(
+                    context,
+                    host = "gate.elmec.com/rivagroup",
+                    profile = "Riva"
+                )
             }
         }
         Log.d(TAG, "← verifierConnexionEtEventuellementLancerVpn(): fin")
