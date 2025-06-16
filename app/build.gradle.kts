@@ -130,8 +130,13 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation("androidx.room:room-runtime:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
-    implementation(libs.androidx.media3.common.ktx)
+    // Remplacement de la ligne media3 non-résolue
+    implementation("androidx.media3:media3-common:1.0.0")
+    implementation("androidx.media3:media3-common-ktx:1.0.0")
 
+    // (optionnel si tu veux l’UI ou la session)
+    implementation("androidx.media3:media3-ui:1.0.0")
+    implementation("androidx.media3:media3-session:1.0.0")
     // Caméra & Photo
     implementation("androidx.camera:camera-camera2:1.3.1")
     implementation("androidx.camera:camera-lifecycle:1.3.1")
@@ -153,7 +158,8 @@ dependencies {
     // ViewModel & LiveData Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.compose.runtime:runtime-livedata:1.6.1")
-
+    implementation("androidx.media3:media3-common:1.5.0")
+    implementation("androidx.media3:media3-common-ktx:1.5.0")
     // Sécurité
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 

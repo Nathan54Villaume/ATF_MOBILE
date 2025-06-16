@@ -32,7 +32,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Autres activités à déclarer ici si besoin -->
+        <!-- Déclarez ici d'autres activités si nécessaire -->
 
     </application>
 </manifest>
