@@ -1,21 +1,23 @@
 package com.riva.atsmobile
-import androidx.lifecycle.lifecycleScope
+
 import android.Manifest
+import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import com.riva.atsmobile.ui.ATSMobileApp
 import com.riva.atsmobile.ui.theme.ATSMobileTheme
-import com.riva.atsmobile.utils.NetworkUtils
 import com.riva.atsmobile.utils.NetworkMonitor
+import com.riva.atsmobile.utils.NetworkUtils
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -28,29 +30,38 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: SelectionViewModel by viewModels()
 
+    // 1) Launcher pour la permission VPN
+    val requestVpnPermission =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                // Démarre votre service VPN intégré
+                NetworkUtils.startAlwaysOnVpn(this)
+            } else {
+                Toast.makeText(this, "Permission VPN refusée", Toast.LENGTH_LONG).show()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Demande de permission de localisation si nécessaire
+        // 2) Permission localisation
         if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                this, Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            ActivityCompat.requestPermissions(
-                this,
+            requestPermissions(
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                 PERM_REQUEST_LOCATION
             )
         } else {
-            // permission déjà accordée → on peut vérifier la connexion VPN
+            // Vérifier et lancer VPN si besoin
             NetworkUtils.verifierConnexionEtEventuellementLancerVpn(this)
         }
 
-        // Enregistre l’observateur réseau réactif (ne déclenche plus le VPN ici)
+        // Observateur réseau
         NetworkMonitor.register(applicationContext)
 
-        // Configuration des barres système
+        // UI system bars
         WindowCompat.setDecorFitsSystemWindows(window, true)
         lifecycleScope.launch {
             viewModel.role.collectLatest { role ->
@@ -67,7 +78,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Interface principale
         setContent {
             ATSMobileTheme {
                 ATSMobileApp(viewModel = viewModel)
@@ -75,16 +85,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Gère la réponse de la demande de permission
+    // 3) Résultat permission localisation
     override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERM_REQUEST_LOCATION) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission accordée → vérifier le VPN
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
                 NetworkUtils.verifierConnexionEtEventuellementLancerVpn(this)
             } else {
                 Toast.makeText(
