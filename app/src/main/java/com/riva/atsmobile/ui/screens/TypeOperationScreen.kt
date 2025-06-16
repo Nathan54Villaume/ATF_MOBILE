@@ -393,7 +393,7 @@ fun DetailsColumn(
                     )
                 )
             }
-
+            Spacer(Modifier.width(8.dp))
             ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
             Footer(zone, intervention)
         }
