@@ -18,7 +18,9 @@ class MyVpnService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(1, buildForegroundNotification())
+        val notification = buildForegroundNotification()
+        // Démarre en foreground sans type explicite
+        startForeground(1, notification)
         Log.i(TAG, "MyVpnService créé")
     }
 
@@ -62,9 +64,7 @@ class MyVpnService : VpnService() {
                 CHANNEL_ID,
                 "ATF Mobile VPN",
                 NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Service VPN intégré Always-On"
-            }
+            ).apply { description = "Service VPN intégré Always-On" }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
@@ -81,7 +81,6 @@ class MyVpnService : VpnService() {
             .setContentText("Votre connexion passe via le VPN intégré.")
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .build()
-        // Marquer comme notification persistante
         notification.flags = notification.flags or Notification.FLAG_ONGOING_EVENT
         return notification
     }
