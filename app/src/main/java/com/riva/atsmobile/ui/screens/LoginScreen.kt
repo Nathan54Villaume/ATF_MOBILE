@@ -82,14 +82,10 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
                         }
                     }
                     .onFailure {
-                        handleOfflineFallback(context, matricule, motDePasse, viewModel, navController) { err ->
-                            message = err
-                        }
+                        message = "Connexion impossible : VPN ou réseau requis."
                     }
             } else {
-                handleOfflineFallback(context, matricule, motDePasse, viewModel, navController) { err ->
-                    message = err
-                }
+                message = "Connexion impossible : VPN ou réseau requis."
             }
         }
     }
