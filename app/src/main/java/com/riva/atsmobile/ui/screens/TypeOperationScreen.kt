@@ -328,9 +328,12 @@ fun DetailsColumn(
         contentAlignment = Alignment.Center
     ) {
         Column(
+            modifier = Modifier
+                .fillMaxSize(),                         // ← on occupe tout l’espace disponible
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.SpaceBetween // ← répartit haut et bas
         ) {
+            // Bloc GAMME ACTUELLE
             Column(
                 modifier = Modifier.onGloballyPositioned {
                     topY = it.positionInParent().y
@@ -363,6 +366,7 @@ fun DetailsColumn(
                 )
             }
 
+            // Bloc GAMME VISÉE
             Column(
                 modifier = Modifier.onGloballyPositioned {
                     bottomY = it.positionInParent().y
@@ -393,9 +397,22 @@ fun DetailsColumn(
                     )
                 )
             }
-            Spacer(Modifier.width(32.dp))
-            ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
-            Footer(zone, intervention)
+
+            // Rangée de boutons collée en bas
+            ActionRow(
+                current = current,
+                desired = desired,
+                role = role,
+                navController = navController,
+                viewModel = viewModel,
+                snackbarHost = snackbarHost,
+                zone = zone,
+                intervention = intervention,
+                scope = rememberCoroutineScope()
+            )
+
+            // Footer tout en bas
+            Footer(zone = zone, intervention = intervention)
         }
 
         TransitionArrow(
@@ -408,6 +425,7 @@ fun DetailsColumn(
         )
     }
 }
+
 
 
 
