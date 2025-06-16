@@ -41,13 +41,11 @@
             android:name=".vpn.MyVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:exported="true"
-            >
+            android:foregroundServiceType="specialUse">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
         </service>
-
-        <!-- Déclarez ici d'autres activités ou services si nécessaire -->
 
     </application>
 </manifest>
