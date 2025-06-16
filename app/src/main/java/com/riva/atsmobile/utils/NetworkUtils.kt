@@ -7,7 +7,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.util.Log
@@ -32,6 +34,7 @@ object NetworkUtils {
             return false
         }
 
+        // Utilisation de var pour pouvoir réassigner
         var ssid = wifiManager.connectionInfo.ssid
         if (ssid.startsWith("\"") && ssid.endsWith("\"")) {
             ssid = ssid.substring(1, ssid.length - 1)
@@ -65,6 +68,27 @@ object NetworkUtils {
     }
 
     fun lancerVpnCisco(context: Context, host: String, profile: String) {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        // 1) On s'abonne aux événements VPN
+        val vpnRequest = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_VPN)
+            .build()
+        val vpnCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                super.onAvailable(network)
+                cm.unregisterNetworkCallback(this)
+                // 2) On ramène notre appli au premier plan
+                context.packageManager.getLaunchIntentForPackage(context.packageName)
+                    ?.apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        context.startActivity(this)
+                    }
+            }
+        }
+        cm.registerNetworkCallback(vpnRequest, vpnCallback)
+
+        // 3) On lance Cisco AnyConnect
         val uri = "anyconnect://connect?host=$host&profile=$profile"
         Log.d(TAG, "→ lancerVpnCisco(): uri = $uri")
 
@@ -72,8 +96,6 @@ object NetworkUtils {
             "com.cisco.anyconnect.vpn.android.avf",
             "com.cisco.anyconnect.ui.PrimaryActivity"
         )
-
-        // On utilise setComponent() et setFlags(), pas de ré-affectation de val
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
             setComponent(component)
             setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -91,6 +113,7 @@ object NetworkUtils {
                 "Cisco AnyConnect introuvable. Vérifiez l’installation.",
                 Toast.LENGTH_LONG
             ).show()
+            cm.unregisterNetworkCallback(vpnCallback)
         }
     }
 
@@ -108,11 +131,7 @@ object NetworkUtils {
             }
             else -> {
                 Log.w(TAG, "Branch: ni VPN ni Wi-Fi autorisé → lancement VPN Cisco")
-                lancerVpnCisco(
-                    context,
-                    host = "gate.elmec.com/rivagroup",
-                    profile = "Riva"
-                )
+                lancerVpnCisco(context, host = "gate.elmec.com/rivagroup", profile = "Riva")
             }
         }
         Log.d(TAG, "← verifierConnexionEtEventuellementLancerVpn(): fin")
