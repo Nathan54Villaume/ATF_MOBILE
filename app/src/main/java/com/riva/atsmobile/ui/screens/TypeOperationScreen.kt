@@ -414,10 +414,10 @@ fun DetailsColumn(
                 scope = rememberCoroutineScope()
             )
 
-            Spacer(Modifier.height(16.dp))
+
 
             // ─── FOOTER ─────────────────────────────────
-            Footer(zone = zone, intervention = intervention)
+            //Footer(zone = zone, intervention = intervention)
         }
 
         TransitionArrow(
