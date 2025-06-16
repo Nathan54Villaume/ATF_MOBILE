@@ -1,5 +1,6 @@
 package com.riva.atsmobile.ui.screens
 
+import com.riva.atsmobile.utils.verifierConnexionEtEventuellementLancerVpn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -58,6 +59,11 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
+
+    // Déclencher le VPN si nécessaire dès l'affichage de l'écran
+    LaunchedEffect(Unit) {
+        verifierConnexionEtEventuellementLancerVpn(context)
+    }
 
     // Bloc de connexion réutilisable
     val doLogin: () -> Unit = {
