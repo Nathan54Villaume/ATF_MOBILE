@@ -544,7 +544,7 @@ fun TypeOperationScreen(
                             )
                         }
 
-                        //ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
+                        ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
                         //Footer(zone, intervention)
                     }
 
