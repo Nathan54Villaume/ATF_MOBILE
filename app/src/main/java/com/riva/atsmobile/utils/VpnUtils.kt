@@ -22,7 +22,7 @@ fun isOnAllowedWifi(context: Context, allowedSsids: List<String>): Boolean {
     val wifiManager = context.applicationContext
         .getSystemService(Context.WIFI_SERVICE) as WifiManager
 
-    // Vérification du permission ACCESS_FINE_LOCATION requise pour Android 8+
+    // Vérification de la permission ACCESS_FINE_LOCATION
     if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
         != PackageManager.PERMISSION_GRANTED) {
         Log.e(TAG, "Permission ACCESS_FINE_LOCATION non accordée")
@@ -31,7 +31,7 @@ fun isOnAllowedWifi(context: Context, allowedSsids: List<String>): Boolean {
 
     val info = wifiManager.connectionInfo
     var ssid = info.ssid
-    // Sur certains appareils SSID est encadré de guillemets
+    // Supprime les guillemets éventuels
     if (ssid.startsWith("\"") && ssid.endsWith("\"")) {
         ssid = ssid.substring(1, ssid.length - 1)
     }
@@ -63,25 +63,26 @@ fun isConnectedToWifi(context: Context): Boolean {
     return hasWifi
 }
 
-fun lancerVpnCisco(context: Context, host: String, profile: String? = null) {
-    val uri = profile
-        ?.let { "anyconnect://connect/?name=$it" }
-        ?: "anyconnect://connect/?host=$host"
+fun lancerVpnCisco(context: Context, host: String, profile: String) {
+    val uri = "anyconnect://connect?host=$host&profile=$profile"
     Log.d(TAG, "→ lancerVpnCisco(): uri = $uri")
 
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-        data = Uri.parse(uri)
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
+        // Ciblage explicite du package Cisco AnyConnect
+        setPackage("com.cisco.anyconnect.vpn.android.avf")
         flags = Intent.FLAG_ACTIVITY_NEW_TASK
     }
 
-    if (intent.resolveActivity(context.packageManager) != null) {
+    val resolved = intent.resolveActivity(context.packageManager)
+    Log.d(TAG, "   • resolveActivity = $resolved")
+    if (resolved != null) {
         Log.i(TAG, "Démarrage Cisco AnyConnect")
         context.startActivity(intent)
     } else {
-        Log.e(TAG, "Cisco AnyConnect non installé")
+        Log.e(TAG, "Cisco AnyConnect non résolu par resolveActivity")
         Toast.makeText(
             context,
-            "Cisco AnyConnect n'est pas installé",
+            "Cisco AnyConnect introuvable. Veuillez l’installer depuis le Play Store.",
             Toast.LENGTH_LONG
         ).show()
     }
