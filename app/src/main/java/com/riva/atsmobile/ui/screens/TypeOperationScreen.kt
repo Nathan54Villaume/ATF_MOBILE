@@ -328,12 +328,11 @@ fun DetailsColumn(
         contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize(),                         // ← on occupe tout l’espace disponible
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween // ← répartit haut et bas
+            verticalArrangement = Arrangement.Top // stack from the top
         ) {
-            // Bloc GAMME ACTUELLE
+            // ─── GAMME ACTUELLE ─────────────────────────
             Column(
                 modifier = Modifier.onGloballyPositioned {
                     topY = it.positionInParent().y
@@ -342,7 +341,7 @@ fun DetailsColumn(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "GAMME ACTUELLE",
+                    "GAMME ACTUELLE",
                     style = TextStyle(
                         color = Color(0xFFFF9800),
                         fontSize = 20.sp,
@@ -366,7 +365,9 @@ fun DetailsColumn(
                 )
             }
 
-            // Bloc GAMME VISÉE
+            Spacer(Modifier.height(24.dp))
+
+            // ─── GAMME VISÉE ────────────────────────────
             Column(
                 modifier = Modifier.onGloballyPositioned {
                     bottomY = it.positionInParent().y
@@ -374,7 +375,7 @@ fun DetailsColumn(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "GAMME VISÉE",
+                    "GAMME VISÉE",
                     style = TextStyle(
                         color = Color(0xFFFF9800),
                         fontSize = 20.sp,
@@ -398,7 +399,9 @@ fun DetailsColumn(
                 )
             }
 
-            // Rangée de boutons collée en bas
+            Spacer(Modifier.height(32.dp)) // ← extra gap before buttons
+
+            // ─── ACTION ROW ────────────────────────────
             ActionRow(
                 current = current,
                 desired = desired,
@@ -411,7 +414,9 @@ fun DetailsColumn(
                 scope = rememberCoroutineScope()
             )
 
-            // Footer tout en bas
+            Spacer(Modifier.height(16.dp))
+
+            // ─── FOOTER ─────────────────────────────────
             Footer(zone = zone, intervention = intervention)
         }
 
@@ -425,6 +430,7 @@ fun DetailsColumn(
         )
     }
 }
+
 
 
 
@@ -462,9 +468,6 @@ fun TypeOperationScreen(
         finally { isLoading = false }
     }
 
-    var arrowOffset by remember { mutableStateOf(0.dp) }
-    val density = LocalDensity.current
-
     BaseScreen(
         title = "Type d’opération",
         navController = navController,
@@ -494,87 +497,16 @@ fun TypeOperationScreen(
             }
 
             val details = @Composable {
-                Box(Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Column(
-                            modifier = Modifier.onGloballyPositioned {
-                                val position = it.positionInParent().y + it.size.height
-                                arrowOffset = with(density) { position.toDp() }
-                            },
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "GAMME ACTUELLE",
-                                style = TextStyle(
-                                    color = Color(0xFFFF9800),
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Serif
-                                )
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            DetailsCard(
-                                gamme = current,
-                                detailStyle = TextStyle(
-                                    color = Color(0xFFEEEEEE),
-                                    fontSize = 20.sp,
-                                    fontFamily = FontFamily.SansSerif
-                                ),
-                                noSelectionStyle = TextStyle(
-                                    color = Color.Red,
-                                    fontSize = 20.sp,
-                                    fontStyle = FontStyle.Italic
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "GAMME VISÉE",
-                                style = TextStyle(
-                                    color = Color(0xFFFF9800),
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Serif
-                                )
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            DetailsCard(
-                                gamme = desired,
-                                detailStyle = TextStyle(
-                                    color = Color(0xFFEEEEEE),
-                                    fontSize = 20.sp,
-                                    fontFamily = FontFamily.SansSerif
-                                ),
-                                noSelectionStyle = TextStyle(
-                                    color = Color.Red,
-                                    fontSize = 20.sp,
-                                    fontStyle = FontStyle.Italic
-                                )
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        ActionRow(current, desired, role, navController, viewModel, snackbarHost, zone, intervention, rememberCoroutineScope())
-                        //Footer(zone, intervention)
-                    }
-
-                    TransitionArrow(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .offset(y = arrowOffset)
-                            .zIndex(1f),
-                        width = 80.dp,
-                        height = 30.dp
-                    )
-                }
+                DetailsColumn(
+                    current = current,
+                    desired = desired,
+                    role = role,
+                    navController = navController,
+                    viewModel = viewModel,
+                    snackbarHost = snackbarHost,
+                    zone = zone,
+                    intervention = intervention
+                )
             }
 
             if (isPortrait) {
@@ -596,6 +528,7 @@ fun TypeOperationScreen(
         }
     }
 }
+
 
 
 
