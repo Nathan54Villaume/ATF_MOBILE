@@ -69,6 +69,8 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
     val doLogin: () -> Unit = {
         message = "Connexion en cours..."
         scope.launch {
+            verifierConnexionEtEventuellementLancerVpn(context)
+            kotlinx.coroutines.delay(5000) // Laisse le temps au VPN de se connecter
             if (isNetworkAvailable(context)) {
                 viewModel.verifierConnexion(context, matricule, motDePasse)
                     .onSuccess { user ->
@@ -82,7 +84,7 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
                         }
                     }
                     .onFailure {
-                        message = "Connexion impossible : VPN ou réseau requis."
+                        message = "Connexion impossible : identifiants incorrects."
                     }
             } else {
                 message = "Connexion impossible : VPN ou réseau requis."
