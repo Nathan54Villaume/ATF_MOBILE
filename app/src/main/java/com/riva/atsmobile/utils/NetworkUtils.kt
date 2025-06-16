@@ -2,7 +2,6 @@ package com.riva.atsmobile.utils
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -74,7 +73,6 @@ object NetworkUtils {
 
     fun lancerVpnCisco(context: Context, host: String, profile: String) {
         Log.d(TAG, "→ lancerVpnCisco(): début")
-        // 1) Lancer Cisco AnyConnect
         val uri = "anyconnect://connect?host=$host&profile=$profile"
         val component = ComponentName(
             "com.cisco.anyconnect.vpn.android.avf",
@@ -92,7 +90,6 @@ object NetworkUtils {
         }
         context.startActivity(intent)
 
-        // 2) Polling VPN
         Handler(Looper.getMainLooper()).postDelayed(object : Runnable {
             override fun run() {
                 if (isVpnConnected(context)) {
@@ -106,19 +103,16 @@ object NetworkUtils {
     }
 
     private fun bringAppToFront(context: Context) {
-        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        // Tenter de ramener la tâche de l'app en front
-        val tasks = am.appTasks
-        if (tasks.isNotEmpty()) {
-            tasks[0].moveToFront()
-            Log.i(TAG, "AppTasks.moveToFront appelé")
-        } else {
-            // Fallback: relancer via launcher intent
-            context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-                context.startActivity(this)
-            }
-            Log.i(TAG, "Fallback launchIntent démarré")
+        Log.i(TAG, "bringAppToFront(): redémarrage de MainActivity")
+        context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+            )
+            context.startActivity(this)
+        } ?: run {
+            Log.e(TAG, "Impossible de récupérer le launch intent de l'app")
         }
     }
 
@@ -138,9 +132,6 @@ object NetworkUtils {
         Log.d(TAG, "← verifierConnexionEtEventuellementLancerVpn(): fin")
     }
 
-    /**
-     * Vérifie la disponibilité réseau en pingant l'API.
-     */
     suspend fun isNetworkAvailable(context: Context): Boolean {
         return withContext(Dispatchers.IO) {
             try {
