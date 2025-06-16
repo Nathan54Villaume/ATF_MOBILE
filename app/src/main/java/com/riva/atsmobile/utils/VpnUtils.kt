@@ -48,7 +48,7 @@ fun verifierConnexionEtEventuellementLancerVpn(context: Context) {
         }
         else -> {
             // Aucun réseau local ni VPN actif → déclencher la connexion VPN Cisco
-            lancerVpnCisco(context, host = "vpn.sam.local", profile = "Riva")
+            lancerVpnCisco(context, host = "gate.elmec.com/rivagroup", profile = "Riva")
         }
     }
 }
