@@ -2,6 +2,7 @@ package com.riva.atsmobile.utils
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -72,9 +73,9 @@ object NetworkUtils {
     }
 
     fun lancerVpnCisco(context: Context, host: String, profile: String) {
+        Log.d(TAG, "→ lancerVpnCisco(): début")
+        // 1) Lancer Cisco AnyConnect
         val uri = "anyconnect://connect?host=$host&profile=$profile"
-        Log.d(TAG, "→ lancerVpnCisco(): uri = $uri")
-
         val component = ComponentName(
             "com.cisco.anyconnect.vpn.android.avf",
             "com.cisco.anyconnect.ui.PrimaryActivity"
@@ -83,39 +84,41 @@ object NetworkUtils {
             setComponent(component)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
-
         val resolved = intent.resolveActivity(context.packageManager)
-        if (resolved != null) {
-            Log.i(TAG, "Démarrage Cisco AnyConnect")
-            context.startActivity(intent)
+        if (resolved == null) {
+            Log.e(TAG, "Cisco AnyConnect introuvable")
+            Toast.makeText(context, "Cisco AnyConnect non installé", Toast.LENGTH_LONG).show()
+            return
+        }
+        context.startActivity(intent)
 
-            val handler = Handler(Looper.getMainLooper())
-            val checkVpn = object : Runnable {
-                override fun run() {
-                    if (isVpnConnected(context)) {
-                        Log.i(TAG, "VPN détecté, retour automatique à l'application")
-                        handler.removeCallbacks(this)
-                        val backIntent = Intent(context, MainActivity::class.java).apply {
-                            addFlags(
-                                Intent.FLAG_ACTIVITY_NEW_TASK or
-                                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                                        Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            )
-                        }
-                        context.startActivity(backIntent)
-                    } else {
-                        handler.postDelayed(this, 500)
-                    }
+        // 2) Polling VPN
+        Handler(Looper.getMainLooper()).postDelayed(object : Runnable {
+            override fun run() {
+                if (isVpnConnected(context)) {
+                    Log.i(TAG, "VPN actif détecté, tentative de retour à l'app")
+                    bringAppToFront(context)
+                } else {
+                    Handler(Looper.getMainLooper()).postDelayed(this, 500)
                 }
             }
-            handler.postDelayed(checkVpn, 500)
+        }, 500)
+    }
+
+    private fun bringAppToFront(context: Context) {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        // Tenter de ramener la tâche de l'app en front
+        val tasks = am.appTasks
+        if (tasks.isNotEmpty()) {
+            tasks[0].moveToFront()
+            Log.i(TAG, "AppTasks.moveToFront appelé")
         } else {
-            Log.e(TAG, "Impossible de résoudre l’Intent pour Cisco AnyConnect")
-            Toast.makeText(
-                context,
-                "Cisco AnyConnect introuvable. Vérifiez l’installation.",
-                Toast.LENGTH_LONG
-            ).show()
+            // Fallback: relancer via launcher intent
+            context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                context.startActivity(this)
+            }
+            Log.i(TAG, "Fallback launchIntent démarré")
         }
     }
 
@@ -128,7 +131,7 @@ object NetworkUtils {
             isVpnConnected(context) -> Log.i(TAG, "Branch: déjà connecté au VPN")
             isConnectedToWifi(context) && isOnAllowedWifi(context, allowedSsids) -> Log.i(TAG, "Branch: Wi-Fi autorisé (${allowedSsids.joinToString()})")
             else -> {
-                Log.w(TAG, "Branch: ni VPN ni Wi-Fi autorisé → lancement VPN Cisco")
+                Log.w(TAG, "Branch: lancement VPN Cisco")
                 lancerVpnCisco(context, host = "gate.elmec.com/rivagroup", profile = "Riva")
             }
         }
@@ -142,16 +145,13 @@ object NetworkUtils {
         return withContext(Dispatchers.IO) {
             try {
                 val urlString = "${ApiConfig.getBaseUrl(context)}/api/ping"
-                Log.d(TAG, "→ Test API ping = $urlString")
                 val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
                     connectTimeout = 1000
                     readTimeout = 1000
                     requestMethod = "GET"
                     connect()
                 }
-                val success = connection.responseCode == HttpURLConnection.HTTP_OK
-                Log.d(TAG, "← API response = ${connection.responseCode}")
-                success
+                connection.responseCode == HttpURLConnection.HTTP_OK
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Exception ping API", e)
                 false
