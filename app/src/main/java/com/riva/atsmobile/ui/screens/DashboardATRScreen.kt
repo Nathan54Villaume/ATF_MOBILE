@@ -65,8 +65,8 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
                             is Number -> v.toInt() != 0
                             else -> false
                         },
-                        vitesseConsigne = (values["$db.DBD2"] as? Number)?.toFloat() ?: 0f,
-                        vitesseActuelle = (values["$db.DBD6"] as? Number)?.toFloat() ?: 0f,
+                        vitesseConsigne = ((values["$db.DBD2"] as? Number)?.toFloat() ?: 0f ) / 1000f,
+                        vitesseActuelle = ((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f ) / 1000f,
                         diametre = (values["$db.DBD10"] as? Number)?.toFloat() ?: 0f,
                         longueurBobine = (values["$db.DBD14"] as? Number)?.toFloat() ?: 0f,
                         poidsBobine = (values["$db.DBD18"] as? Number)?.toFloat() ?: 0f
