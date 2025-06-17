@@ -1,9 +1,9 @@
 package com.riva.atsmobile.network
+import kotlinx.serialization.serializer
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -24,7 +24,8 @@ object ApiAutomateClient {
     suspend fun fetchGroupedValues(dbMap: Map<String, List<String>>): Map<String, Map<String, Any>> = withContext(Dispatchers.IO) {
         try {
             val allAddresses = dbMap.values.flatten()
-            val requestBody = json.encodeToString(ListSerializer(String.serializer()), allAddresses)
+            val requestBody = json.encodeToString(ListSerializer(serializer<String>()), allAddresses)
+
                 .toRequestBody("application/json".toMediaType())
 
             val request = Request.Builder()

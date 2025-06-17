@@ -29,12 +29,12 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
 
     LaunchedEffect(Unit) {
         while (true) {
-            val dbMap = lignes.associate { (label, db) ->
+            val addresses = lignes.associate { (label, db) ->
                 db to listOf(
-                    "$db.DBX0.0", "$db.DBD2", "$db.DBD6", "$db.DBD10", "$db.DBD14", "$db.DBD18"
+                    "$db.DBB0", "$db.DBD2", "$db.DBD6", "$db.DBD10", "$db.DBD14", "$db.DBD18"
                 )
             }
-            data = ApiAutomateClient.fetchGroupedValues(dbMap)
+            data = ApiAutomateClient.fetchGroupedValues(addresses)
             delay(2000)
         }
     }
@@ -57,9 +57,9 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
                 if (values != null) {
                     TrefileuseCard(
                         titre = label,
-                        isActive = values["DBX0.0"] as? Boolean ?: false,
-                        vitesseActuelle = (values["DBD6"] as? Number)?.toFloat() ?: 0f,
+                        isActive = values["DBB0"] as? Boolean ?: false,
                         vitesseConsigne = (values["DBD2"] as? Number)?.toFloat() ?: 0f,
+                        vitesseActuelle = (values["DBD6"] as? Number)?.toFloat() ?: 0f,
                         diametre = (values["DBD10"] as? Number)?.toFloat() ?: 0f,
                         longueurBobine = (values["DBD14"] as? Number)?.toFloat() ?: 0f,
                         poidsBobine = (values["DBD18"] as? Number)?.toFloat() ?: 0f
