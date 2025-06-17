@@ -56,20 +56,20 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
             items(lignes) { (label, db) ->
                 val values = data[db]
                 if (values != null) {
-                    Log.d("Dashboard", "$label → $values") // 🔍 LOG TEMPORAIRE
+                    Log.d("Dashboard", "$label → $values")
 
                     TrefileuseCard(
                         titre = label,
-                        isActive = when (val v = values["DBB0"]) {
+                        isActive = when (val v = values["$db.DBB0"]) {
                             is Boolean -> v
                             is Number -> v.toInt() != 0
                             else -> false
                         },
-                        vitesseConsigne = (values["DBD2"] as? Number)?.toFloat() ?: 0f,
-                        vitesseActuelle = (values["DBD6"] as? Number)?.toFloat() ?: 0f,
-                        diametre = (values["DBD10"] as? Number)?.toFloat() ?: 0f,
-                        longueurBobine = (values["DBD14"] as? Number)?.toFloat() ?: 0f,
-                        poidsBobine = (values["DBD18"] as? Number)?.toFloat() ?: 0f
+                        vitesseConsigne = (values["$db.DBD2"] as? Number)?.toFloat() ?: 0f,
+                        vitesseActuelle = (values["$db.DBD6"] as? Number)?.toFloat() ?: 0f,
+                        diametre = (values["$db.DBD10"] as? Number)?.toFloat() ?: 0f,
+                        longueurBobine = (values["$db.DBD14"] as? Number)?.toFloat() ?: 0f,
+                        poidsBobine = (values["$db.DBD18"] as? Number)?.toFloat() ?: 0f
                     )
                 }
             }
