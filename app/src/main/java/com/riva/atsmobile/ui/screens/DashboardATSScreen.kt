@@ -21,6 +21,7 @@ import com.riva.atsmobile.ui.components.TrefileuseCard
 import com.riva.atsmobile.ui.shared.BaseScreen
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 import kotlinx.coroutines.delay
+import kotlin.math.round
 
 @Composable
 fun DashboardATSScreen(navController: NavController, viewModel: SelectionViewModel) {
@@ -101,8 +102,8 @@ fun DashboardATSScreen(navController: NavController, viewModel: SelectionViewMod
                             is Number -> v.toInt() != 0
                             else -> false
                         },
-                        vitesseConsigne = ((values["$db.DBD2"] as? Number)?.toFloat() ?: 0f) / 1000f,
-                        vitesseActuelle = ((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f) / 1000f,
+                        vitesseConsigne = round(((values["$db.DBD2"] as? Number)?.toFloat() ?: 0f) / 100f) / 10f,
+                        vitesseActuelle = round(((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f) / 100f) / 10f,
                         diametre = (values["$db.DBD10"] as? Number)?.toFloat() ?: 0f,
                         longueurBobine = (values["$db.DBD14"] as? Number)?.toFloat() ?: 0f,
                         poidsBobine = (values["$db.DBD18"] as? Number)?.toFloat() ?: 0f
@@ -146,8 +147,8 @@ fun DashboardATSScreen(navController: NavController, viewModel: SelectionViewMod
                             is Number -> v.toInt() != 0
                             else -> false
                         },
-                        vitesseConsigne = ((values["$db.DBD2"] as? Number)?.toFloat() ?: 0f) / 1000f,
-                        vitesseActuelle = ((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f) / 1000f,
+                        vitesseConsigne = round(((values["$db.DBD2"] as? Number)?.toFloat() ?: 0f) / 100f) / 10f,
+                        vitesseActuelle = round(((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f) / 100f) / 10f,
                         diamFil = (values["$db.DBD10"] as? Number)?.toFloat() ?: 0f,
                         diamTrame = (values["$db.DBD14"] as? Number)?.toFloat() ?: 0f,
                         longueur = (values["$db.DBD18"] as? Number)?.toFloat() ?: 0f,
