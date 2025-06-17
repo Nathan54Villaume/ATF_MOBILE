@@ -124,13 +124,13 @@ fun HomeScreen(viewModel: SelectionViewModel, navController: NavController) {
                                         resId = R.drawable.logo2,
                                         height = logoHeight,
                                         rotationZ = rotation.value,
-                                        onClick = { navController.navigate("dashboard_atr") }
+                                        onClick = { navController.navigate("dashboard_ats") }
                                     )
                                     LogoClickable(
                                         resId = R.drawable.logo3,
                                         height = logoHeight,
                                         rotationZ = rotation.value,
-                                        onClick = { navController.navigate("dashboard_ats") }
+                                        onClick = { navController.navigate("dashboard_atr") }
                                     )
                                 }
                             } else {
