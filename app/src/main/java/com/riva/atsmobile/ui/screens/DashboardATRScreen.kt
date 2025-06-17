@@ -32,7 +32,7 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
         while (true) {
             val addresses = lignes.associate { (_, db) ->
                 db to listOf(
-                    "$db.DBB0", "$db.DBD2", "$db.DBD6", "$db.DBD10", "$db.DBD14", "$db.DBD18"
+                    "$db.DBX0.0", "$db.DBD2", "$db.DBD6", "$db.DBD10", "$db.DBD14", "$db.DBD18"
                 )
             }
             data = ApiAutomateClient.fetchGroupedValues(addresses)
@@ -60,7 +60,7 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
 
                     TrefileuseCard(
                         titre = label,
-                        isActive = when (val v = values["$db.DBB0"]) {
+                        isActive = when (val v = values["$db.DBX0.0"]) {
                             is Boolean -> v
                             is Number -> v.toInt() != 0
                             else -> false
