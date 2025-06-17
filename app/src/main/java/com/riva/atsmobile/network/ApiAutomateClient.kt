@@ -28,11 +28,11 @@ object ApiAutomateClient {
 
             client.newCall(request).execute().use { response ->
                 val bodyStr = response.body?.string().orEmpty()
-                Log.d("API", "Response → $bodyStr")
+                Log.d("API", "Response brut → $bodyStr")
 
                 val parsed = JSONObject(bodyStr)
 
-                return@withContext dbMap.mapValues { (_, addresses) ->
+                val result = dbMap.mapValues { (_, addresses) ->
                     addresses.associateWith { addr ->
                         val raw = parsed.opt(addr)
                         val interpreted: Any = when {
@@ -47,6 +47,9 @@ object ApiAutomateClient {
                         interpreted
                     }
                 }
+
+                Log.d("API", "✔ Résultat décodé final → $result")
+                return@withContext result
             }
         } catch (e: Exception) {
             Log.e("API", "fetchGroupedValues error", e)
