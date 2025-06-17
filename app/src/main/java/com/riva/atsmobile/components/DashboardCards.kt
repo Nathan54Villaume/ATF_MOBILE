@@ -8,11 +8,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.riva.atsmobile.components.VitesseGauge
 
 @Composable
 fun TrefileuseCard(
@@ -32,6 +34,7 @@ fun TrefileuseCard(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // En-tête
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -43,7 +46,6 @@ fun TrefileuseCard(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-
                 Box(
                     modifier = Modifier
                         .size(16.dp)
@@ -56,10 +58,23 @@ fun TrefileuseCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            InfoRow("Vitesse", "${vitesseActuelle} m/s (cible: $vitesseConsigne)")
+            // Le compteur de vitesse
+            VitesseGauge(
+                vitesseActuelle = vitesseActuelle,
+                vitesseConsigne = vitesseConsigne,
+                // tu peux ajuster vitesseMax si nécessaire
+                vitesseMax = maxOf(vitesseActuelle, vitesseConsigne) * 1.2f,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Les autres infos
             InfoRow("Diamètre", "$diametre mm")
             InfoRow("Longueur bobine", "$longueurBobine m")
-            InfoRow("Poids bobine", "$poidsBobine kg")
+            InfoRow("Poids bobine", "${poidsBobine.toInt()} kg")
         }
     }
 }
@@ -68,8 +83,8 @@ fun TrefileuseCard(
 fun SoudeuseCard(
     titre: String,
     isActive: Boolean,
-    vitesseActuelle: Float,
-    vitesseConsigne: Float,
+    vitesseActuelle: Float,   // en m/min
+    vitesseConsigne: Float,   // en m/min
     diamFil: Float,
     diamTrame: Float,
     longueur: Float,
@@ -77,6 +92,10 @@ fun SoudeuseCard(
     energie: Int,
     nbPanneaux: Int
 ) {
+    // conversion m/min → m/s pour le gauge
+    val vitesseActuelleMs = vitesseActuelle / 60f
+    val vitesseConsigneMs = vitesseConsigne / 60f
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -85,6 +104,7 @@ fun SoudeuseCard(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // En-tête
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -96,7 +116,6 @@ fun SoudeuseCard(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-
                 Box(
                     modifier = Modifier
                         .size(16.dp)
@@ -109,7 +128,19 @@ fun SoudeuseCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            InfoRow("Vitesse", "${vitesseActuelle} m/min (cible: $vitesseConsigne)")
+            // Compteur de vitesse (m/s)
+            VitesseGauge(
+                vitesseActuelle = vitesseActuelleMs,
+                vitesseConsigne = vitesseConsigneMs,
+                vitesseMax = maxOf(vitesseActuelleMs, vitesseConsigneMs) * 1.2f,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Autres infos
             InfoRow("Diam. fil / trame", "$diamFil / $diamTrame mm")
             InfoRow("Dim. panneau", "$longueur x $largeur mm")
             InfoRow("Énergie", "$energie Wh")
