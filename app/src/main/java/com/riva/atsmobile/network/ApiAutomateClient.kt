@@ -4,7 +4,6 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.*
 import okhttp3.MediaType.Companion.toMediaType
@@ -37,22 +36,27 @@ object ApiAutomateClient {
                 val bodyStr = response.body?.string().orEmpty()
                 Log.d("API", "Response → $bodyStr")
 
-                val parsed = json.decodeFromString<JsonObject>(bodyStr)
+                val parsed = json.parseToJsonElement(bodyStr).jsonObject
 
                 return@withContext dbMap.mapValues { (_, addresses) ->
                     addresses.associateWith { addr ->
-                        parsed[addr]?.jsonPrimitive?.let { prim ->
-                            prim.booleanOrNull
-                                ?: prim.doubleOrNull
-                                ?: prim.intOrNull
-                                ?: prim.content
-                        } ?: "N/A"
+                        val primitive = parsed[addr]?.jsonPrimitive
+                        if (primitive != null && !primitive.content.startsWith("Erreur")) {
+                            when {
+                                primitive.booleanOrNull != null -> primitive.boolean
+                                primitive.doubleOrNull != null -> primitive.double
+                                primitive.intOrNull != null -> primitive.int
+                                else -> primitive.content
+                            }
+                        } else {
+                            "N/A"
+                        }
                     }
                 }
             }
         } catch (e: Exception) {
             Log.e("API", "fetchGroupedValues error", e)
-            emptyMap()
+            return@withContext emptyMap()
         }
     }
 }
