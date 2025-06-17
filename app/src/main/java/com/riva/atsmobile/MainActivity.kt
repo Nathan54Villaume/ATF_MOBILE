@@ -1,13 +1,11 @@
 package com.riva.atsmobile
 
 import android.Manifest
-import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -17,7 +15,6 @@ import androidx.lifecycle.lifecycleScope
 import com.riva.atsmobile.ui.ATSMobileApp
 import com.riva.atsmobile.ui.theme.ATSMobileTheme
 import com.riva.atsmobile.utils.NetworkMonitor
-import com.riva.atsmobile.utils.NetworkUtils
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -30,21 +27,10 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: SelectionViewModel by viewModels()
 
-    // 1) Launcher pour la permission VPN
-    val requestVpnPermission =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                // Démarre votre service VPN intégré
-                NetworkUtils.startAlwaysOnVpn(this)
-            } else {
-                Toast.makeText(this, "Permission VPN refusée", Toast.LENGTH_LONG).show()
-            }
-        }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 2) Permission localisation
+        // 1) Demande de permission de localisation si nécessaire
         if (ContextCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
@@ -53,31 +39,27 @@ class MainActivity : ComponentActivity() {
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                 PERM_REQUEST_LOCATION
             )
-        } else {
-            // Vérifier et lancer VPN si besoin
-            NetworkUtils.verifierConnexionEtEventuellementLancerVpn(this)
         }
 
-        // Observateur réseau
+        // 2) Démarrage de l'observateur réseau (pour UI offline/online, etc.)
         NetworkMonitor.register(applicationContext)
 
-        // UI system bars
+        // 3) Configuration des barres système
         WindowCompat.setDecorFitsSystemWindows(window, true)
         lifecycleScope.launch {
             viewModel.role.collectLatest { role ->
+                val controller = WindowInsetsControllerCompat(window, window.decorView)
                 if (role.equals("ADMIN", ignoreCase = true)) {
-                    WindowInsetsControllerCompat(window, window.decorView)
-                        .show(WindowInsetsCompat.Type.statusBars())
+                    controller.show(WindowInsetsCompat.Type.statusBars())
                 } else {
-                    WindowInsetsControllerCompat(window, window.decorView).apply {
-                        hide(WindowInsetsCompat.Type.statusBars())
-                        systemBarsBehavior =
-                            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                    }
+                    controller.hide(WindowInsetsCompat.Type.statusBars())
+                    controller.systemBarsBehavior =
+                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 }
             }
         }
 
+        // 4) Mise en place de Compose
         setContent {
             ATSMobileTheme {
                 ATSMobileApp(viewModel = viewModel)
@@ -85,21 +67,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // 3) Résultat permission localisation
+    // Traitement du résultat de la demande de permission
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERM_REQUEST_LOCATION) {
-            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
-                NetworkUtils.verifierConnexionEtEventuellementLancerVpn(this)
-            } else {
-                Toast.makeText(
-                    this,
-                    "La permission de localisation est requise pour vérifier le réseau Wi-Fi",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+        if (requestCode == PERM_REQUEST_LOCATION && grantResults.firstOrNull() != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(
+                this,
+                "La permission de localisation est requise pour certaines fonctionnalités réseau.",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 }

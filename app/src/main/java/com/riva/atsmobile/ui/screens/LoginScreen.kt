@@ -1,6 +1,5 @@
 package com.riva.atsmobile.ui.screens
 
-import com.riva.atsmobile.utils.NetworkUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,7 +23,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,10 +41,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.riva.atsmobile.R
 import com.riva.atsmobile.ui.shared.BaseScreen
-import com.riva.atsmobile.utils.handleOfflineFallback
 import com.riva.atsmobile.utils.isNetworkAvailable
 import com.riva.atsmobile.utils.playSoundWithVibration
 import com.riva.atsmobile.viewmodel.SelectionViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -60,17 +58,10 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
 
-    // Déclencher le VPN si nécessaire dès l'affichage de l'écran
-    LaunchedEffect(Unit) {
-        NetworkUtils.verifierConnexionEtEventuellementLancerVpn(context)
-    }
-
-    // Bloc de connexion réutilisable
+    // Bloc de connexion
     val doLogin: () -> Unit = {
         message = "Connexion en cours..."
         scope.launch {
-            NetworkUtils.verifierConnexionEtEventuellementLancerVpn(context)
-            kotlinx.coroutines.delay(5000) // Laisse le temps au VPN de se connecter
             if (isNetworkAvailable(context)) {
                 viewModel.verifierConnexion(context, matricule, motDePasse)
                     .onSuccess { user ->
@@ -87,18 +78,16 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
                         message = "Connexion impossible : identifiants incorrects."
                     }
             } else {
-                message = "Connexion impossible : VPN ou réseau requis."
+                message = "Connexion impossible : réseau indisponible."
             }
         }
     }
 
     // Navigation après connexion
     val isLoggedIn by viewModel.nom.collectAsState()
-    LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn.isNotBlank()) {
-            navController.navigate("home") {
-                popUpTo("login") { inclusive = true }
-            }
+    if (isLoggedIn.isNotBlank()) {
+        navController.navigate("home") {
+            popUpTo("login") { inclusive = true }
         }
     }
 
