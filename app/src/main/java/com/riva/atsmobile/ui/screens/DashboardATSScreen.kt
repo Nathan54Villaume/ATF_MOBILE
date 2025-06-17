@@ -53,7 +53,7 @@ fun DashboardATSScreen(navController: NavController, viewModel: SelectionViewMod
 
             trefData = ApiAutomateClient.fetchGroupedValues(trefAddresses)
             soudData = ApiAutomateClient.fetchGroupedValues(soudAddresses)
-            delay(2000)
+            delay(1000)
         }
     }
 

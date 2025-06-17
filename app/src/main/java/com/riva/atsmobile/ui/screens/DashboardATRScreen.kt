@@ -36,7 +36,7 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
                 )
             }
             data = ApiAutomateClient.fetchGroupedValues(addresses)
-            delay(2000)
+            delay(1000)
         }
     }
 
