@@ -9,5 +9,8 @@ object Routes {
     const val ChangementGamme = "changement_gamme"
     const val TypeOperation = "type_operation"
     const val TypeOperationParametres = "typeoperation_parametres"
+    const val DashboardATS = "dashboard_ats"
+    const val DashboardATR = "dashboard_atr"
+
 
 }

@@ -68,6 +68,22 @@ fun ATSMobileNavHost(
                 TypeOperationParamScreen(viewModel, navController)
             }
         }
+
+        composable(Routes.DashboardATS) {
+            requireRoleOrDev(role, devMode, navController) {
+                DashboardATSScreen(navController, viewModel)
+            }
+        }
+        composable(Routes.DashboardATR) {
+            requireRoleOrDev(role, devMode, navController) {
+                DashboardATRScreen(navController, viewModel)
+            }
+        }
+
+
+
+
+
     }
 }
 

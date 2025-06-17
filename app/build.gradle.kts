@@ -9,6 +9,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.kapt")
     id("org.jetbrains.kotlin.plugin.compose")
+    kotlin("plugin.serialization") version "1.9.23"
 }
 
 // --- VERSIONING AUTOMATIQUE ---
@@ -151,6 +152,8 @@ dependencies {
 
     // Logging
     implementation("com.jakewharton.timber:timber:5.0.1")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     // PDF
     implementation("com.itextpdf:itext7-core:7.2.5")

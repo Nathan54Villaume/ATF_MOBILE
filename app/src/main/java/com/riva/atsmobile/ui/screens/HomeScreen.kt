@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,7 +26,6 @@ import com.riva.atsmobile.R
 import com.riva.atsmobile.ui.shared.BaseScreen
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(viewModel: SelectionViewModel, navController: NavController) {
@@ -59,7 +57,6 @@ fun HomeScreen(viewModel: SelectionViewModel, navController: NavController) {
     val rotation = remember { Animatable(0f) }
     var visible by remember { mutableStateOf(true) }
 
-    // ✅ Rotation une seule fois
     LaunchedEffect(Unit) {
         rotation.animateTo(
             targetValue = 360f,
@@ -67,7 +64,6 @@ fun HomeScreen(viewModel: SelectionViewModel, navController: NavController) {
         )
     }
 
-    // ✅ Redirection si opérateur
     LaunchedEffect(roleOriginal) {
         if (roleOriginal == "OPERATEUR") {
             delay(1500)
@@ -124,20 +120,39 @@ fun HomeScreen(viewModel: SelectionViewModel, navController: NavController) {
                                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    ImageRotative(R.drawable.logo2, logoHeight, rotation.value)
-                                    ImageRotative(R.drawable.logo3, logoHeight, rotation.value)
+                                    LogoClickable(
+                                        resId = R.drawable.logo2,
+                                        height = logoHeight,
+                                        rotationZ = rotation.value,
+                                        onClick = { navController.navigate("dashboard_atr") }
+                                    )
+                                    LogoClickable(
+                                        resId = R.drawable.logo3,
+                                        height = logoHeight,
+                                        rotationZ = rotation.value,
+                                        onClick = { navController.navigate("dashboard_ats") }
+                                    )
                                 }
                             } else {
                                 Column(
                                     verticalArrangement = Arrangement.spacedBy(16.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    ImageRotative(R.drawable.logo2, logoHeight, rotation.value)
-                                    ImageRotative(R.drawable.logo3, logoHeight, rotation.value)
+                                    LogoClickable(
+                                        resId = R.drawable.logo2,
+                                        height = logoHeight,
+                                        rotationZ = rotation.value,
+                                        onClick = { navController.navigate("dashboard_atr") }
+                                    )
+                                    LogoClickable(
+                                        resId = R.drawable.logo3,
+                                        height = logoHeight,
+                                        rotationZ = rotation.value,
+                                        onClick = { navController.navigate("dashboard_ats") }
+                                    )
                                 }
                             }
                         }
-
                         else -> {
                             AnimatedVisibility(
                                 visible = visible,
@@ -163,4 +178,23 @@ private fun ImageRotative(imageRes: Int, height: Dp, rotationZ: Float) {
             .height(height)
             .graphicsLayer(rotationZ = rotationZ)
     )
+}
+
+@Composable
+fun LogoClickable(resId: Int, height: Dp, rotationZ: Float, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        contentPadding = PaddingValues(0.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background),
+        elevation = null
+    ) {
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .height(height)
+                .graphicsLayer(rotationZ = rotationZ)
+        )
+    }
 }
