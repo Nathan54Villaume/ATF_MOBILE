@@ -17,8 +17,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun DashboardATSScreen(navController: NavController, viewModel: SelectionViewModel) {
     val lignes = listOf(
-        "Soudeuse 1" to "DB2041",
-        "Soudeuse 2" to "DB2043",
+        "Soudeuse 1" to "DB2040",
+        "Soudeuse 2" to "DB2042",
         "Soudeuse 3" to "DB2045"
     )
 
