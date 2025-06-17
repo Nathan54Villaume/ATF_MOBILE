@@ -34,12 +34,11 @@
             </intent-filter>
         </activity>
 
-        <!-- Service VPN intégré Always-On -->
+        <!-- Service VPN intégré Always-On : on retire foregroundServiceType -->
         <service
             android:name=".vpn.MyVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
-            android:exported="true"
-            android:foregroundServiceType="location">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.net.VpnService"/>
             </intent-filter>

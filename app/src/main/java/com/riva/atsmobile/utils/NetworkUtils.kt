@@ -2,7 +2,6 @@ package com.riva.atsmobile.utils
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -10,6 +9,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import com.riva.atsmobile.MainActivity
@@ -64,13 +64,18 @@ object NetworkUtils {
 
     /** Lancement du VPN intégré via VpnService.prepare() */
     fun startAlwaysOnVpn(context: Context) {
-        val intent = VpnService.prepare(context)
-        if (intent != null && context is MainActivity) {
-            context.requestVpnPermission.launch(intent)
+        val vpnIntent = VpnService.prepare(context)
+        if (vpnIntent != null && context is MainActivity) {
+            // Demande de permission à l'utilisateur
+            context.requestVpnPermission.launch(vpnIntent)
         } else {
             // permission déjà accordée ou hors MainActivity
             Intent(context, MyVpnService::class.java).also {
-                context.startForegroundService(it)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(it)
+                } else {
+                    context.startService(it)
+                }
             }
         }
     }
@@ -82,11 +87,11 @@ object NetworkUtils {
     ) {
         when {
             isVpnConnected(context) ->
-                Log.i(TAG, "Déjà connecté au VPN")
+                Log.i(TAG, "[VPN] déjà connecté au VPN")
             isConnectedToWifi(context) && isOnAllowedWifi(context, allowedSsids) ->
-                Log.i(TAG, "Wi-Fi autorisé, pas de VPN nécessaire")
+                Log.i(TAG, "[Wi‑Fi] SSID autorisé, pas de VPN nécessaire")
             else -> {
-                Log.i(TAG, "Démarrage VPN intégré Always-On")
+                Log.i(TAG, "[Action] démarrage VPN intégré Always‑On")
                 startAlwaysOnVpn(context)
             }
         }

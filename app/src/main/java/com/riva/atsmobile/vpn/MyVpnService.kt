@@ -3,6 +3,7 @@ package com.riva.atsmobile.vpn
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.Service
 import android.content.Intent
 import android.net.VpnService
 import android.os.Build
@@ -20,14 +21,19 @@ class MyVpnService : VpnService() {
         createNotificationChannel()
         val notification = buildForegroundNotification()
         // Démarre le service en foreground (type déclaré en AndroidManifest.xml)
-        startForeground(1, notification)
-        Log.i(TAG, "MyVpnService créé en foreground")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForeground(1, notification)
+        } else {
+            // Avant Oreo, on utilise startForeground sans type
+            startForeground(1, notification)
+        }
+        Log.i(TAG, "MyVpnService démarré en foreground")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.i(TAG, "Démarrage du VPN intégré Always-On")
         establishVpn()
-        return START_STICKY
+        return Service.START_STICKY
     }
 
     override fun onDestroy() {
@@ -46,7 +52,7 @@ class MyVpnService : VpnService() {
         vpnInterface?.close()
         vpnInterface = builder.establish()
         if (vpnInterface != null) {
-            Log.i(TAG, "Interface VPN établie: $vpnInterface")
+            Log.i(TAG, "Interface VPN établie: \$vpnInterface")
         } else {
             Log.e(TAG, "Échec de l'établissement du VPN")
         }
@@ -76,12 +82,11 @@ class MyVpnService : VpnService() {
         } else {
             Notification.Builder(this)
         }
-        val notification = builder
+        return builder
             .setContentTitle("ATF Mobile VPN actif")
             .setContentText("Votre connexion passe via le VPN intégré.")
             .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setOngoing(true)
             .build()
-        notification.flags = notification.flags or Notification.FLAG_ONGOING_EVENT
-        return notification
     }
 }
