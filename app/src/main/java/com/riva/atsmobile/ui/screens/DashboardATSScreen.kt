@@ -106,7 +106,7 @@ fun DashboardATSScreen(navController: NavController, viewModel: SelectionViewMod
                         vitesseActuelle = round(((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f) / 100f) / 10f,
                         diametre = (values["$db.DBD10"] as? Number)?.toFloat() ?: 0f,
                         longueurBobine = (values["$db.DBD14"] as? Number)?.toFloat() ?: 0f,
-                        poidsBobine = (values["$db.DBD18"] as? Number)?.toFloat() ?: 0f
+                        poidsBobine = round((values["$db.DBD18"] as? Number)?.toFloat() ?: 0f)
                     )
                 } else {
                     Card(

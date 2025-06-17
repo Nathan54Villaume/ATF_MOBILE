@@ -56,7 +56,7 @@ fun TrefileuseCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            InfoRow("Vitesse", "${vitesseActuelle} m/min (cible: $vitesseConsigne)")
+            InfoRow("Vitesse", "${vitesseActuelle} m/s (cible: $vitesseConsigne)")
             InfoRow("Diamètre", "$diametre mm")
             InfoRow("Longueur bobine", "$longueurBobine m")
             InfoRow("Poids bobine", "$poidsBobine kg")
