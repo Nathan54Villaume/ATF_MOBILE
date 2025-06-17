@@ -34,12 +34,17 @@ object ApiAutomateClient {
 
                 return@withContext dbMap.mapValues { (_, addresses) ->
                     addresses.associateWith { addr ->
-                        val value = parsed.opt(addr)
-                        if (value is String && value.startsWith("Erreur")) {
-                            "N/A"
-                        } else {
-                            value ?: "N/A"
+                        val raw = parsed.opt(addr)
+                        val interpreted: Any = when {
+                            raw is Int && addr.contains(".DBD") -> Float.fromBits(raw)
+                            raw is Int && addr.contains(".DBW") -> raw.toShort()
+                            raw is Int && addr.contains(".DBB") -> raw.toByte()
+                            raw is Int -> raw
+                            raw is Boolean -> raw
+                            raw is String && raw.startsWith("Erreur") -> "N/A"
+                            else -> raw ?: "N/A"
                         }
+                        interpreted
                     }
                 }
             }
