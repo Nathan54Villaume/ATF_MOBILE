@@ -1,5 +1,6 @@
 package com.riva.atsmobile.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,7 +30,7 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
 
     LaunchedEffect(Unit) {
         while (true) {
-            val addresses = lignes.associate { (label, db) ->
+            val addresses = lignes.associate { (_, db) ->
                 db to listOf(
                     "$db.DBB0", "$db.DBD2", "$db.DBD6", "$db.DBD10", "$db.DBD14", "$db.DBD18"
                 )
@@ -55,9 +56,15 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
             items(lignes) { (label, db) ->
                 val values = data[db]
                 if (values != null) {
+                    Log.d("Dashboard", "$label → $values") // 🔍 LOG TEMPORAIRE
+
                     TrefileuseCard(
                         titre = label,
-                        isActive = values["DBB0"] as? Boolean ?: false,
+                        isActive = when (val v = values["DBB0"]) {
+                            is Boolean -> v
+                            is Number -> v.toInt() != 0
+                            else -> false
+                        },
                         vitesseConsigne = (values["DBD2"] as? Number)?.toFloat() ?: 0f,
                         vitesseActuelle = (values["DBD6"] as? Number)?.toFloat() ?: 0f,
                         diametre = (values["DBD10"] as? Number)?.toFloat() ?: 0f,
