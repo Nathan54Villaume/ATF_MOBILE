@@ -1,4 +1,3 @@
-// DashboardATRScreen.kt
 package com.riva.atsmobile.ui.screens
 
 import android.util.Log
@@ -29,26 +28,19 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
         "Ligne 6" to "DB2013",
         "Ligne 7" to "DB2015"
     )
-
-    // Récupération du contexte et de l'URL de base une seule fois
+    // contexte + baseUrl
     val context = LocalContext.current
     val baseUrl = ApiConfig.getBaseUrl(context)
-
     var data by remember { mutableStateOf<Map<String, Map<String, Any>>>(emptyMap()) }
 
     LaunchedEffect(Unit) {
         while (true) {
             val addresses = lignes.associate { (_, db) ->
                 db to listOf(
-                    "$db.DBX0.0",
-                    "$db.DBD2",
-                    "$db.DBD6",
-                    "$db.DBD10",
-                    "$db.DBD14",
-                    "$db.DBD18"
+                    "$db.DBX0.0", "$db.DBD2", "$db.DBD6", "$db.DBD10", "$db.DBD14", "$db.DBD18"
                 )
             }
-            data = ApiAutomateClient.fetchGroupedValues(addresses, baseUrl)
+            data = ApiAutomateClient.fetchGroupedValues(addresses, baseUrl )
             delay(1000)
         }
     }
@@ -70,26 +62,19 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
                 val values = data[db]
                 if (values != null) {
                     Log.d("Dashboard", "$label → $values")
+
                     TrefileuseCard(
                         titre = label,
                         isActive = when (val v = values["$db.DBX0.0"]) {
                             is Boolean -> v
-                            is Number  -> v.toInt() != 0
-                            else       -> false
+                            is Number -> v.toInt() != 0
+                            else -> false
                         },
-                        vitesseConsigne = round(
-                            ((values["$db.DBD2"] as? Number)?.toFloat() ?: 0f) / 100f
-                        ) / 10f,
-                        vitesseActuelle = round(
-                            ((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f) / 100f
-                        ) / 10f,
+                        vitesseConsigne = round(((values["$db.DBD2"] as? Number)?.toFloat() ?: 0f ) / 100f) /10f,
+                        vitesseActuelle = round(((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f ) / 100f) /10f,
                         diametre = (values["$db.DBD10"] as? Number)?.toFloat() ?: 0f,
-                        longueurBobine = round(
-                            ((values["$db.DBD14"] as? Number)?.toFloat() ?: 0f) / 1f
-                        ) / 10f,
-                        poidsBobine = round(
-                            ((values["$db.DBD18"] as? Number)?.toFloat() ?: 0f) / 1f
-                        ) / 10f
+                        longueurBobine = round(((values["$db.DBD14"] as? Number)?.toFloat() ?: 0f ) / 1f) /10f,
+                        poidsBobine = round(((values["$db.DBD18"] as? Number)?.toFloat() ?: 0f ) / 1f) /10f
                     )
                 }
             }
