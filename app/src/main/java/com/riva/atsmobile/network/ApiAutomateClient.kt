@@ -1,6 +1,8 @@
 package com.riva.atsmobile.network
 
 import android.util.Log
+import com.google.gson.JsonArray
+import com.riva.atsmobile.utils.ApiConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -11,49 +13,80 @@ import org.json.JSONObject
 
 object ApiAutomateClient {
     private val client = OkHttpClient()
-    private const val BASE_URL = "http://10.250.13.4:8088/api/automate/read-multiple"
+    private const val ENDPOINT_PATH = "/api/automate/read-multiple"
+    private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
 
+    /**
+     * Envoie en une seule fois toutes les adresses contenues dans dbMap,
+     * puis reconstitue une Map identique à celle passée en paramètre.
+     *
+     * @param dbMap Map où chaque clé regroupe une liste d’adresses à lire.
+     * @param baseUrl URL de base (p. ex. issue de ApiConfig.getBaseUrl(context)).
+     * @return Map<String, Map<String, Any>> avec les valeurs décodées.
+     */
     suspend fun fetchGroupedValues(
-        dbMap: Map<String, List<String>>
+        dbMap: Map<String, List<String>>,
+        baseUrl: String
     ): Map<String, Map<String, Any>> = withContext(Dispatchers.IO) {
         try {
-            val allAddresses = dbMap.values.flatten()
-            val jsonArray = allAddresses.joinToString(prefix = "[\"", separator = "\",\"", postfix = "\"]")
-            Log.d("API", "Payload → $jsonArray")
+            // 1) Construction du JsonArray contenant toutes les adresses
+            val jsonArray = JsonArray().apply {
+                dbMap.values.flatten().forEach { add(it) }
+            }
+            val requestBody = jsonArray.toString().toRequestBody(JSON_MEDIA)
 
+            Log.d("API", "POST vers $baseUrl$ENDPOINT_PATH → $requestBody")
+
+            // 2) Construction et exécution de la requête HTTP
             val request = Request.Builder()
-                .url(BASE_URL)
-                .post(jsonArray.toRequestBody("application/json".toMediaType()))
+                .url(baseUrl.trimEnd('/') + ENDPOINT_PATH)
+                .post(requestBody)
+                .addHeader("Accept", "application/json")
+                .addHeader("Content-Type", "application/json; charset=utf-8")
                 .build()
 
             client.newCall(request).execute().use { response ->
-                val bodyStr = response.body?.string().orEmpty()
-                Log.d("API", "Response brut → $bodyStr")
+                val rawBody = response.body?.string().orEmpty()
+                Log.d("API", "HTTP ${response.code} → $rawBody")
 
-                val parsed = JSONObject(bodyStr)
-
-                val result = dbMap.mapValues { (_, addresses) ->
-                    addresses.associateWith { addr ->
-                        val raw = parsed.opt(addr)
-                        val interpreted: Any = when {
-                            raw is Int && addr.contains(".DBD") -> Float.fromBits(raw)
-                            raw is Int && addr.contains(".DBW") -> raw.toShort()
-                            raw is Int && addr.contains(".DBB") -> raw.toByte()
-                            raw is Int -> raw
-                            raw is Boolean -> raw
-                            raw is String && raw.startsWith("Erreur") -> "N/A"
-                            else -> raw ?: "N/A"
-                        }
-                        interpreted
-                    }
+                if (!response.isSuccessful) {
+                    Log.e("API", "fetchGroupedValues échoué, code ${response.code}")
+                    return@withContext emptyMap()
                 }
 
-                Log.d("API", "✔ Résultat décodé final → $result")
-                return@withContext result
+                val parsed = JSONObject(rawBody)
+
+                // 3) Regroupement des résultats dans la même structure que dbMap
+                return@withContext dbMap.mapValues { (_, adresses) ->
+                    adresses.associateWith { addr ->
+                        val rawVal = parsed.opt(addr)
+                        when (rawVal) {
+                            is Boolean -> rawVal
+                            is Double -> {
+                                // JSONObject renvoie les nombres en Double
+                                when {
+                                    addr.endsWith(".DBD", true) ->
+                                        Float.fromBits(rawVal.toInt())
+                                    addr.endsWith(".DBW", true) ->
+                                        rawVal.toInt().toShort()
+                                    addr.endsWith(".DBB", true) ->
+                                        rawVal.toInt().toByte()
+                                    else ->
+                                        // Si c’est un entier déguisé en double, on cast en Int
+                                        if (rawVal % 1.0 == 0.0) rawVal.toInt() else rawVal
+                                }
+                            }
+                            is Int    -> rawVal
+                            is String -> if (rawVal.startsWith("Erreur")) "N/A" else rawVal
+                            null      -> "N/A"
+                            else      -> rawVal
+                        }
+                    }
+                }
             }
         } catch (e: Exception) {
-            Log.e("API", "fetchGroupedValues error", e)
-            return@withContext emptyMap()
+            Log.e("API", "Erreur fetchGroupedValues", e)
+            emptyMap()
         }
     }
 }

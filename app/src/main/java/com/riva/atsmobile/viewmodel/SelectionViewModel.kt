@@ -8,6 +8,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.model.LoginResponse
+import com.riva.atsmobile.network.ApiAutomateClient
 import com.riva.atsmobile.utils.ApiConfig
 import com.riva.atsmobile.utils.LocalAuthManager
 import com.riva.atsmobile.utils.isNetworkAvailable
@@ -23,6 +24,9 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class SelectionViewModel : ViewModel() {
+
+    private val _groupedValues = MutableStateFlow<Map<String, Map<String, Any>>>(emptyMap())
+    val groupedValues: StateFlow<Map<String, Map<String, Any>>> = _groupedValues.asStateFlow()
 
     // --- Données utilisateur / session ---
     private val _matricule = MutableStateFlow("")
@@ -70,7 +74,24 @@ class SelectionViewModel : ViewModel() {
     fun setGammesSelectionnees(codes: Set<String>) {
         _gammesSelectionnees.value = codes
     }
-
+    fun testFetchGroupedValues(context: Context) {
+        viewModelScope.launch {
+            // Exemple de Map<String, List<String>>
+            val demoMap = mapOf(
+                "g1" to listOf("addr1", "addr2"),
+                "g2" to listOf("addr3")
+            )
+            // Récupération de l’URL de base
+            val baseUrl = ApiConfig.getBaseUrl(context)
+            // Appel au client réseau avec baseUrl
+            val result = ApiAutomateClient.fetchGroupedValues(
+                dbMap   = demoMap,
+                baseUrl = baseUrl
+            )
+            Log.d("API", "Result → \$result")
+            _groupedValues.value = result
+        }
+    }
     /** Charge les gammes depuis l’API */
     fun chargerGammesDepuisApi(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -108,6 +129,8 @@ class SelectionViewModel : ViewModel() {
 
                             // on les applique
                             _gammesSelectionnees.value = defaultCodes
+                        } else {
+
                         }
                     } else {
                         Log.e("GAMMES", "Réponse non valide : $body")

@@ -7,17 +7,20 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import com.riva.atsmobile.ui.ATSMobileApp
 import com.riva.atsmobile.ui.theme.ATSMobileTheme
 import com.riva.atsmobile.utils.NetworkMonitor
 import com.riva.atsmobile.viewmodel.SelectionViewModel
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -30,7 +33,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1) Demande de permission de localisation si nécessaire
+        // 1) Permission localisation
         if (ContextCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
@@ -41,38 +44,51 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        // 2) Démarrage de l'observateur réseau (pour UI offline/online, etc.)
+        // 2) NetworkMonitor global (pour notifications système)
         NetworkMonitor.register(applicationContext)
 
-        // 3) Configuration des barres système
+        // 3) Démarrage de la boucle de vérif réseau dans le ViewModel
+        viewModel.InitNetworkObserverIfNeeded(this)
+
+        // 4) Charger la session locale et les gammes au démarrage
+        viewModel.chargerSessionLocale(this)
+        viewModel.chargerGammesDepuisApi(this)
+
+        // 5) Configuration des barres système (statut) selon le rôle
         WindowCompat.setDecorFitsSystemWindows(window, true)
         lifecycleScope.launch {
-            viewModel.role.collectLatest { role ->
-                val controller = WindowInsetsControllerCompat(window, window.decorView)
-                if (role.equals("ADMIN", ignoreCase = true)) {
-                    controller.show(WindowInsetsCompat.Type.statusBars())
-                } else {
-                    controller.hide(WindowInsetsCompat.Type.statusBars())
-                    controller.systemBarsBehavior =
-                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.role.collectLatest { role ->
+                    val controller = WindowInsetsControllerCompat(window, window.decorView)
+                    if (role.equals("ADMIN", ignoreCase = true)) {
+                        controller.show(WindowInsetsCompat.Type.statusBars())
+                    } else {
+                        controller.hide(WindowInsetsCompat.Type.statusBars())
+                        controller.systemBarsBehavior =
+                            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    }
                 }
             }
         }
 
-        // 4) Mise en place de Compose
+        // 6) Compose + trigger de test fetchGroupedValues()
         setContent {
             ATSMobileTheme {
+                LaunchedEffect(Unit) {
+                    viewModel.testFetchGroupedValues(this@MainActivity)
+                }
                 ATSMobileApp(viewModel = viewModel)
             }
         }
     }
 
-    // Traitement du résultat de la demande de permission
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERM_REQUEST_LOCATION && grantResults.firstOrNull() != PackageManager.PERMISSION_GRANTED) {
+        if (requestCode == PERM_REQUEST_LOCATION &&
+            grantResults.firstOrNull() != PackageManager.PERMISSION_GRANTED
+        ) {
             Toast.makeText(
                 this,
                 "La permission de localisation est requise pour certaines fonctionnalités réseau.",
