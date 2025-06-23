@@ -8,8 +8,11 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.riva.atsmobile.ui.screens.*
+import com.riva.atsmobile.viewmodel.ChangeoverViewModel
 import com.riva.atsmobile.viewmodel.SelectionViewModel
+
 
 @Composable
 fun ATSMobileNavHost(
@@ -37,7 +40,20 @@ fun ATSMobileNavHost(
 
         composable(Routes.ChangementGamme) {
             requireRoleOrDev(role, devMode, navController) {
+                // Ancienne vue d'introduction
                 ChangementGammeScreen(viewModel, navController)
+            }
+        }
+
+        composable(Routes.StepWizard) {
+            requireRoleOrDev(role, devMode, navController) {
+                // Intégration du StepWizardScreen
+                val changeoverVm: ChangeoverViewModel = hiltViewModel()
+                StepWizardScreen(
+                    selectionViewModel = viewModel,
+                    changeoverViewModel = changeoverVm,
+                    navController = navController
+                )
             }
         }
 
@@ -79,10 +95,6 @@ fun ATSMobileNavHost(
                 DashboardATRScreen(navController, viewModel)
             }
         }
-
-
-
-
 
     }
 }
