@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -14,7 +15,6 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -30,13 +30,12 @@ class MainActivity : ComponentActivity() {
         private const val PERM_REQUEST_LOCATION = 1001
     }
 
-    // Hilt injecte automatiquement le VM annoté @HiltViewModel
     private val viewModel: SelectionViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1) Permission localisation
+        // 1) Demande de permission de localisation
         if (ContextCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
@@ -47,17 +46,17 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        // 2) NetworkMonitor global
+        // 2) Initialisation du NetworkMonitor global
         NetworkMonitor.register(applicationContext)
 
-        // 3) Démarrage de l’observer réseau dans le VM
+        // 3) Démarrage du monitoring réseau dans le ViewModel
         viewModel.InitNetworkObserverIfNeeded(this)
 
-        // 4) Charger la session et les gammes
+        // 4) Chargement de la session locale et des gammes
         viewModel.chargerSessionLocale(this)
         viewModel.chargerGammesDepuisApi(this)
 
-        // 5) Config barres système selon rôle
+        // 5) Configuration des barres système en fonction du rôle
         WindowCompat.setDecorFitsSystemWindows(window, true)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -74,17 +73,18 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // 6) Compose
+        // 6) Lancement de l'UI Compose
         setContent {
             ATSMobileTheme {
-                // Ne passe plus viewModel, ATSMobileApp l’obtient via hiltViewModel()
                 ATSMobileApp()
             }
         }
     }
 
     override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERM_REQUEST_LOCATION &&
@@ -92,7 +92,7 @@ class MainActivity : ComponentActivity() {
         ) {
             Toast.makeText(
                 this,
-                "La permission de localisation est requise pour certaines fonctionnalités réseau.",
+                "La permission de localisation est requise pour certaines fonctionnalités.",
                 Toast.LENGTH_LONG
             ).show()
         }
