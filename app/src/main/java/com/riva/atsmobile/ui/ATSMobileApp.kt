@@ -17,7 +17,6 @@ import com.riva.atsmobile.navigation.BottomNavItem
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 
 @Composable
-
 fun ATSMobileApp(
     viewModel: SelectionViewModel = viewModel()
 ) {
@@ -48,9 +47,9 @@ fun ATSMobileApp(
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            // On passe viewModel au NavHost
             ATSMobileNavHost(
                 navController = navController,
+
                 modifier      = Modifier.fillMaxSize()
             )
         }
