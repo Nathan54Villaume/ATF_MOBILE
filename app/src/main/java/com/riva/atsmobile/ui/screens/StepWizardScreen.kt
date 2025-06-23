@@ -1,8 +1,19 @@
 package com.riva.atsmobile.ui.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -19,22 +30,25 @@ fun StepWizardScreen(
     changeoverViewModel: ChangeoverViewModel,
     navController: NavController
 ) {
-    // Statut réseau
+    // 1) Statut réseau
     val isConnected by selectionViewModel.isOnline.collectAsState()
 
-    // Récupérer les gammes sélectionnées transmises depuis ChangementGammeScreen
-    val saved: Set<String> = navController
+    // 2) On récupère la liste des désignations (List<String>)
+    val designationsList: List<String> = navController
         .previousBackStackEntry
         ?.savedStateHandle
-        ?.get("selectedGammes")
-        ?: emptySet()
+        ?.get<List<String>>("selectedDesignations")
+        ?: emptyList()
 
-    // Initialise le VM une seule fois avec ces gammes
-    LaunchedEffect(saved) {
-        changeoverViewModel.initWithSelectedGammes(saved)
+    // 3) Conversion en Set pour le VM
+    val selectedDesignations = designationsList.toSet()
+
+    // 4) Initialise le VM une seule fois
+    LaunchedEffect(selectedDesignations) {
+        changeoverViewModel.initWithSelectedGammes(selectedDesignations)
     }
 
-    // Flux d’état composables
+    // 5) Collecte des états
     val operators by changeoverViewModel.operatorSteps.collectAsState()
     val zones     by changeoverViewModel.zoneOptions.collectAsState()
     val inters    by changeoverViewModel.interventionOptions.collectAsState()
@@ -42,8 +56,13 @@ fun StepWizardScreen(
     val selInt    by changeoverViewModel.selectedIntervention.collectAsState()
     val selType   by changeoverViewModel.selectedType.collectAsState()
 
+    // 6) Affichage
     BaseScreen(
-        title            = "Changement de gamme",
+        title            = if (selectedDesignations.isEmpty()) {
+            "Changement de gamme"
+        } else {
+            "Changement de gamme : " + selectedDesignations.joinToString(", ")
+        },
         navController    = navController,
         viewModel        = selectionViewModel,
         showBack         = true,
@@ -56,10 +75,10 @@ fun StepWizardScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            // 1) Grille de cartes opérateur
+            // 6.1) Grille de cartes opérateur (prend tout l'espace restant)
             Row(
-                Modifier
-                    .weight(1f)
+                modifier = Modifier
+                    .weight(1f)         // ← here!
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -69,7 +88,9 @@ fun StepWizardScreen(
                         onPrev    = { changeoverViewModel.onPrevStep(idx) },
                         onNext    = { changeoverViewModel.onNextStep(idx) },
                         onFinish  = { changeoverViewModel.onFinishStep(idx) },
-                        onComment = { comment -> changeoverViewModel.onCommentChanged(idx, comment) },
+                        onComment = { comment ->
+                            changeoverViewModel.onCommentChanged(idx, comment)
+                        },
                         modifier  = Modifier.weight(1f)
                     )
                 }
@@ -77,7 +98,7 @@ fun StepWizardScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // 2) Barre de sélection
+            // 6.2) Barre de sélection
             BottomSelectionBar(
                 zones                  = zones,
                 selectedZone           = selZone,
