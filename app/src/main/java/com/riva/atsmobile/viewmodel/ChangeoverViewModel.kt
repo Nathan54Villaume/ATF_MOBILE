@@ -16,6 +16,7 @@ class ChangeoverViewModel(
 ) : ViewModel() {
 
     private val allEntities = MutableStateFlow<List<EtapeEntity>>(emptyList())
+
     private val _operatorSteps = MutableStateFlow<List<OperatorStepState>>(emptyList())
     val operatorSteps: StateFlow<List<OperatorStepState>> = _operatorSteps.asStateFlow()
 
@@ -34,147 +35,142 @@ class ChangeoverViewModel(
     private val _selectedType = MutableStateFlow(ProcessType.MINEUR)
     val selectedType: StateFlow<ProcessType> = _selectedType.asStateFlow()
 
-    init {
-        loadSteps()
-    }
-
-    private fun loadSteps() {
+    /** Initialize with the selected gamme codes */
+    fun initWithSelectedGammes(selected: Set<String>) {
         viewModelScope.launch {
-            val entities = repo.getAllSteps()
-            allEntities.value = entities
-
-            // Options distinctes
-            _zoneOptions.value = entities.mapNotNull { it.affectationEtape }.distinct()
-            _interventionOptions.value = entities.mapNotNull { it.phaseEtape }.distinct()
-
-            // Sélections par défaut
-            _selectedZone.value = _zoneOptions.value.firstOrNull().orEmpty()
-            _selectedIntervention.value = _interventionOptions.value.firstOrNull().orEmpty()
-
-            // Initialiser états opérateurs
-            val grouped = entities.groupBy { it.affectationEtape.orEmpty() }
-            _operatorSteps.value = grouped.map { (operator, list) ->
-                val first = list.first()
-                OperatorStepState(
-                    operatorName      = operator,
-                    currentStep       = 1,
-                    totalSteps        = list.size,
-                    stepTitle         = first.libelleEtape,
-                    stepDescription   = first.descriptionEtape.orEmpty(),
-                    estimatedDuration = first.dureeEtape ?: 0,
-                    elapsedMinutes    = first.tempsReelEtape ?: 0,
-                    elapsedSeconds    = 0,
-                    progressPercent   = 0,
-                    comment           = first.commentaireEtape1.orEmpty(),
-                    zone              = _selectedZone.value,
-                    intervention      = _selectedIntervention.value,
-                    processType       = _selectedType.value
-                )
-            }
+            val loaded = repo.getAllSteps()
+                .filter { selected.contains(it.libelleEtape) }
+            allEntities.value = loaded
+            buildStateFromEntities(loaded)
         }
     }
 
+    /** Build UI state from loaded entities */
+    private fun buildStateFromEntities(entities: List<EtapeEntity>) {
+        // Populate dropdown options
+        _zoneOptions.value = entities.mapNotNull { it.affectationEtape }.distinct()
+        _interventionOptions.value = entities.mapNotNull { it.phaseEtape }.distinct()
+
+        // Default selections
+        _selectedZone.value = _zoneOptions.value.firstOrNull().orEmpty()
+        _selectedIntervention.value = _interventionOptions.value.firstOrNull().orEmpty()
+
+        // Initial operator step states
+        val grouped = entities.groupBy { it.affectationEtape.orEmpty() }
+        _operatorSteps.value = grouped.map { (operator, list) ->
+            val first = list.first()
+            OperatorStepState(
+                operatorName      = operator,
+                currentStep       = 1,
+                totalSteps        = list.size,
+                stepTitle         = first.libelleEtape,
+                stepDescription   = first.descriptionEtape.orEmpty(),
+                estimatedDuration = first.dureeEtape ?: 0,
+                elapsedMinutes    = first.tempsReelEtape ?: 0,
+                elapsedSeconds    = 0,
+                progressPercent   = 0,
+                comment           = first.commentaireEtape1.orEmpty(),
+                zone              = _selectedZone.value,
+                intervention      = _selectedIntervention.value,
+                processType       = _selectedType.value
+            )
+        }
+    }
+
+    /** Move to next step for operator at index */
     fun onNextStep(index: Int) {
         viewModelScope.launch {
-            val currentList = _operatorSteps.value.toMutableList()
-            val state = currentList[index]
+            val list = _operatorSteps.value.toMutableList()
+            val state = list[index]
             if (state.currentStep < state.totalSteps) {
-                val operatorEntities = allEntities.value.filter { it.affectationEtape == state.operatorName }
-                val nextEntity = operatorEntities.getOrNull(state.currentStep)
-                if (nextEntity != null) {
+                val ops = allEntities.value.filter { it.affectationEtape == state.operatorName }
+                val next = ops.getOrNull(state.currentStep)
+                next?.let {
                     val updated = state.copy(
                         currentStep       = state.currentStep + 1,
-                        stepTitle         = nextEntity.libelleEtape,
-                        stepDescription   = nextEntity.descriptionEtape.orEmpty(),
-                        estimatedDuration = nextEntity.dureeEtape ?: 0,
-                        elapsedMinutes    = nextEntity.tempsReelEtape ?: 0,
+                        stepTitle         = it.libelleEtape,
+                        stepDescription   = it.descriptionEtape.orEmpty(),
+                        estimatedDuration = it.dureeEtape ?: 0,
+                        elapsedMinutes    = it.tempsReelEtape ?: 0,
                         elapsedSeconds    = 0,
-                        progressPercent   = ((state.currentStep) * 100 / state.totalSteps),
-                        comment           = nextEntity.commentaireEtape1.orEmpty()
+                        progressPercent   = (state.currentStep * 100 / state.totalSteps),
+                        comment           = it.commentaireEtape1.orEmpty()
                     )
-                    currentList[index] = updated
-                    _operatorSteps.value = currentList
-                    repo.updateStep(
-                        nextEntity.copy(
-                            tempsReelEtape   = updated.elapsedMinutes,
-                            commentaireEtape1 = updated.comment
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    fun onPrevStep(index: Int) {
-        viewModelScope.launch {
-            val currentList = _operatorSteps.value.toMutableList()
-            val state = currentList[index]
-            if (state.currentStep > 1) {
-                val operatorEntities = allEntities.value.filter { it.affectationEtape == state.operatorName }
-                val prevEntity = operatorEntities.getOrNull(state.currentStep - 2)
-                if (prevEntity != null) {
-                    val updated = state.copy(
-                        currentStep       = state.currentStep - 1,
-                        stepTitle         = prevEntity.libelleEtape,
-                        stepDescription   = prevEntity.descriptionEtape.orEmpty(),
-                        estimatedDuration = prevEntity.dureeEtape ?: 0,
-                        elapsedMinutes    = prevEntity.tempsReelEtape ?: 0,
-                        elapsedSeconds    = 0,
-                        progressPercent   = ((state.currentStep - 2) * 100 / state.totalSteps),
-                        comment           = prevEntity.commentaireEtape1.orEmpty()
-                    )
-                    currentList[index] = updated
-                    _operatorSteps.value = currentList
-                    repo.updateStep(
-                        prevEntity.copy(
-                            tempsReelEtape   = updated.elapsedMinutes,
-                            commentaireEtape1 = updated.comment
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    fun onFinishStep(index: Int) {
-        viewModelScope.launch {
-            val state = _operatorSteps.value[index]
-            // Marquer comme terminé : progression à 100%
-            val updated = state.copy(progressPercent = 100)
-            _operatorSteps.value = _operatorSteps.value.toMutableList().also { it[index] = updated }
-            // Persister
-            val entity = allEntities.value
-                .filter { it.affectationEtape == state.operatorName }
-                .lastOrNull()
-            entity?.let {
-                repo.updateStep(
-                    it.copy(
+                    list[index] = updated
+                    _operatorSteps.value = list
+                    repo.updateStep(it.copy(
                         tempsReelEtape   = updated.elapsedMinutes,
                         commentaireEtape1 = updated.comment
-                    )
-                )
+                    ))
+                }
             }
         }
     }
 
+    /** Move to previous step */
+    fun onPrevStep(index: Int) {
+        viewModelScope.launch {
+            val list = _operatorSteps.value.toMutableList()
+            val state = list[index]
+            if (state.currentStep > 1) {
+                val ops  = allEntities.value.filter { it.affectationEtape == state.operatorName }
+                val prev = ops.getOrNull(state.currentStep - 2)
+                prev?.let {
+                    val updated = state.copy(
+                        currentStep       = state.currentStep - 1,
+                        stepTitle         = it.libelleEtape,
+                        stepDescription   = it.descriptionEtape.orEmpty(),
+                        estimatedDuration = it.dureeEtape ?: 0,
+                        elapsedMinutes    = it.tempsReelEtape ?: 0,
+                        elapsedSeconds    = 0,
+                        progressPercent   = ((state.currentStep - 2) * 100 / state.totalSteps),
+                        comment           = it.commentaireEtape1.orEmpty()
+                    )
+                    list[index] = updated
+                    _operatorSteps.value = list
+                    repo.updateStep(it.copy(
+                        tempsReelEtape   = updated.elapsedMinutes,
+                        commentaireEtape1 = updated.comment
+                    ))
+                }
+            }
+        }
+    }
+
+    /** Mark step finished */
+    fun onFinishStep(index: Int) {
+        viewModelScope.launch {
+            val list = _operatorSteps.value.toMutableList()
+            val state = list[index]
+            val updated = state.copy(progressPercent = 100)
+            list[index] = updated
+            _operatorSteps.value = list
+            allEntities.value
+                .filter { it.affectationEtape == state.operatorName }
+                .lastOrNull()
+                ?.let { repo.updateStep(it.copy(
+                    tempsReelEtape   = updated.elapsedMinutes,
+                    commentaireEtape1 = updated.comment
+                )) }
+        }
+    }
+
+    /** Update comment */
     fun onCommentChanged(index: Int, comment: String) {
         viewModelScope.launch {
-            val currentList = _operatorSteps.value.toMutableList()
-            val state = currentList[index]
+            val list = _operatorSteps.value.toMutableList()
+            val state = list[index]
             val updated = state.copy(comment = comment)
-            currentList[index] = updated
-            _operatorSteps.value = currentList
-            val entity = allEntities.value
+            list[index] = updated
+            _operatorSteps.value = list
+            allEntities.value
                 .filter { it.affectationEtape == state.operatorName }
                 .getOrNull(state.currentStep - 1)
-            entity?.let {
-                repo.updateStep(
-                    it.copy(commentaireEtape1 = comment)
-                )
-            }
+                ?.let { repo.updateStep(it.copy(commentaireEtape1 = comment)) }
         }
     }
 
+    /** Selection callbacks */
     fun onZoneSelected(zone: String) {
         viewModelScope.launch {
             _selectedZone.value = zone

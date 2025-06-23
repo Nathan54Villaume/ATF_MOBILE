@@ -13,7 +13,6 @@ import com.riva.atsmobile.ui.screens.*
 import com.riva.atsmobile.viewmodel.ChangeoverViewModel
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 
-
 @Composable
 fun ATSMobileNavHost(
     navController: NavHostController,
@@ -24,9 +23,9 @@ fun ATSMobileNavHost(
     val devMode by viewModel.devModeEnabled.collectAsState()
 
     NavHost(
-        navController = navController,
+        navController    = navController,
         startDestination = Routes.Login,
-        modifier = modifier
+        modifier         = modifier
     ) {
         composable(Routes.Login) {
             LoginScreen(navController, viewModel)
@@ -40,19 +39,17 @@ fun ATSMobileNavHost(
 
         composable(Routes.ChangementGamme) {
             requireRoleOrDev(role, devMode, navController) {
-                // Ancienne vue d'introduction
                 ChangementGammeScreen(viewModel, navController)
             }
         }
 
         composable(Routes.StepWizard) {
             requireRoleOrDev(role, devMode, navController) {
-                // Intégration du StepWizardScreen
                 val changeoverVm: ChangeoverViewModel = hiltViewModel()
                 StepWizardScreen(
-                    selectionViewModel = viewModel,
+                    selectionViewModel  = viewModel,
                     changeoverViewModel = changeoverVm,
-                    navController = navController
+                    navController       = navController
                 )
             }
         }
@@ -90,12 +87,12 @@ fun ATSMobileNavHost(
                 DashboardATSScreen(navController, viewModel)
             }
         }
+
         composable(Routes.DashboardATR) {
             requireRoleOrDev(role, devMode, navController) {
                 DashboardATRScreen(navController, viewModel)
             }
         }
-
     }
 }
 

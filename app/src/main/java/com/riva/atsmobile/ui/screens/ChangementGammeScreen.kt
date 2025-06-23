@@ -27,13 +27,15 @@ fun ChangementGammeScreen(
 ) {
     // On récupère simplement l'état de connexion
     val isConnected by viewModel.isOnline.collectAsState()
+    // On récupère les gammes sélectionnées
+    val selectedCodes by viewModel.gammesSelectionnees.collectAsState()
 
     BaseScreen(
-        title = "Changement de gamme",
-        navController = navController,
-        viewModel = viewModel,
-        showBack = true,
-        showLogout = false,
+        title            = "Changement de gamme",
+        navController    = navController,
+        viewModel        = viewModel,
+        showBack         = true,
+        showLogout       = false,
         connectionStatus = isConnected
     ) { padding ->
         Box(
@@ -43,22 +45,25 @@ fun ChangementGammeScreen(
                 .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "🔧 Changement de gamme",
+                    text  = "🔧 Changement de gamme",
                     style = MaterialTheme.typography.headlineLarge
                 )
-
                 Spacer(Modifier.height(24.dp))
 
                 ElevatedButton(
-                    onClick = { navController.navigate(Routes.TypeOperation) }
+                    enabled = (selectedCodes.size == 2),
+                    onClick = {
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("selectedGammes", selectedCodes)
+                        navController.navigate(Routes.StepWizard)
+                    }
                 ) {
                     Icon(Icons.Default.WbSunny, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Type d’opération")
+                    Text("OK – ${selectedCodes.size}/2 gammes")
                 }
             }
         }

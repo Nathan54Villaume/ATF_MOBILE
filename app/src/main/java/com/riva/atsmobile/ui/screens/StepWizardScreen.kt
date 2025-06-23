@@ -19,16 +19,28 @@ fun StepWizardScreen(
     changeoverViewModel: ChangeoverViewModel,
     navController: NavController
 ) {
-    // Statut réseau depuis SelectionViewModel
+    // Statut réseau
     val isConnected by selectionViewModel.isOnline.collectAsState()
 
-    // États pas-à-pas depuis ChangeoverViewModel
-    val operators           by changeoverViewModel.operatorSteps.collectAsState()
-    val zones               by changeoverViewModel.zoneOptions.collectAsState()
-    val inters              by changeoverViewModel.interventionOptions.collectAsState()
-    val selZone             by changeoverViewModel.selectedZone.collectAsState()
-    val selInt              by changeoverViewModel.selectedIntervention.collectAsState()
-    val selType             by changeoverViewModel.selectedType.collectAsState()
+    // Récupérer les gammes sélectionnées transmises depuis ChangementGammeScreen
+    val saved: Set<String> = navController
+        .previousBackStackEntry
+        ?.savedStateHandle
+        ?.get("selectedGammes")
+        ?: emptySet()
+
+    // Initialise le VM une seule fois avec ces gammes
+    LaunchedEffect(saved) {
+        changeoverViewModel.initWithSelectedGammes(saved)
+    }
+
+    // Flux d’état composables
+    val operators by changeoverViewModel.operatorSteps.collectAsState()
+    val zones     by changeoverViewModel.zoneOptions.collectAsState()
+    val inters    by changeoverViewModel.interventionOptions.collectAsState()
+    val selZone   by changeoverViewModel.selectedZone.collectAsState()
+    val selInt    by changeoverViewModel.selectedIntervention.collectAsState()
+    val selType   by changeoverViewModel.selectedType.collectAsState()
 
     BaseScreen(
         title            = "Changement de gamme",
@@ -44,7 +56,7 @@ fun StepWizardScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            // 1) Grille des opérateurs
+            // 1) Grille de cartes opérateur
             Row(
                 Modifier
                     .weight(1f)
@@ -57,7 +69,7 @@ fun StepWizardScreen(
                         onPrev    = { changeoverViewModel.onPrevStep(idx) },
                         onNext    = { changeoverViewModel.onNextStep(idx) },
                         onFinish  = { changeoverViewModel.onFinishStep(idx) },
-                        onComment = { c -> changeoverViewModel.onCommentChanged(idx, c) },
+                        onComment = { comment -> changeoverViewModel.onCommentChanged(idx, comment) },
                         modifier  = Modifier.weight(1f)
                     )
                 }
@@ -69,13 +81,13 @@ fun StepWizardScreen(
             BottomSelectionBar(
                 zones                  = zones,
                 selectedZone           = selZone,
-                onZoneSelected         = changeoverViewModel::onZoneSelected,
+                onZoneSelected         = { changeoverViewModel.onZoneSelected(it) },
                 interventions          = inters,
                 selectedIntervention   = selInt,
-                onInterventionSelected = changeoverViewModel::onInterventionSelected,
+                onInterventionSelected = { changeoverViewModel.onInterventionSelected(it) },
                 types                  = ProcessType.values().toList(),
                 selectedType           = selType,
-                onTypeSelected         = changeoverViewModel::onProcessTypeSelected,
+                onTypeSelected         = { changeoverViewModel.onProcessTypeSelected(it) },
                 currentDateTime        = LocalDateTime.now(),
                 modifier               = Modifier.fillMaxWidth()
             )
