@@ -464,7 +464,7 @@ fun TypeOperationScreen(
     LaunchedEffect(Unit) {
         isLoading = true; loadError = null
         try { viewModel.chargerGammesDepuisApi(context) }
-        catch (e: Exception) { loadError = "Erreur : ${e.message}" }
+        catch (e: Exception) { loadError = "Erreur : ${'$'}{e.message}" }
         finally { isLoading = false }
     }
 
@@ -477,9 +477,7 @@ fun TypeOperationScreen(
         connectionStatus = isConnected
     ) { padding ->
         Box(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
+            Modifier.fillMaxSize().padding(padding)
         ) {
             val selection = @Composable {
                 SelectionColumn(
@@ -568,7 +566,16 @@ private fun ActionRow(
             }
         }
         ElevatedButton(
-            onClick = { viewModel.validateGammeChange { _, msg -> scope.launch { snackbarHost.showSnackbar(msg) } } },
+            onClick = {
+                // Enregistre les gammes sélectionnées et navigue vers StepWizardScreen
+                navController.currentBackStackEntry
+                    ?.savedStateHandle
+                    ?.set("currentGamme", current)
+                navController.currentBackStackEntry
+                    ?.savedStateHandle
+                    ?.set("desiredGamme", desired)
+                navController.navigate(Routes.StepWizard)
+            },
             enabled = current != null && desired != null,
             modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
         ) {
@@ -578,6 +585,7 @@ private fun ActionRow(
         }
     }
 }
+
 
 
 
