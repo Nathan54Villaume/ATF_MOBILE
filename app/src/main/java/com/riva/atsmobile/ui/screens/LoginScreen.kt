@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -44,7 +46,6 @@ import com.riva.atsmobile.ui.shared.BaseScreen
 import com.riva.atsmobile.utils.isNetworkAvailable
 import com.riva.atsmobile.utils.playSoundWithVibration
 import com.riva.atsmobile.viewmodel.SelectionViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -58,7 +59,20 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
 
-    // Bloc de connexion
+    // Flag pour distinguer l'initialisation et un vrai login
+    var hasInitialized by remember { mutableStateOf(false) }
+    val isLoggedIn by viewModel.nom.collectAsState()
+
+    // Navigation déclenchée seulement après un login effectif
+    LaunchedEffect(isLoggedIn) {
+        if (hasInitialized && isLoggedIn.isNotBlank()) {
+            navController.navigate("home") {
+                popUpTo("login") { inclusive = true }
+            }
+        }
+        hasInitialized = true
+    }
+
     val doLogin: () -> Unit = {
         message = "Connexion en cours..."
         scope.launch {
@@ -70,9 +84,7 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
                         viewModel.setNom(user.nom)
                         viewModel.setRole(user.role)
                         message = ""
-                        navController.navigate("home") {
-                            popUpTo("login") { inclusive = true }
-                        }
+                        // LaunchedEffect gère la navigation
                     }
                     .onFailure {
                         message = "Connexion impossible : identifiants incorrects."
@@ -80,14 +92,6 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
             } else {
                 message = "Connexion impossible : réseau indisponible."
             }
-        }
-    }
-
-    // Navigation après connexion
-    val isLoggedIn by viewModel.nom.collectAsState()
-    if (isLoggedIn.isNotBlank()) {
-        navController.navigate("home") {
-            popUpTo("login") { inclusive = true }
         }
     }
 
@@ -122,11 +126,9 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
                 label = { Text("Matricule") },
                 modifier = champModifier,
                 singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    imeAction = ImeAction.Next
-                ),
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
                 )
             )
 
@@ -137,9 +139,7 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = champModifier,
                 singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    imeAction = ImeAction.Done
-                ),
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
                     onDone = {
                         focusManager.clearFocus()
