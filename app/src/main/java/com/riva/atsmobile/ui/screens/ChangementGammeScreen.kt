@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WbSunny
@@ -52,8 +52,7 @@ fun ChangementGammeScreen(
                 )
                 Spacer(Modifier.height(24.dp))
 
-                ElevatedButton(
-                    enabled = (selectedCodes.size == 2),
+                Button(
                     onClick = {
                         // On enregistre les gammes sélectionnées et on navigue vers TypeOperationScreen
                         navController.currentBackStackEntry
@@ -64,7 +63,7 @@ fun ChangementGammeScreen(
                 ) {
                     Icon(Icons.Default.WbSunny, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("OK – ${selectedCodes.size}/2 gammes")
+                    Text("Type Opération")
                 }
             }
         }
