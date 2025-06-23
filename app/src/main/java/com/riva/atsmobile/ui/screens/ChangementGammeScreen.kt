@@ -54,10 +54,7 @@ fun ChangementGammeScreen(
 
                 Button(
                     onClick = {
-                        // On enregistre les gammes sélectionnées et on navigue vers TypeOperationScreen
-                        navController.currentBackStackEntry
-                            ?.savedStateHandle
-                            ?.set("selectedGammes", selectedCodes)
+
                         navController.navigate(Routes.TypeOperation)
                     }
                 ) {
