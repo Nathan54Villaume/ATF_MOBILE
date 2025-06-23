@@ -19,59 +19,109 @@ fun ATSMobileNavHost(
     selectionViewModel: SelectionViewModel,
     modifier: Modifier = Modifier
 ) {
+    // États globaux issus du SelectionViewModel
+    val role by selectionViewModel.role.collectAsState()
+    val devMode by selectionViewModel.devModeEnabled.collectAsState()
+
     NavHost(
         navController    = navController,
         startDestination = Routes.Login,
         modifier         = modifier
     ) {
+        // Écran de login
         composable(Routes.Login) {
             LoginScreen(navController, selectionViewModel)
         }
 
+        // Écran Home, protégé
         composable(Routes.Home) {
-            HomeScreen(selectionViewModel, navController)
+            requireRoleOrDev(role, devMode, navController) {
+                HomeScreen(selectionViewModel, navController)
+            }
         }
 
+        // Intro Changement de gamme, protégé
         composable(Routes.ChangementGamme) {
-            ChangementGammeScreen(selectionViewModel, navController)
+            requireRoleOrDev(role, devMode, navController) {
+                ChangementGammeScreen(selectionViewModel, navController)
+            }
         }
 
+        // Wizard, protégé
         composable(Routes.StepWizard) {
-            // On récupère le ChangeoverViewModel via viewModel()
-            val changeoverVm: ChangeoverViewModel = viewModel()
-            StepWizardScreen(
-                selectionViewModel  = selectionViewModel,
-                changeoverViewModel = changeoverVm,
-                navController       = navController
-            )
+            requireRoleOrDev(role, devMode, navController) {
+                // ChangeoverViewModel récupéré ici
+                val changeoverVm: ChangeoverViewModel = viewModel()
+                StepWizardScreen(
+                    selectionViewModel  = selectionViewModel,
+                    changeoverViewModel = changeoverVm,
+                    navController       = navController
+                )
+            }
         }
 
+        // Change Password, protégé
         composable(Routes.ChangePassword) {
-            ChangePasswordScreen(selectionViewModel, navController)
+            requireRoleOrDev(role, devMode, navController) {
+                ChangePasswordScreen(selectionViewModel, navController)
+            }
         }
 
+        // Paramètres (non protégé)
         composable(Routes.Settings) {
             ParametresScreen(navController, selectionViewModel)
         }
 
+        // DevTools, protégé
         composable(Routes.DevTools) {
-            DevSettingsScreen(navController, selectionViewModel)
+            requireRoleOrDev(role, devMode, navController) {
+                DevSettingsScreen(navController, selectionViewModel)
+            }
         }
 
+        // Type d’opération, protégé
         composable(Routes.TypeOperation) {
-            TypeOperationScreen(selectionViewModel, navController)
+            requireRoleOrDev(role, devMode, navController) {
+                TypeOperationScreen(selectionViewModel, navController)
+            }
         }
 
+        // Paramètres TypeOp, protégé
         composable(Routes.TypeOperationParametres) {
-            TypeOperationParamScreen(selectionViewModel, navController)
+            requireRoleOrDev(role, devMode, navController) {
+                TypeOperationParamScreen(selectionViewModel, navController)
+            }
         }
 
+        // Dashboards, protégés
         composable(Routes.DashboardATS) {
-            DashboardATSScreen(navController, selectionViewModel)
+            requireRoleOrDev(role, devMode, navController) {
+                DashboardATSScreen(navController, selectionViewModel)
+            }
         }
-
         composable(Routes.DashboardATR) {
-            DashboardATRScreen(navController, selectionViewModel)
+            requireRoleOrDev(role, devMode, navController) {
+                DashboardATRScreen(navController, selectionViewModel)
+            }
+        }
+    }
+}
+
+/** N’autorise l’accès qu’aux utilisateurs loggués (ou en devMode) */
+@Composable
+private fun requireRoleOrDev(
+    role: String,
+    devMode: Boolean,
+    navController: NavHostController,
+    content: @Composable () -> Unit
+) {
+    if (role.isNotBlank() || devMode) {
+        content()
+    } else {
+        LaunchedEffect(Unit) {
+            navController.navigate(Routes.Login) {
+                popUpTo(0)
+            }
         }
     }
 }
