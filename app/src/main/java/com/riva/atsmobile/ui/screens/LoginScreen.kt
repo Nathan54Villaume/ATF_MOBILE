@@ -21,10 +21,10 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +56,7 @@ fun LoginScreen(
     navController: NavController,
     viewModel: SelectionViewModel
 ) {
+    // États locaux pour les champs utilisateur
     var matricule by remember { mutableStateOf("") }
     var motDePasse by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
@@ -65,19 +66,7 @@ fun LoginScreen(
     val scrollState  = rememberScrollState()
     val focusManager = LocalFocusManager.current
 
-    var hasInitialized by remember { mutableStateOf(false) }
-    val nom by viewModel.nom.collectAsState()
-
-    // Navigation vers Home dès que 'nom' est renseigné après le premier affichage
-    LaunchedEffect(nom) {
-        if (hasInitialized && nom.isNotBlank()) {
-            navController.navigate(Routes.Home) {
-                popUpTo(Routes.Login) { inclusive = true }
-            }
-        }
-        hasInitialized = true
-    }
-
+    // Action de connexion déclenchée par le bouton
     val doLogin = {
         message = "Connexion en cours..."
         scope.launch {
@@ -89,6 +78,10 @@ fun LoginScreen(
                         viewModel.setNom(user.nom)
                         viewModel.setRole(user.role)
                         message = ""
+                        // navigation immédiate vers Home
+                        navController.navigate(Routes.Home) {
+                            popUpTo(Routes.Login) { inclusive = true }
+                        }
                     }
                     .onFailure {
                         message = "Connexion impossible : identifiants incorrects."
@@ -128,8 +121,8 @@ fun LoginScreen(
                 value               = matricule,
                 onValueChange       = { matricule = it },
                 label               = { Text("Matricule") },
-                modifier            = champModifier,
                 singleLine          = true,
+                modifier            = champModifier,
                 keyboardOptions     = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
                 keyboardActions     = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
@@ -141,8 +134,8 @@ fun LoginScreen(
                 onValueChange       = { motDePasse = it },
                 label               = { Text("Mot de passe") },
                 visualTransformation = PasswordVisualTransformation(),
-                modifier            = champModifier,
                 singleLine          = true,
+                modifier            = champModifier,
                 keyboardOptions     = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
                 keyboardActions     = KeyboardActions(
                     onDone = {
@@ -163,7 +156,10 @@ fun LoginScreen(
             }
 
             if (message.isNotBlank()) {
-                Text(text = message, color = MaterialTheme.colorScheme.error)
+                Text(
+                    text  = message,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
 
             TextButton(onClick = { navController.navigate(Routes.Settings) }) {
