@@ -55,10 +55,11 @@ fun ChangementGammeScreen(
                 ElevatedButton(
                     enabled = (selectedCodes.size == 2),
                     onClick = {
+                        // On enregistre les gammes sélectionnées et on navigue vers TypeOperationScreen
                         navController.currentBackStackEntry
                             ?.savedStateHandle
                             ?.set("selectedGammes", selectedCodes)
-                        navController.navigate(Routes.StepWizard)
+                        navController.navigate(Routes.TypeOperation)
                     }
                 ) {
                     Icon(Icons.Default.WbSunny, contentDescription = null)
