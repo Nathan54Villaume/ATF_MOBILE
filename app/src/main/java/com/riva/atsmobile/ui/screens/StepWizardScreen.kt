@@ -33,22 +33,22 @@ fun StepWizardScreen(
     // 1) Statut réseau
     val isConnected by selectionViewModel.isOnline.collectAsState()
 
-    // 2) On récupère la liste des désignations (List<String>)
+    // 2) On récupère la liste des désignations passées depuis la précédente étape
     val designationsList: List<String> = navController
         .previousBackStackEntry
         ?.savedStateHandle
         ?.get<List<String>>("selectedDesignations")
-        ?: emptyList()
+        .orEmpty()
 
-    // 3) Conversion en Set pour le VM
+    // 3) Conversion en Set pour init du VM
     val selectedDesignations = designationsList.toSet()
 
-    // 4) Initialise le VM une seule fois
+    // 4) Initialise le VM une seule fois avec ces désignations
     LaunchedEffect(selectedDesignations) {
         changeoverViewModel.initWithSelectedGammes(selectedDesignations)
     }
 
-    // 5) Collecte des états
+    // 5) Collecte des flux d’état
     val operators by changeoverViewModel.operatorSteps.collectAsState()
     val zones     by changeoverViewModel.zoneOptions.collectAsState()
     val inters    by changeoverViewModel.interventionOptions.collectAsState()
@@ -61,7 +61,7 @@ fun StepWizardScreen(
         title            = if (selectedDesignations.isEmpty()) {
             "Changement de gamme"
         } else {
-            "Changement de gamme : " + selectedDesignations.joinToString(", ")
+            "Changement de gamme : ${selectedDesignations.joinToString(", ")}"
         },
         navController    = navController,
         viewModel        = selectionViewModel,
@@ -75,10 +75,10 @@ fun StepWizardScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            // 6.1) Grille de cartes opérateur (prend tout l'espace restant)
+            // 6.1) Grille de cartes opérateur (remplit tout l’espace restant)
             Row(
                 modifier = Modifier
-                    .weight(1f)         // ← here!
+                    .weight(1f)
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {

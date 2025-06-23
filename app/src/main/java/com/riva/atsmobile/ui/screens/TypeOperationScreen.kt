@@ -547,33 +547,20 @@ private fun ActionRow(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        ElevatedButton(
-            onClick = { navController.popBackStack() },
-            modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
-        ) {
-            Icon(Icons.Default.WbSunny, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Retour")
-        }
-        if (role == "ADMIN") {
-            ElevatedButton(
-                onClick = { navController.navigate(Routes.TypeOperationParametres) },
-                modifier = Modifier.defaultMinSize(minWidth = 160.dp, minHeight = 56.dp)
-            ) {
-                Icon(Icons.Default.Settings, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Paramètres")
-            }
-        }
+        // … vos boutons Retour / Admin …
+
         ElevatedButton(
             onClick = {
-                // Enregistre les gammes sélectionnées et navigue vers StepWizardScreen
+                // On ne stocke QUE la désignation (String) dans le SavedStateHandle
+                val curDesig = current?.designation.orEmpty()
+                val desDesig = desired?.designation.orEmpty()
                 navController.currentBackStackEntry
                     ?.savedStateHandle
-                    ?.set("currentGamme", current)
+                    ?.set("currentDesignation", curDesig)
                 navController.currentBackStackEntry
                     ?.savedStateHandle
-                    ?.set("desiredGamme", desired)
+                    ?.set("desiredDesignation", desDesig)
+
                 navController.navigate(Routes.StepWizard)
             },
             enabled = current != null && desired != null,
@@ -585,6 +572,7 @@ private fun ActionRow(
         }
     }
 }
+
 
 
 
