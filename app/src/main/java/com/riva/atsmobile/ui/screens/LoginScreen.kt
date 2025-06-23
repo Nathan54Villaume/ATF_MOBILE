@@ -16,8 +16,21 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Login
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -39,20 +52,23 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
+fun LoginScreen(
+    navController: NavController,
+    viewModel: SelectionViewModel
+) {
     var matricule by remember { mutableStateOf("") }
     var motDePasse by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
 
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val scrollState = rememberScrollState()
+    val context      = LocalContext.current
+    val scope        = rememberCoroutineScope()
+    val scrollState  = rememberScrollState()
     val focusManager = LocalFocusManager.current
 
     var hasInitialized by remember { mutableStateOf(false) }
     val nom by viewModel.nom.collectAsState()
 
-    // Navigation déclenchée seulement après premier login
+    // Navigation vers Home dès que 'nom' est renseigné après le premier affichage
     LaunchedEffect(nom) {
         if (hasInitialized && nom.isNotBlank()) {
             navController.navigate(Routes.Home) {
@@ -91,19 +107,19 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
         showLogout    = false
     ) { padding ->
         Column(
-            modifier = Modifier
+            modifier            = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(24.dp)
                 .verticalScroll(scrollState),
-            horizontalAlignment   = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically)
         ) {
             Image(
-                painter           = painterResource(id = R.drawable.logo),
+                painter            = painterResource(id = R.drawable.logo),
                 contentDescription = "Logo ATS",
-                modifier          = Modifier.size(120.dp),
-                contentScale      = ContentScale.Fit
+                modifier           = Modifier.size(120.dp),
+                contentScale       = ContentScale.Fit
             )
 
             val champModifier = Modifier.widthIn(max = 300.dp)
@@ -137,8 +153,8 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
             )
 
             FilledTonalButton(
-                onClick = { doLogin() },
-                enabled = matricule.isNotBlank() && motDePasse.isNotBlank(),
+                onClick  = { doLogin() },
+                enabled  = matricule.isNotBlank() && motDePasse.isNotBlank(),
                 modifier = champModifier.height(50.dp)
             ) {
                 Icon(Icons.Default.Login, contentDescription = null)
