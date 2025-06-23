@@ -7,7 +7,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -15,6 +14,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.hilt.navigation.compose.hiltViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.riva.atsmobile.ui.ATSMobileApp
@@ -22,12 +23,14 @@ import com.riva.atsmobile.ui.theme.ATSMobileTheme
 import com.riva.atsmobile.utils.NetworkMonitor
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     companion object {
         private const val PERM_REQUEST_LOCATION = 1001
     }
 
+    // Hilt injecte automatiquement le VM annoté @HiltViewModel
     private val viewModel: SelectionViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,17 +47,17 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        // 2) NetworkMonitor global (pour notifications système)
+        // 2) NetworkMonitor global
         NetworkMonitor.register(applicationContext)
 
-        // 3) Démarrage de la boucle de vérif réseau dans le ViewModel
+        // 3) Démarrage de l’observer réseau dans le VM
         viewModel.InitNetworkObserverIfNeeded(this)
 
-        // 4) Charger la session locale et les gammes au démarrage
+        // 4) Charger la session et les gammes
         viewModel.chargerSessionLocale(this)
         viewModel.chargerGammesDepuisApi(this)
 
-        // 5) Configuration des barres système (statut) selon le rôle
+        // 5) Config barres système selon rôle
         WindowCompat.setDecorFitsSystemWindows(window, true)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -71,13 +74,11 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // 6) Compose + trigger de test fetchGroupedValues()
+        // 6) Compose
         setContent {
             ATSMobileTheme {
-                LaunchedEffect(Unit) {
-                    viewModel.testFetchGroupedValues(this@MainActivity)
-                }
-                ATSMobileApp(viewModel = viewModel)
+                // Ne passe plus viewModel, ATSMobileApp l’obtient via hiltViewModel()
+                ATSMobileApp()
             }
         }
     }
