@@ -4,7 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -15,89 +16,62 @@ import com.riva.atsmobile.viewmodel.SelectionViewModel
 @Composable
 fun ATSMobileNavHost(
     navController: NavHostController,
-    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier
+    selectionViewModel: SelectionViewModel,
+    modifier: Modifier = Modifier
 ) {
     NavHost(
         navController    = navController,
         startDestination = Routes.Login,
         modifier         = modifier
     ) {
-        // LOGIN
         composable(Routes.Login) {
-            val vm = hiltViewModel<SelectionViewModel>()
-            LoginScreen(navController, vm)
+            LoginScreen(navController, selectionViewModel)
         }
 
-        // HOME
         composable(Routes.Home) {
-            val vm = hiltViewModel<SelectionViewModel>()
-            HomeScreen(vm, navController)
+            HomeScreen(selectionViewModel, navController)
         }
 
-        // CHANGEMENT GAMME – vue d’intro
         composable(Routes.ChangementGamme) {
-            val vm = hiltViewModel<SelectionViewModel>()
-            ChangementGammeScreen(vm, navController)
+            ChangementGammeScreen(selectionViewModel, navController)
         }
 
-        // WIZARD
         composable(Routes.StepWizard) {
-            val selVm    = hiltViewModel<SelectionViewModel>()
-            val covVm    = hiltViewModel<ChangeoverViewModel>()
+            // On récupère le ChangeoverViewModel via viewModel()
+            val changeoverVm: ChangeoverViewModel = viewModel()
             StepWizardScreen(
-                selectionViewModel  = selVm,
-                changeoverViewModel = covVm,
+                selectionViewModel  = selectionViewModel,
+                changeoverViewModel = changeoverVm,
                 navController       = navController
             )
         }
 
-        // AUTRES ROUTES
         composable(Routes.ChangePassword) {
-            val vm = hiltViewModel<SelectionViewModel>()
-            ChangePasswordScreen(vm, navController)
+            ChangePasswordScreen(selectionViewModel, navController)
         }
+
         composable(Routes.Settings) {
-            val vm = hiltViewModel<SelectionViewModel>()
-            ParametresScreen(navController, vm)
+            ParametresScreen(navController, selectionViewModel)
         }
+
         composable(Routes.DevTools) {
-            val vm = hiltViewModel<SelectionViewModel>()
-            DevSettingsScreen(navController, vm)
+            DevSettingsScreen(navController, selectionViewModel)
         }
+
         composable(Routes.TypeOperation) {
-            val vm = hiltViewModel<SelectionViewModel>()
-            TypeOperationScreen(vm, navController)
+            TypeOperationScreen(selectionViewModel, navController)
         }
+
         composable(Routes.TypeOperationParametres) {
-            val vm = hiltViewModel<SelectionViewModel>()
-            TypeOperationParamScreen(vm, navController)
+            TypeOperationParamScreen(selectionViewModel, navController)
         }
+
         composable(Routes.DashboardATS) {
-            val vm = hiltViewModel<SelectionViewModel>()
-            DashboardATSScreen(navController, vm)
+            DashboardATSScreen(navController, selectionViewModel)
         }
+
         composable(Routes.DashboardATR) {
-            val vm = hiltViewModel<SelectionViewModel>()
-            DashboardATRScreen(navController, vm)
-        }
-    }
-}
-
-
-@Composable
-private fun requireRoleOrDev(
-    role: String,
-    devMode: Boolean,
-    navController: NavHostController,
-    content: @Composable () -> Unit
-) {
-    if (role.isNotBlank() || devMode) {
-        content()
-    } else {
-        LaunchedEffect(Unit) {
-            navController.navigate(Routes.Login) {
-                popUpTo(0)
-            }
+            DashboardATRScreen(navController, selectionViewModel)
         }
     }
 }

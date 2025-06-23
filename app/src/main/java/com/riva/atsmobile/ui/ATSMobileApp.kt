@@ -51,6 +51,7 @@ fun ATSMobileApp(
             .padding(innerPadding)) {
             ATSMobileNavHost(
                 navController = navController,
+                selectionViewModel   = viewModel,
                 modifier      = Modifier.fillMaxSize()
             )
         }
