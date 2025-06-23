@@ -210,4 +210,4 @@ tasks.matching { it.name.startsWith("assemble") }.configureEach {
     finalizedBy(gitAddDev)
 }
 gitAddDev.configure { finalizedBy(gitCommitDev) }
-//gitCommitDev.configure { finalizedBy(gitPushDev) }
+gitCommitDev.configure { finalizedBy(gitPushDev) }
