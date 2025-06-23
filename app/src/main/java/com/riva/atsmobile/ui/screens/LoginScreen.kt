@@ -16,20 +16,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Login
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -42,12 +30,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.riva.atsmobile.R
+import com.riva.atsmobile.navigation.Routes
 import com.riva.atsmobile.ui.shared.BaseScreen
 import com.riva.atsmobile.utils.isNetworkAvailable
 import com.riva.atsmobile.utils.playSoundWithVibration
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
     var matricule by remember { mutableStateOf("") }
@@ -59,21 +49,20 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
 
-    // Flag pour distinguer l'initialisation et un vrai login
     var hasInitialized by remember { mutableStateOf(false) }
-    val isLoggedIn by viewModel.nom.collectAsState()
+    val nom by viewModel.nom.collectAsState()
 
-    // Navigation déclenchée seulement après un login effectif
-    LaunchedEffect(isLoggedIn) {
-        if (hasInitialized && isLoggedIn.isNotBlank()) {
-            navController.navigate("home") {
-                popUpTo("login") { inclusive = true }
+    // Navigation déclenchée seulement après premier login
+    LaunchedEffect(nom) {
+        if (hasInitialized && nom.isNotBlank()) {
+            navController.navigate(Routes.Home) {
+                popUpTo(Routes.Login) { inclusive = true }
             }
         }
         hasInitialized = true
     }
 
-    val doLogin: () -> Unit = {
+    val doLogin = {
         message = "Connexion en cours..."
         scope.launch {
             if (isNetworkAvailable(context)) {
@@ -84,7 +73,6 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
                         viewModel.setNom(user.nom)
                         viewModel.setRole(user.role)
                         message = ""
-                        // LaunchedEffect gère la navigation
                     }
                     .onFailure {
                         message = "Connexion impossible : identifiants incorrects."
@@ -96,11 +84,11 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
     }
 
     BaseScreen(
-        title = "Connexion",
-        viewModel = viewModel,
+        title         = "Connexion",
+        viewModel     = viewModel,
         navController = navController,
-        showBack = false,
-        showLogout = false
+        showBack      = false,
+        showLogout    = false
     ) { padding ->
         Column(
             modifier = Modifier
@@ -108,39 +96,39 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
                 .padding(padding)
                 .padding(24.dp)
                 .verticalScroll(scrollState),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment   = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically)
         ) {
             Image(
-                painter = painterResource(id = R.drawable.logo),
+                painter           = painterResource(id = R.drawable.logo),
                 contentDescription = "Logo ATS",
-                modifier = Modifier.size(120.dp),
-                contentScale = ContentScale.Fit
+                modifier          = Modifier.size(120.dp),
+                contentScale      = ContentScale.Fit
             )
 
             val champModifier = Modifier.widthIn(max = 300.dp)
 
             OutlinedTextField(
-                value = matricule,
-                onValueChange = { matricule = it },
-                label = { Text("Matricule") },
-                modifier = champModifier,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(
+                value               = matricule,
+                onValueChange       = { matricule = it },
+                label               = { Text("Matricule") },
+                modifier            = champModifier,
+                singleLine          = true,
+                keyboardOptions     = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                keyboardActions     = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
                 )
             )
 
             OutlinedTextField(
-                value = motDePasse,
-                onValueChange = { motDePasse = it },
-                label = { Text("Mot de passe") },
+                value               = motDePasse,
+                onValueChange       = { motDePasse = it },
+                label               = { Text("Mot de passe") },
                 visualTransformation = PasswordVisualTransformation(),
-                modifier = champModifier,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(
+                modifier            = champModifier,
+                singleLine          = true,
+                keyboardOptions     = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+                keyboardActions     = KeyboardActions(
                     onDone = {
                         focusManager.clearFocus()
                         doLogin()
@@ -162,7 +150,7 @@ fun LoginScreen(navController: NavController, viewModel: SelectionViewModel) {
                 Text(text = message, color = MaterialTheme.colorScheme.error)
             }
 
-            TextButton(onClick = { navController.navigate("settings") }) {
+            TextButton(onClick = { navController.navigate(Routes.Settings) }) {
                 Text("⚙️ Options")
             }
         }
