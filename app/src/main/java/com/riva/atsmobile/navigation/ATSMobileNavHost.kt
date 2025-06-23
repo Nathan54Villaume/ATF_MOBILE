@@ -4,11 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.riva.atsmobile.ui.screens.*
 import com.riva.atsmobile.viewmodel.ChangeoverViewModel
 import com.riva.atsmobile.viewmodel.SelectionViewModel
@@ -16,85 +15,74 @@ import com.riva.atsmobile.viewmodel.SelectionViewModel
 @Composable
 fun ATSMobileNavHost(
     navController: NavHostController,
-    viewModel: SelectionViewModel,
-    modifier: Modifier = Modifier
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier
 ) {
-    val role by viewModel.role.collectAsState()
-    val devMode by viewModel.devModeEnabled.collectAsState()
-
     NavHost(
         navController    = navController,
         startDestination = Routes.Login,
         modifier         = modifier
     ) {
+        // LOGIN
         composable(Routes.Login) {
-            LoginScreen(navController, viewModel)
+            val vm = hiltViewModel<SelectionViewModel>()
+            LoginScreen(navController, vm)
         }
 
+        // HOME
         composable(Routes.Home) {
-            requireRoleOrDev(role, devMode, navController) {
-                HomeScreen(viewModel, navController)
-            }
+            val vm = hiltViewModel<SelectionViewModel>()
+            HomeScreen(vm, navController)
         }
 
+        // CHANGEMENT GAMME – vue d’intro
         composable(Routes.ChangementGamme) {
-            requireRoleOrDev(role, devMode, navController) {
-                ChangementGammeScreen(viewModel, navController)
-            }
+            val vm = hiltViewModel<SelectionViewModel>()
+            ChangementGammeScreen(vm, navController)
         }
 
+        // WIZARD
         composable(Routes.StepWizard) {
-            requireRoleOrDev(role, devMode, navController) {
-                val changeoverVm: ChangeoverViewModel = hiltViewModel()
-                StepWizardScreen(
-                    selectionViewModel  = viewModel,
-                    changeoverViewModel = changeoverVm,
-                    navController       = navController
-                )
-            }
+            val selVm    = hiltViewModel<SelectionViewModel>()
+            val covVm    = hiltViewModel<ChangeoverViewModel>()
+            StepWizardScreen(
+                selectionViewModel  = selVm,
+                changeoverViewModel = covVm,
+                navController       = navController
+            )
         }
 
+        // AUTRES ROUTES
         composable(Routes.ChangePassword) {
-            requireRoleOrDev(role, devMode, navController) {
-                ChangePasswordScreen(viewModel, navController)
-            }
+            val vm = hiltViewModel<SelectionViewModel>()
+            ChangePasswordScreen(vm, navController)
         }
-
         composable(Routes.Settings) {
-            ParametresScreen(navController, viewModel)
+            val vm = hiltViewModel<SelectionViewModel>()
+            ParametresScreen(navController, vm)
         }
-
         composable(Routes.DevTools) {
-            requireRoleOrDev(role, devMode, navController) {
-                DevSettingsScreen(navController, viewModel)
-            }
+            val vm = hiltViewModel<SelectionViewModel>()
+            DevSettingsScreen(navController, vm)
         }
-
         composable(Routes.TypeOperation) {
-            requireRoleOrDev(role, devMode, navController) {
-                TypeOperationScreen(viewModel, navController)
-            }
+            val vm = hiltViewModel<SelectionViewModel>()
+            TypeOperationScreen(vm, navController)
         }
-
         composable(Routes.TypeOperationParametres) {
-            requireRoleOrDev(role, devMode, navController) {
-                TypeOperationParamScreen(viewModel, navController)
-            }
+            val vm = hiltViewModel<SelectionViewModel>()
+            TypeOperationParamScreen(vm, navController)
         }
-
         composable(Routes.DashboardATS) {
-            requireRoleOrDev(role, devMode, navController) {
-                DashboardATSScreen(navController, viewModel)
-            }
+            val vm = hiltViewModel<SelectionViewModel>()
+            DashboardATSScreen(navController, vm)
         }
-
         composable(Routes.DashboardATR) {
-            requireRoleOrDev(role, devMode, navController) {
-                DashboardATRScreen(navController, viewModel)
-            }
+            val vm = hiltViewModel<SelectionViewModel>()
+            DashboardATRScreen(navController, vm)
         }
     }
 }
+
 
 @Composable
 private fun requireRoleOrDev(
