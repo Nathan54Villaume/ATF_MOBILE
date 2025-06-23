@@ -17,6 +17,7 @@ import com.riva.atsmobile.navigation.BottomNavItem
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 
 @Composable
+
 fun ATSMobileApp(
     viewModel: SelectionViewModel = viewModel()
 ) {
@@ -52,7 +53,6 @@ fun ATSMobileApp(
                 navController = navController,
                 modifier      = Modifier.fillMaxSize()
             )
-
         }
     }
 }
