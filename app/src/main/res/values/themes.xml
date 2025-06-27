@@ -1,6 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.ATSMobile" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- ✅ Couleurs système -->
+    <!-- Thème basé sur Material Components v2 DayNight sans ActionBar -->
+    <style name="Theme.ATSMobile" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/black</item>
     </style>

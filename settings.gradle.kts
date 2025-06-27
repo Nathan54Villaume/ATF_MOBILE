@@ -8,7 +8,10 @@ pluginManagement {
             }
         }
         mavenCentral()
-        gradlePluginPortal()
+        gradlePluginPortal()  // nécessaire pour résoudre kotlin DSL et Hilt
+    }
+    plugins {
+
     }
 }
 
@@ -17,7 +20,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven(url = "https://jitpack.io") // Pour bibliothèques type SignalR, MPAndroidChart, etc.
+        maven("https://jitpack.io")
     }
 }
 

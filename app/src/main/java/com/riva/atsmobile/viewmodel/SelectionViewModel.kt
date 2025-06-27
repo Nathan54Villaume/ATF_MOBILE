@@ -8,14 +8,11 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.riva.atsmobile.model.Gamme
 import com.riva.atsmobile.model.LoginResponse
-import com.riva.atsmobile.network.ApiAutomateClient
 import com.riva.atsmobile.utils.ApiConfig
 import com.riva.atsmobile.utils.LocalAuthManager
 import com.riva.atsmobile.utils.isNetworkAvailable
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -25,10 +22,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class SelectionViewModel : ViewModel() {
 
-    private val _groupedValues = MutableStateFlow<Map<String, Map<String, Any>>>(emptyMap())
-    val groupedValues: StateFlow<Map<String, Map<String, Any>>> = _groupedValues.asStateFlow()
-
-    // --- Données utilisateur / session ---
     private val _matricule = MutableStateFlow("")
     val matricule: StateFlow<String> = _matricule.asStateFlow()
 
@@ -47,12 +40,11 @@ class SelectionViewModel : ViewModel() {
     private val _devModeEnabled = MutableStateFlow(false)
     val devModeEnabled: StateFlow<Boolean> = _devModeEnabled.asStateFlow()
 
-    // --- Statut réseau ---
     private val _isOnline = MutableStateFlow(false)
     val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
+
     private var isNetworkLoopStarted = false
 
-    // === Données de l’écran “Type d’opération” ===
     private val _gammes = MutableStateFlow<List<Gamme>>(emptyList())
     val gammes: StateFlow<List<Gamme>> = _gammes.asStateFlow()
 
@@ -62,73 +54,67 @@ class SelectionViewModel : ViewModel() {
     private val _desiredGamme = MutableStateFlow<Gamme?>(null)
     val desiredGamme: StateFlow<Gamme?> = _desiredGamme.asStateFlow()
 
+    private val _gammesSelectionnees = MutableStateFlow<Set<String>>(emptySet())
+    val gammesSelectionnees: StateFlow<Set<String>> = _gammesSelectionnees.asStateFlow()
+
     private val _zoneDeTravail = MutableStateFlow("")
     val zoneDeTravail: StateFlow<String> = _zoneDeTravail.asStateFlow()
 
     private val _intervention = MutableStateFlow("")
     val intervention: StateFlow<String> = _intervention.asStateFlow()
 
-    private val _gammesSelectionnees = MutableStateFlow<Set<String>>(emptySet())
-    val gammesSelectionnees: StateFlow<Set<String>> = _gammesSelectionnees.asStateFlow()
+    private val _groupedValues = MutableStateFlow<Map<String, Map<String, Any>>>(emptyMap())
+    val groupedValues: StateFlow<Map<String, Map<String, Any>>> = _groupedValues.asStateFlow()
+
+    private val _nbFilsActuel = MutableStateFlow<Int?>(null)
+    val nbFilsActuelFlow: StateFlow<Int?> = _nbFilsActuel.asStateFlow()
+
+    private val _nbFilsVise = MutableStateFlow<Int?>(null)
+    val nbFilsViseFlow: StateFlow<Int?> = _nbFilsVise.asStateFlow()
+
+    var memoireGammeActuelle: Gamme? = null
+    var memoireGammeVisee: Gamme? = null
 
     fun setGammesSelectionnees(codes: Set<String>) {
         _gammesSelectionnees.value = codes
     }
+
     fun testFetchGroupedValues(context: Context) {
         viewModelScope.launch {
-            // Exemple de Map<String, List<String>>
-            val demoMap = mapOf(
-                "g1" to listOf("addr1", "addr2"),
-                "g2" to listOf("addr3")
-            )
-            // Récupération de l’URL de base
+            val demoMap = mapOf("g1" to listOf("addr1", "addr2"), "g2" to listOf("addr3"))
             val baseUrl = ApiConfig.getBaseUrl(context)
-            // Appel au client réseau avec baseUrl
-            val result = ApiAutomateClient.fetchGroupedValues(
-                dbMap   = demoMap,
-                baseUrl = baseUrl
-            )
-            Log.d("API", "Result → \$result")
+            val result = com.riva.atsmobile.network.ApiAutomateClient.fetchGroupedValues(demoMap, baseUrl)
             _groupedValues.value = result
         }
     }
-    /** Charge les gammes depuis l’API */
+
     fun chargerGammesDepuisApi(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val baseUrl = ApiConfig.getBaseUrl(context)
-                val url = "$baseUrl/api/gammes"
-
-                val client = OkHttpClient()
                 val request = Request.Builder()
-                    .url(url)
+                    .url("$baseUrl/api/gammes")
                     .get()
                     .addHeader("Accept", "application/json")
                     .build()
 
-                client.newCall(request).execute().use { response ->
+                OkHttpClient().newCall(request).execute().use { response ->
                     val body = response.body?.string()
                     if (response.isSuccessful && body != null) {
                         val listType = object : TypeToken<List<Gamme>>() {}.type
                         val gammesLoaded = Gson().fromJson<List<Gamme>>(body, listType)
                         _gammes.value = gammesLoaded
 
-                        // Sélection par défaut
                         if (_gammesSelectionnees.value.isEmpty()) {
-                            // liste des désignations par défaut
                             val defaultDesignations = setOf(
                                 "PAF R", "PAF C", "PAF V", "PAF 10",
                                 "ST 15 C", "ST 20", "ST 25", "ST 25 C"
                             ).map { it.trim().uppercase() }.toSet()
 
-                            // on filtre les gammes reçues pour ne garder que celles-ci
-                            val defaultCodes = gammesLoaded
-                                .filter { defaultDesignations.contains(it.designation.trim().uppercase()) }
+                            _gammesSelectionnees.value = gammesLoaded
+                                .filter { it.designation.trim().uppercase() in defaultDesignations }
                                 .map { it.codeTreillis }
                                 .toSet()
-
-                            // on les applique
-                            _gammesSelectionnees.value = defaultCodes
                         } else {
 
                         }
@@ -144,29 +130,25 @@ class SelectionViewModel : ViewModel() {
 
     fun selectCurrentGamme(g: Gamme) {
         _currentGamme.value = g
-        if (_desiredGamme.value == g) {
-            _desiredGamme.value = null
-        }
+        if (_desiredGamme.value == g) _desiredGamme.value = null
+        memoireGammeActuelle = g
+        _nbFilsActuel.value = g.nbFilChaine
     }
 
     fun selectDesiredGamme(g: Gamme) {
         if (_currentGamme.value != g) {
             _desiredGamme.value = g
+            memoireGammeVisee = g
+            _nbFilsVise.value = g.nbFilChaine
         }
     }
 
-    fun setZoneDeTravail(zone: String) {
-        _zoneDeTravail.value = zone
-    }
+    fun setZoneDeTravail(zone: String) { _zoneDeTravail.value = zone }
+    fun setIntervention(inter: String) { _intervention.value = inter }
 
-    fun setIntervention(inter: String) {
-        _intervention.value = inter
-    }
-
-    fun validateGammeChange(onResult: (success: Boolean, msg: String) -> Unit) {
+    fun validateGammeChange(onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             try {
-                // TODO : Remplacer cette partie par un POST réel si besoin
                 onResult(true, "Validation OK")
             } catch (e: Exception) {
                 Log.e("SelectionViewModel", "Erreur validation gamme", e)
@@ -175,23 +157,17 @@ class SelectionViewModel : ViewModel() {
         }
     }
 
-    // --- Fonctions générales ---
-    fun setMatricule(value: String) { _matricule.value = value }
-    fun setNom(value: String) { _nom.value = value }
-    fun setRole(value: String) { _role.value = value }
-    fun setAnnee(value: Int) { _annee.value = value }
-    fun setMois(value: Int) { _mois.value = value }
-    fun activateDevMode() { _devModeEnabled.value = true }
-    fun setDevMode(enabled: Boolean) { _devModeEnabled.value = enabled }
+    fun setMatricule(value: String) = run { _matricule.value = value }
+    fun setNom(value: String) = run { _nom.value = value }
+    fun setRole(value: String) = run { _role.value = value }
+    fun setAnnee(value: Int) = run { _annee.value = value }
+    fun setMois(value: Int) = run { _mois.value = value }
+    fun setDevMode(enabled: Boolean) = run { _devModeEnabled.value = enabled }
+    fun activateDevMode() = setDevMode(true)
 
     fun updateOnlineStatus(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
-            val result = try {
-                isNetworkAvailable(context)
-            } catch (_: Exception) {
-                false
-            }
-            _isOnline.value = result
+            _isOnline.value = try { isNetworkAvailable(context) } catch (_: Exception) { false }
         }
     }
 
@@ -212,15 +188,14 @@ class SelectionViewModel : ViewModel() {
         setRole("")
         setAnnee(2025)
         setMois(1)
-        _devModeEnabled.value = false
+        setDevMode(false)
     }
 
     fun chargerSessionLocale(context: Context) {
-        val userInfo = LocalAuthManager.loadUserInfo(context)
-        if (userInfo != null) {
-            setMatricule(userInfo.matricule)
-            setNom(userInfo.nom)
-            setRole(userInfo.role)
+        LocalAuthManager.loadUserInfo(context)?.let {
+            setMatricule(it.matricule)
+            setNom(it.nom)
+            setRole(it.role)
         }
     }
 
@@ -230,45 +205,31 @@ class SelectionViewModel : ViewModel() {
         motDePasse: String
     ): Result<LoginResponse> {
         val baseUrl = ApiConfig.getBaseUrl(context)
-        Log.d("API_URL", "Base URL utilisée pour la connexion : $baseUrl")
         val url = "$baseUrl/api/auth/login"
-
-        val json = """
-            {
-                "matricule": "$matricule",
-                "motDePasse": "$motDePasse"
-            }
-        """.trimIndent()
-
-        val client = OkHttpClient()
+        val json = """{"matricule":"$matricule","motDePasse":"$motDePasse"}"""
         val requestBody = json.toRequestBody("application/json".toMediaType())
-        val request = Request.Builder()
-            .url(url)
-            .post(requestBody)
-            .addHeader("Accept", "application/json")
-            .addHeader("Content-Type", "application/json")
-            .build()
 
         return withContext(Dispatchers.IO) {
             try {
-                client.newCall(request).execute().use { response ->
+                OkHttpClient().newCall(
+                    Request.Builder()
+                        .url(url)
+                        .post(requestBody)
+                        .addHeader("Accept", "application/json")
+                        .addHeader("Content-Type", "application/json")
+                        .build()
+                ).execute().use { response ->
                     val body = response.body?.string()
                     if (response.isSuccessful && body != null) {
                         val user = Gson().fromJson(body, LoginResponse::class.java)
-                        LocalAuthManager.saveUserInfo(
-                            context,
-                            user.matricule,
-                            user.nom,
-                            user.role,
-                            motDePasse
-                        )
+                        LocalAuthManager.saveUserInfo(context, user.matricule, user.nom, user.role, motDePasse)
                         Result.success(user)
                     } else {
                         Result.failure(Exception(body ?: "Erreur inconnue"))
                     }
                 }
             } catch (e: Exception) {
-                Log.e("SelectionViewModel", "Erreur lors de la requête réseau", e)
+                Log.e("SelectionViewModel", "Erreur connexion", e)
                 Result.failure(e)
             }
         }

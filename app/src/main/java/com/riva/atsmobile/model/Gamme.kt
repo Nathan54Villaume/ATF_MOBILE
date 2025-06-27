@@ -19,4 +19,15 @@ data class Gamme(
     @SerializedName("Masse_paquet") val massePaquet: Double,
     @SerializedName("Horo_maj") val horoMaj: String,
     @SerializedName("Valid") val valid: Int
-)
+) {
+    val nbFilChaine: Int?
+        get() {
+            val normalized = designation.trim().uppercase()
+
+            return when {
+                normalized in setOf("PAF C", "PAF R", "PAF V", "PAF 10", "ST 15 C") -> 12
+                normalized in setOf("ST 20", "ST 25", "ST 25 C") -> 16
+                else -> null
+            }
+        }
+}

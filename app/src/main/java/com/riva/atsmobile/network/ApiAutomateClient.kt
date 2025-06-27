@@ -1,8 +1,10 @@
 package com.riva.atsmobile.network
 
 import android.util.Log
+import com.google.gson.Gson
 import com.google.gson.JsonArray
-import com.riva.atsmobile.utils.ApiConfig
+import com.google.gson.reflect.TypeToken
+import com.riva.atsmobile.model.Etape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -12,34 +14,35 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
 object ApiAutomateClient {
+
     private val client = OkHttpClient()
-    private const val ENDPOINT_PATH = "/api/automate/read-multiple"
+    private const val TAG = "API_AUTOMATE"
+    private const val ENDPOINT_READ_MULTIPLE = "/api/automate/read-multiple"
     private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
 
     /**
-     * Envoie en une seule fois toutes les adresses contenues dans dbMap,
-     * puis reconstitue une Map identique à celle passée en paramètre.
+     * Lit plusieurs adresses regroupées par catégories via l'API
      *
-     * @param dbMap Map où chaque clé regroupe une liste d’adresses à lire.
-     * @param baseUrl URL de base (p. ex. issue de ApiConfig.getBaseUrl(context)).
-     * @return Map<String, Map<String, Any>> avec les valeurs décodées.
+     * @param dbMap Map regroupant les adresses à lire (clé = groupe logique, valeur = liste d'adresses DB)
+     * @param baseUrl URL de base (ex: http://10.250.13.4:8080)
+     * @return Map identique à dbMap, mais contenant les valeurs décodées.
      */
     suspend fun fetchGroupedValues(
         dbMap: Map<String, List<String>>,
         baseUrl: String
     ): Map<String, Map<String, Any>> = withContext(Dispatchers.IO) {
         try {
-            // 1) Construction du JsonArray contenant toutes les adresses
             val jsonArray = JsonArray().apply {
                 dbMap.values.flatten().forEach { add(it) }
             }
+
             val requestBody = jsonArray.toString().toRequestBody(JSON_MEDIA)
+            val fullUrl = baseUrl.trimEnd('/') + ENDPOINT_READ_MULTIPLE
 
-            Log.d("API", "POST vers $baseUrl$ENDPOINT_PATH → $requestBody")
+            Log.d(TAG, "POST → $fullUrl\nPayload → $jsonArray")
 
-            // 2) Construction et exécution de la requête HTTP
             val request = Request.Builder()
-                .url(baseUrl.trimEnd('/') + ENDPOINT_PATH)
+                .url(fullUrl)
                 .post(requestBody)
                 .addHeader("Accept", "application/json")
                 .addHeader("Content-Type", "application/json; charset=utf-8")
@@ -47,46 +50,83 @@ object ApiAutomateClient {
 
             client.newCall(request).execute().use { response ->
                 val rawBody = response.body?.string().orEmpty()
-                Log.d("API", "HTTP ${response.code} → $rawBody")
+                Log.d(TAG, "HTTP ${response.code} → $rawBody")
 
                 if (!response.isSuccessful) {
-                    Log.e("API", "fetchGroupedValues échoué, code ${response.code}")
+                    Log.e(TAG, "Échec HTTP: code ${response.code}")
                     return@withContext emptyMap()
                 }
 
                 val parsed = JSONObject(rawBody)
 
-                // 3) Regroupement des résultats dans la même structure que dbMap
-                return@withContext dbMap.mapValues { (_, adresses) ->
-                    adresses.associateWith { addr ->
+                return@withContext dbMap.mapValues { (_, addresses) ->
+                    addresses.associateWith { addr ->
                         val rawVal = parsed.opt(addr)
-                        when (rawVal) {
-                            is Boolean -> rawVal
-                            is Double -> {
-                                // JSONObject renvoie les nombres en Double
-                                when {
-                                    addr.endsWith(".DBD", true) ->
-                                        Float.fromBits(rawVal.toInt())
-                                    addr.endsWith(".DBW", true) ->
-                                        rawVal.toInt().toShort()
-                                    addr.endsWith(".DBB", true) ->
-                                        rawVal.toInt().toByte()
-                                    else ->
-                                        // Si c’est un entier déguisé en double, on cast en Int
-                                        if (rawVal % 1.0 == 0.0) rawVal.toInt() else rawVal
-                                }
-                            }
-                            is Int    -> rawVal
-                            is String -> if (rawVal.startsWith("Erreur")) "N/A" else rawVal
-                            null      -> "N/A"
-                            else      -> rawVal
-                        }
+                        decodeAutomateValue(addr, rawVal)
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.e("API", "Erreur fetchGroupedValues", e)
+            Log.e(TAG, "Erreur réseau ou parsing", e)
             emptyMap()
+        }
+    }
+
+    /**
+     * Décode une valeur renvoyée par l'automate selon le type attendu (bool, byte, short, float, etc.)
+     */
+    private fun decodeAutomateValue(addr: String, rawVal: Any?): Any {
+        return when (rawVal) {
+            is Boolean -> rawVal
+            is Double -> {
+                when {
+                    addr.endsWith(".DBD", ignoreCase = true) -> Float.fromBits(rawVal.toInt())
+                    addr.endsWith(".DBW", ignoreCase = true) -> rawVal.toInt().toShort()
+                    addr.endsWith(".DBB", ignoreCase = true) -> rawVal.toInt().toByte()
+                    rawVal % 1.0 == 0.0 -> rawVal.toInt()
+                    else -> rawVal
+                }
+            }
+            is Int -> rawVal
+            is String -> if (rawVal.startsWith("Erreur")) "N/A" else rawVal
+            null -> "N/A"
+            else -> rawVal
+        }
+    }
+
+    /**
+     * Récupère la liste des étapes via l'API.
+     *
+     * @param baseUrl URL de base (ex: http://10.250.13.4:8080)
+     * @return Liste d'étapes (ou vide en cas d'erreur)
+     */
+    suspend fun getEtapes(
+        baseUrl: String
+    ): List<Etape> = withContext(Dispatchers.IO) {
+        try {
+            val endpoint = "/api/etapes"
+            val fullUrl = baseUrl.trimEnd('/') + endpoint
+
+            Log.d(TAG, "GET → $fullUrl")
+
+            val request = Request.Builder()
+                .url(fullUrl)
+                .get()
+                .addHeader("Accept", "application/json")
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                Log.d(TAG, "HTTP ${response.code} → $body")
+
+                if (!response.isSuccessful) return@withContext emptyList()
+
+                val listType = object : TypeToken<List<Etape>>() {}.type
+                return@withContext Gson().fromJson<List<Etape>>(body, listType)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Erreur lors du chargement des étapes", e)
+            emptyList()
         }
     }
 }

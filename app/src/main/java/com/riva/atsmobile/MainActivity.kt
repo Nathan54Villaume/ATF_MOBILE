@@ -1,62 +1,43 @@
 package com.riva.atsmobile
 
 import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.runtime.LaunchedEffect
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import com.riva.atsmobile.ui.ATSMobileApp
 import com.riva.atsmobile.ui.theme.ATSMobileTheme
 import com.riva.atsmobile.utils.NetworkMonitor
 import com.riva.atsmobile.viewmodel.SelectionViewModel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    companion object {
-        private const val PERM_REQUEST_LOCATION = 1001
-    }
-
     private val viewModel: SelectionViewModel by viewModels()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1) Demande de permission de localisation
-        if (ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissions(
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                PERM_REQUEST_LOCATION
-            )
-        }
 
-        // 2) Initialisation du NetworkMonitor global
+        // Démarrage du monitoring réseau
         NetworkMonitor.register(applicationContext)
-
-        // 3) Démarrage du monitoring réseau dans le ViewModel
         viewModel.InitNetworkObserverIfNeeded(this)
 
-        // 4) Chargement de la session locale et des gammes
+        // Chargement session utilisateur et gammes
         viewModel.chargerSessionLocale(this)
         viewModel.chargerGammesDepuisApi(this)
 
-        // 5) Configuration des barres système en fonction du rôle
+        // Masquage ou affichage dynamique de la barre de statut
         WindowCompat.setDecorFitsSystemWindows(window, true)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -73,28 +54,11 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // 6) Lancement de l'UI Compose
+        // Affichage de l'application principale avec thème
         setContent {
             ATSMobileTheme {
-                ATSMobileApp()
+                ATSMobileApp(viewModel = viewModel)
             }
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERM_REQUEST_LOCATION &&
-            grantResults.firstOrNull() != PackageManager.PERMISSION_GRANTED
-        ) {
-            Toast.makeText(
-                this,
-                "La permission de localisation est requise pour certaines fonctionnalités.",
-                Toast.LENGTH_LONG
-            ).show()
         }
     }
 }
