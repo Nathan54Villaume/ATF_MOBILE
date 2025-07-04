@@ -12,7 +12,12 @@ data class Etape(
     val etat_Etape: String?,
     val temps_Reel_Etape: Int?,
     val commentaire_Etape_1: String?,
-    val predecesseur_etape: String?,
-    val successeur_etape: String?
+
+    // On reprend simplement les deux chaînes brutes
+    @SerializedName("predecesseur_etape")
+    val predecesseur_Etape: String?,
+
+    @SerializedName("successeur_etape")
+    val successeur_Etape: String?
 )
 
