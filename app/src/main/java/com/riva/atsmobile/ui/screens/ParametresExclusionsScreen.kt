@@ -28,7 +28,7 @@ import com.riva.atsmobile.viewmodel.SelectionViewModel
 fun ParametresExclusionsScreen(
     navController: NavController,
     selectionViewModel: SelectionViewModel,
-    etapeViewModel: EtapeViewModel = EtapeViewModel()
+    etapeViewModel: EtapeViewModel
 ) {
     val context = LocalContext.current
     val isConnected by selectionViewModel.isOnline.collectAsState()
@@ -53,8 +53,7 @@ fun ParametresExclusionsScreen(
         StepFilterManager.init(context)
         exclusions.clear()
         exclusions.putAll(
-            StepFilterManager.loadExclusions()
-                .mapValues { it.value.toMutableSet() }
+            StepFilterManager.loadExclusions().mapValues { it.value.toMutableSet() }
         )
         etapeViewModel.loadEtapes(context)
     }
@@ -66,18 +65,22 @@ fun ParametresExclusionsScreen(
         navController = navController,
         viewModel = selectionViewModel,
         showBack = true,
+        showLogout = false,
         connectionStatus = isConnected
-    ) { padding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(paddingValues)
                 .padding(16.dp)
         ) {
             Text("Couple", style = MaterialTheme.typography.titleMedium)
-            DropdownMenuCoupleSelector(selectedCouple, couples) {
-                selectedCouple = it
-            }
+            Spacer(Modifier.height(8.dp))
+            DropdownMenuCoupleSelector(
+                selected = selectedCouple,
+                options = couples,
+                onSelected = { selectedCouple = it }
+            )
 
             Spacer(Modifier.height(16.dp))
 
@@ -103,14 +106,14 @@ fun ParametresExclusionsScreen(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                "Étapes à exclure (${selectedSet.size})",
+                text = "Étapes à exclure (${selectedSet.size})",
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(Modifier.height(8.dp))
 
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(allEtapes.sortedBy { it.id_Etape }) { etape ->
-                    val checked = remember { mutableStateOf(etape.id_Etape in selectedSet) }
+                    val checkedState = remember { mutableStateOf(etape.id_Etape in selectedSet) }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -123,15 +126,15 @@ fun ParametresExclusionsScreen(
                                 roleLog = etape.role_Log
                                 phase = etape.phase_Etape
                                 duree = etape.duree_Etape?.toString() ?: ""
-                                predecessor = etape.predecesseur_Etape ?: ""    // corrected
-                                successor = etape.successeur_Etape ?: ""       // corrected
+                                predecessor = etape.predecesseurs.flatMap { it.ids }.joinToString("!")
+                                successor = etape.successeurs.flatMap { it.ids }.joinToString("!")
                                 showDialog = true
                             }
                     ) {
                         Checkbox(
-                            checked = checked.value,
+                            checked = checkedState.value,
                             onCheckedChange = { isChecked ->
-                                checked.value = isChecked
+                                checkedState.value = isChecked
                                 if (isChecked) selectedSet.add(etape.id_Etape)
                                 else selectedSet.remove(etape.id_Etape)
                             }
@@ -148,9 +151,7 @@ fun ParametresExclusionsScreen(
 
             Button(
                 onClick = {
-                    StepFilterManager.saveExclusions(
-                        exclusions.mapValues { it.value.toList() }
-                    )
+                    StepFilterManager.saveExclusions(exclusions.mapValues { it.value.toList() })
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -268,15 +269,9 @@ fun ParametresExclusionsScreen(
                         }
                         etapeViewModel.loadEtapes(context)
                         showDialog = false
-                    }) {
-                        Text("OK")
-                    }
+                    }) { Text("OK") }
                 },
-                dismissButton = {
-                    TextButton(onClick = { showDialog = false }) {
-                        Text("Annuler")
-                    }
-                }
+                dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Annuler") } }
             )
         }
     }
@@ -289,7 +284,7 @@ fun DropdownMenuCoupleSelector(
     onSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
+    Box(modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = selected,
             onValueChange = {},
@@ -302,7 +297,11 @@ fun DropdownMenuCoupleSelector(
             },
             modifier = Modifier.fillMaxWidth()
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option) },

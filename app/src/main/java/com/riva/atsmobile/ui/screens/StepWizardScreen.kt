@@ -12,7 +12,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -20,13 +19,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.riva.atsmobile.logic.StepFilterManager
-import com.riva.atsmobile.model.Etape
-import com.riva.atsmobile.model.EtapeValidationDto
-import com.riva.atsmobile.model.Gamme
+import com.riva.atsmobile.model.*
 import com.riva.atsmobile.ui.shared.BaseScreen
-import com.riva.atsmobile.viewmodel.EtapeViewModel
-import com.riva.atsmobile.viewmodel.SelectionViewModel
-import kotlinx.coroutines.launch
+import com.riva.atsmobile.viewmodel.*
 
 @Composable
 fun StepWizardScreen(
@@ -46,8 +41,7 @@ fun StepWizardScreen(
     val desiredGamme: Gamme? = selectionViewModel.memoireGammeVisee
     val nbFilsActuel by selectionViewModel.nbFilsActuelFlow.collectAsState()
     val nbFilsVise by selectionViewModel.nbFilsViseFlow.collectAsState()
-    // --- Récupération du flag ADMIN ---
-    val isAdmin by selectionViewModel.isAdmin.collectAsState()  // :contentReference[oaicite:2]{index=2}
+    val isAdmin by selectionViewModel.isAdmin.collectAsState()
 
     var idsToExclude by remember { mutableStateOf(emptyList<Int>()) }
     LaunchedEffect(nbFilsActuel, nbFilsVise) {
@@ -59,6 +53,10 @@ fun StepWizardScreen(
         derivedStateOf { etapes.filter { it.id_Etape !in idsToExclude } }
     }
 
+    val etapesFiltresTriees by remember(etapesFiltres) {
+        derivedStateOf { getOrderedSteps(etapesFiltres) }
+    }
+
     BaseScreen(
         title = "Étapes de changement",
         navController = navController,
@@ -67,7 +65,7 @@ fun StepWizardScreen(
         showLogout = false,
         connectionStatus = true
     ) { padding ->
-        if (etapesFiltres.isEmpty()) {
+        if (etapesFiltresTriees.isEmpty()) {
             Text(
                 "Aucune étape trouvée.",
                 color = Color.White,
@@ -88,22 +86,17 @@ fun StepWizardScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             Text(
-                "✔ ${etapesFiltres.count { it.etat_Etape == "VALIDE" }} / ${etapesFiltres.size} étapes validées",
+                "✔ ${etapesFiltresTriees.count { it.etat_Etape == "VALIDE" }} / ${etapesFiltresTriees.size} étapes validées",
                 color = Color.White,
                 style = MaterialTheme.typography.titleLarge
             )
+
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    "Actuelle: ${currentGamme?.designation ?: "-"} (${nbFilsActuel ?: "-"})",
-                    color = Color.LightGray
-                )
-                Text(
-                    "Visée: ${desiredGamme?.designation ?: "-"} (${nbFilsVise ?: "-"})",
-                    color = Color.LightGray
-                )
+                Text("Actuelle: ${currentGamme?.designation ?: "-"} (${nbFilsActuel ?: "-"})", color = Color.LightGray)
+                Text("Visée: ${desiredGamme?.designation ?: "-"} (${nbFilsVise ?: "-"})", color = Color.LightGray)
             }
 
             var soudeuseExpanded by remember { mutableStateOf(true) }
@@ -112,32 +105,32 @@ fun StepWizardScreen(
 
             ExpandableCard("Soudeuse", soudeuseExpanded, { soudeuseExpanded = !soudeuseExpanded }) {
                 EtapeCardGroup(
-                    title = "Soudeuse",
-                    etapes = etapesFiltres.filter { it.affectation_Etape?.contains("operateur_soudeuse") == true },
-                    etapeViewModel = etapeViewModel,
-                    context = context,
-                    cardColor = Color(0xFF263238),
-                    isAdmin = isAdmin    // :contentReference[oaicite:3]{index=3}
+                    "Soudeuse",
+                    etapesFiltresTriees.filter { it.affectation_Etape.contains("operateur_soudeuse") },
+                    etapeViewModel,
+                    context,
+                    Color(0xFF263238),
+                    isAdmin
                 )
             }
             ExpandableCard("Tréfileuse T1", tref1Expanded, { tref1Expanded = !tref1Expanded }) {
                 EtapeCardGroup(
-                    title = "Tréfileuse T1",
-                    etapes = etapesFiltres.filter { it.affectation_Etape?.contains("operateur_t1") == true },
-                    etapeViewModel = etapeViewModel,
-                    context = context,
-                    cardColor = Color(0xFF1E272E),
-                    isAdmin = isAdmin
+                    "Tréfileuse T1",
+                    etapesFiltresTriees.filter { it.affectation_Etape.contains("operateur_t1") },
+                    etapeViewModel,
+                    context,
+                    Color(0xFF1E272E),
+                    isAdmin
                 )
             }
             ExpandableCard("Tréfileuse T2", tref2Expanded, { tref2Expanded = !tref2Expanded }) {
                 EtapeCardGroup(
-                    title = "Tréfileuse T2",
-                    etapes = etapesFiltres.filter { it.affectation_Etape?.contains("operateur_t2") == true },
-                    etapeViewModel = etapeViewModel,
-                    context = context,
-                    cardColor = Color(0xFF2C3E50),
-                    isAdmin = isAdmin
+                    "Tréfileuse T2",
+                    etapesFiltresTriees.filter { it.affectation_Etape.contains("operateur_t2") },
+                    etapeViewModel,
+                    context,
+                    Color(0xFF2C3E50),
+                    isAdmin
                 )
             }
         }
@@ -180,30 +173,22 @@ private fun EtapeCardGroup(
     etapeViewModel: EtapeViewModel,
     context: Context,
     cardColor: Color,
-    isAdmin: Boolean     // ajout du flag
+    isAdmin: Boolean
 ) {
     var currentIndex by remember { mutableStateOf(0) }
     val etape = etapes.getOrNull(currentIndex) ?: return
-    val coroutineScope = rememberCoroutineScope()
-
-    // Initialisation des champs selon l'API
-    var description by remember(etape.id_Etape) { mutableStateOf(etape.description_Etape ?: "") }
-    LaunchedEffect(etape.description_Etape) { description = etape.description_Etape ?: "" }
-
-    var commentaire by remember(etape.id_Etape) { mutableStateOf(etape.commentaire_Etape_1 ?: "") }
-    LaunchedEffect(etape.commentaire_Etape_1) { commentaire = etape.commentaire_Etape_1 ?: "" }
-
-    var isValidated by remember { mutableStateOf(etape.etat_Etape == "VALIDE") }
-    LaunchedEffect(etape.etat_Etape) { isValidated = (etape.etat_Etape == "VALIDE") }
-
     var startTime by remember(etape.id_Etape) { mutableStateOf(System.currentTimeMillis()) }
     var bgColor by remember { mutableStateOf(Color.Transparent) }
     val animatedBgColor by animateColorAsState(targetValue = bgColor)
 
-    LaunchedEffect(etape.id_Etape) {
-        startTime = System.currentTimeMillis()
-        bgColor = Color.Transparent
-    }
+    var description by remember(etape.id_Etape) { mutableStateOf(etape.description_Etape.orEmpty()) }
+    LaunchedEffect(etape.description_Etape) { description = etape.description_Etape.orEmpty() }
+
+    var commentaire by remember(etape.id_Etape) { mutableStateOf(etape.commentaire_Etape_1.orEmpty()) }
+    LaunchedEffect(etape.commentaire_Etape_1) { commentaire = etape.commentaire_Etape_1.orEmpty() }
+
+    var isValidated by remember(etape.etat_Etape) { mutableStateOf(etape.etat_Etape == "VALIDE") }
+    LaunchedEffect(etape.etat_Etape) { isValidated = etape.etat_Etape == "VALIDE" }
 
     Card(
         Modifier
@@ -220,9 +205,12 @@ private fun EtapeCardGroup(
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(Modifier.height(8.dp))
-            Text(etape.libelle_Etape, color = Color.White, style = MaterialTheme.typography.titleLarge)
+            Text(
+                etape.libelle_Etape,
+                color = Color.White,
+                style = MaterialTheme.typography.titleLarge
+            )
 
-            //–– Champ Description : affichage conditionnel & non modifiable sauf ADMIN ––
             if (!etape.description_Etape.isNullOrBlank() || isAdmin) {
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
@@ -252,7 +240,10 @@ private fun EtapeCardGroup(
             )
 
             Spacer(Modifier.height(20.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
                 Button(
                     onClick = { if (currentIndex > 0) currentIndex-- },
                     enabled = currentIndex > 0,
@@ -261,22 +252,20 @@ private fun EtapeCardGroup(
 
                 Button(
                     onClick = {
-                        coroutineScope.launch {
-                            val elapsed = ((System.currentTimeMillis() - startTime) / 1000).toInt()
-                            val dto = EtapeValidationDto(
-                                id_Etape    = etape.id_Etape,
-                                commentaire = commentaire.trim(),
-                                description = description.trim(),
-                                tempsReel   = if (isValidated) 0 else elapsed
-                            )
-                            val success = if (isValidated) {
-                                etapeViewModel.devaliderEtape(context, dto)
-                            } else {
-                                etapeViewModel.validerEtape(context, dto)
+                        val elapsed = ((System.currentTimeMillis() - startTime) / 1000).toInt()
+                        val dto = EtapeValidationDto(
+                            id_Etape = etape.id_Etape,
+                            commentaire = commentaire.trim(),
+                            description = description.trim(),
+                            tempsReel = if (isValidated) 0 else elapsed
+                        )
+                        if (isValidated) {
+                            etapeViewModel.devaliderEtape(context, dto) { success ->
+                                if (success) bgColor = Color(0x33FFFF00)
                             }
-                            if (success) {
-                                bgColor = if (!isValidated) Color(0x3300FF00) else Color(0x33FFFF00)
-                                etapeViewModel.loadEtapes(context)
+                        } else {
+                            etapeViewModel.validerEtape(context, dto) { success ->
+                                if (success) bgColor = Color(0x3300FF00)
                             }
                         }
                     },
@@ -293,4 +282,20 @@ private fun EtapeCardGroup(
             }
         }
     }
+}
+
+
+private fun getOrderedSteps(etapes: List<Etape>): List<Etape> {
+    val etapeMap = etapes.associateBy { it.id_Etape }
+    val visited = mutableSetOf<Int>()
+    val orderedList = mutableListOf<Etape>()
+
+    fun visit(etape: Etape) {
+        if (!visited.add(etape.id_Etape)) return
+        etape.predecesseurs.flatMap { it.ids }.filter { it != 0 }.mapNotNull { etapeMap[it] }.forEach(::visit)
+        if (etape !in orderedList) orderedList += etape
+    }
+
+    etapes.forEach(::visit)
+    return orderedList
 }

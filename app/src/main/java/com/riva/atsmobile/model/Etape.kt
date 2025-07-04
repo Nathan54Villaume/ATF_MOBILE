@@ -2,6 +2,17 @@ package com.riva.atsmobile.model
 
 import com.google.gson.annotations.SerializedName
 
+/**
+ * Représente un lien entre étapes pour un opérateur donné.
+ */
+data class EtapeRelation(
+    @SerializedName("operateur")
+    val operateur: String,
+
+    @SerializedName("ids")
+    val ids: List<Int>
+)
+
 data class Etape(
     @SerializedName("id_etape")
     val id_Etape: Int,
@@ -33,10 +44,9 @@ data class Etape(
     @SerializedName("commentaire_etape_1")
     val commentaire_Etape_1: String?,
 
-    // On reprend simplement les deux chaînes brutes
-    @SerializedName("predecesseur_etape")
-    val predecesseur_Etape: String?,
+    @SerializedName("predecesseurs")
+    val predecesseurs: List<EtapeRelation>,
 
-    @SerializedName("successeur_etape")
-    val successeur_Etape: String?
+    @SerializedName("successeurs")
+    val successeurs: List<EtapeRelation>
 )
