@@ -12,6 +12,7 @@ import com.riva.atsmobile.utils.ApiConfig
 import com.riva.atsmobile.utils.LocalAuthManager
 import com.riva.atsmobile.utils.isNetworkAvailable
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,54 +24,54 @@ import okhttp3.RequestBody.Companion.toRequestBody
 class SelectionViewModel : ViewModel() {
 
     private val _matricule = MutableStateFlow("")
-    val matricule: StateFlow<String> = _matricule.asStateFlow()
+    val matricule = _matricule.asStateFlow()
 
     private val _nom = MutableStateFlow("")
-    val nom: StateFlow<String> = _nom.asStateFlow()
+    val nom = _nom.asStateFlow()
 
     private val _role = MutableStateFlow("")
-    val role: StateFlow<String> = _role.asStateFlow()
+    val role = _role.asStateFlow()
 
     private val _annee = MutableStateFlow(2025)
-    val annee: StateFlow<Int> = _annee.asStateFlow()
+    val annee = _annee.asStateFlow()
 
     private val _mois = MutableStateFlow(5)
-    val mois: StateFlow<Int> = _mois.asStateFlow()
+    val mois = _mois.asStateFlow()
 
     private val _devModeEnabled = MutableStateFlow(false)
-    val devModeEnabled: StateFlow<Boolean> = _devModeEnabled.asStateFlow()
+    val devModeEnabled = _devModeEnabled.asStateFlow()
 
     private val _isOnline = MutableStateFlow(false)
-    val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
+    val isOnline = _isOnline.asStateFlow()
 
     private var isNetworkLoopStarted = false
 
     private val _gammes = MutableStateFlow<List<Gamme>>(emptyList())
-    val gammes: StateFlow<List<Gamme>> = _gammes.asStateFlow()
+    val gammes = _gammes.asStateFlow()
 
     private val _currentGamme = MutableStateFlow<Gamme?>(null)
-    val currentGamme: StateFlow<Gamme?> = _currentGamme.asStateFlow()
+    val currentGamme = _currentGamme.asStateFlow()
 
     private val _desiredGamme = MutableStateFlow<Gamme?>(null)
-    val desiredGamme: StateFlow<Gamme?> = _desiredGamme.asStateFlow()
+    val desiredGamme = _desiredGamme.asStateFlow()
 
     private val _gammesSelectionnees = MutableStateFlow<Set<String>>(emptySet())
-    val gammesSelectionnees: StateFlow<Set<String>> = _gammesSelectionnees.asStateFlow()
+    val gammesSelectionnees = _gammesSelectionnees.asStateFlow()
 
     private val _zoneDeTravail = MutableStateFlow("")
-    val zoneDeTravail: StateFlow<String> = _zoneDeTravail.asStateFlow()
+    val zoneDeTravail = _zoneDeTravail.asStateFlow()
 
     private val _intervention = MutableStateFlow("")
-    val intervention: StateFlow<String> = _intervention.asStateFlow()
+    val intervention = _intervention.asStateFlow()
 
     private val _groupedValues = MutableStateFlow<Map<String, Map<String, Any>>>(emptyMap())
-    val groupedValues: StateFlow<Map<String, Map<String, Any>>> = _groupedValues.asStateFlow()
+    val groupedValues = _groupedValues.asStateFlow()
 
     private val _nbFilsActuel = MutableStateFlow<Int?>(null)
-    val nbFilsActuelFlow: StateFlow<Int?> = _nbFilsActuel.asStateFlow()
+    val nbFilsActuelFlow = _nbFilsActuel.asStateFlow()
 
     private val _nbFilsVise = MutableStateFlow<Int?>(null)
-    val nbFilsViseFlow: StateFlow<Int?> = _nbFilsVise.asStateFlow()
+    val nbFilsViseFlow = _nbFilsVise.asStateFlow()
 
     var memoireGammeActuelle: Gamme? = null
     var memoireGammeVisee: Gamme? = null
@@ -130,9 +131,9 @@ class SelectionViewModel : ViewModel() {
 
     fun selectCurrentGamme(g: Gamme) {
         _currentGamme.value = g
-        if (_desiredGamme.value == g) _desiredGamme.value = null
         memoireGammeActuelle = g
         _nbFilsActuel.value = g.nbFilChaine
+        if (_desiredGamme.value == g) _desiredGamme.value = null
     }
 
     fun selectDesiredGamme(g: Gamme) {
@@ -143,8 +144,13 @@ class SelectionViewModel : ViewModel() {
         }
     }
 
-    fun setZoneDeTravail(zone: String) { _zoneDeTravail.value = zone }
-    fun setIntervention(inter: String) { _intervention.value = inter }
+    fun setZoneDeTravail(zone: String) {
+        _zoneDeTravail.value = zone
+    }
+
+    fun setIntervention(inter: String) {
+        _intervention.value = inter
+    }
 
     fun validateGammeChange(onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
@@ -167,7 +173,11 @@ class SelectionViewModel : ViewModel() {
 
     fun updateOnlineStatus(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
-            _isOnline.value = try { isNetworkAvailable(context) } catch (_: Exception) { false }
+            _isOnline.value = try {
+                isNetworkAvailable(context)
+            } catch (_: Exception) {
+                false
+            }
         }
     }
 
@@ -177,7 +187,7 @@ class SelectionViewModel : ViewModel() {
         viewModelScope.launch {
             while (true) {
                 updateOnlineStatus(context)
-                kotlinx.coroutines.delay(intervalMillis)
+                delay(intervalMillis)
             }
         }
     }
@@ -189,6 +199,12 @@ class SelectionViewModel : ViewModel() {
         setAnnee(2025)
         setMois(1)
         setDevMode(false)
+        _currentGamme.value = null
+        _desiredGamme.value = null
+        memoireGammeActuelle = null
+        memoireGammeVisee = null
+        _nbFilsActuel.value = null
+        _nbFilsVise.value = null
     }
 
     fun chargerSessionLocale(context: Context) {

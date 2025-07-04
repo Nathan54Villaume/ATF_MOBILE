@@ -1,3 +1,4 @@
+// file: app/src/main/java/com/riva/atsmobile/ui/screens/TypeOperationScreen.kt
 package com.riva.atsmobile.ui.screens
 
 import android.content.res.Configuration
@@ -15,7 +16,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -25,36 +25,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.toSize
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.zIndex
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.*
 import androidx.navigation.NavController
 import com.riva.atsmobile.R
 import com.riva.atsmobile.model.Gamme
@@ -67,7 +56,8 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 // Trim or fallback
-fun String?.safeText(): String = this?.trim().takeIf { !it.isNullOrEmpty() } ?: "-"
+fun String?.safeText(): String =
+    this?.trim().takeIf { !it.isNullOrEmpty() } ?: "-"
 
 // Logos principal + chaines
 data class GammeLogos(
@@ -97,7 +87,7 @@ fun getImageForGamme(gamme: Gamme?): GammeLogos {
             "PAF 10", "PAF C", "PAF R", "PAF V", "ST 15 C" -> R.drawable.chaines12
             else -> null
         },
-        dimension = when (gamme?.dimension?.trim()?: "") {
+        dimension = when (gamme?.dimension?.trim() ?: "") {
             "4200x2400" -> R.drawable.us4200x2400
             "6000x2400" -> R.drawable.us6000x2400
             "3600x2400" -> R.drawable.us3600x2400
@@ -109,15 +99,12 @@ fun getImageForGamme(gamme: Gamme?): GammeLogos {
             "6x6" -> R.drawable.u6x6
             "7x7" -> R.drawable.u7x7
             "6x7" -> R.drawable.u6x7
-            "5,5x5,5" -> R.drawable.u55x55
-            "5.5x5.5" -> R.drawable.u55x55
-            "4,5x4,5" -> R.drawable.u45x45
-            "4.5x4.5" -> R.drawable.u45x45
+            "5,5x5,5", "5.5x5.5" -> R.drawable.u55x55
+            "4,5x4,5", "4.5x4.5" -> R.drawable.u45x45
             else -> null
         }
     )
 }
-
 
 @Composable
 fun TransitionArrow(
@@ -136,10 +123,10 @@ fun TransitionArrow(
     val offset = offsetFloat.dp
 
     Icon(
-        imageVector = Icons.Default.ArrowDownward, // toujours vers le bas
+        imageVector = Icons.Default.ArrowDownward,
         contentDescription = null,
         modifier = modifier
-            .offset(y = offset)      // plus d’axe X
+            .offset(y = offset)
             .size(width, height)
             .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
             .padding(4.dp)
@@ -186,20 +173,19 @@ fun DetailsCard(
                 gamme?.let {
                     Text(" ${it.designation.safeText()}", style = detailStyle)
                     Text(" ${it.dimension} mm", style = detailStyle)
-                    Text(" ${it.diamChaine} mm x ${it.diamTrame} mm ", style = detailStyle)
+                    Text(" ${it.diamChaine} mm x ${it.diamTrame} mm", style = detailStyle)
                     Text(" ${it.espFilChaineTrame} mm", style = detailStyle)
                 } ?: Text("Aucune sélection", style = noSelectionStyle)
             }
-
             Row(
                 modifier = Modifier.padding(start = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                logos.principale?.let { Image(painterResource(it), null, Modifier.size(mainSize)) }
-                logos.chaines?.let { Image(painterResource(it), null, Modifier.size(secondarySize)) }
-                logos.dimension?.let { Image(painterResource(it), null, Modifier.size(secondarySize)) }
-                logos.diametre?.let { Image(painterResource(it), null, Modifier.size(secondarySize)) }
+                logos.principale?.let { Image(painterResource(it), contentDescription = null, modifier = Modifier.size(mainSize)) }
+                logos.chaines?.let    { Image(painterResource(it), contentDescription = null, modifier = Modifier.size(secondarySize)) }
+                logos.dimension?.let  { Image(painterResource(it), contentDescription = null, modifier = Modifier.size(secondarySize)) }
+                logos.diametre?.let   { Image(painterResource(it), contentDescription = null, modifier = Modifier.size(secondarySize)) }
             }
         }
     }
@@ -243,7 +229,7 @@ fun SelectionColumn(
             ) {
                 Text(
                     "Sélectionnez vos gammes",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 )
                 GammeGrid(
                     title = "GAMME ACTUELLE",
@@ -253,21 +239,7 @@ fun SelectionColumn(
                     restrict = null,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp),
-                    titleStyle = TextStyle(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFFF9800),
-                        fontFamily = FontFamily.Serif
-                    ),
-                    cardShape = RoundedCornerShape(16.dp),
-                    selectedColor = Color(0xFFFF9800),
-                    selectedBgColor = Color(0xFF2C2C2C),
-                    defaultBgColor = Color(0xFF2C2C2C),
-                    defaultColor = Color(0xFFE0E0E0),
-                    disabledBgColor = Color(0xFF424242),
-                    disabledColor = Color(0xFF888888),
-                    cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
+                        .heightIn(min = 100.dp, max = 300.dp)
                 )
                 GammeGrid(
                     title = "GAMME VISÉE",
@@ -277,27 +249,12 @@ fun SelectionColumn(
                     restrict = current,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 300.dp),
-                    titleStyle = TextStyle(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFF9800),
-                        fontFamily = FontFamily.Serif
-                    ),
-                    cardShape = RoundedCornerShape(16.dp),
-                    selectedColor = Color(0xFFFF9800),
-                    selectedBgColor = Color(0xFF2C2C2C),
-                    defaultBgColor = Color(0xFF2C2C2C),
-                    defaultColor = Color(0xFFE0E0E0),
-                    disabledBgColor = Color(0xFF424242),
-                    disabledColor = Color(0xFF888888),
-                    cardPadding = PaddingValues(vertical = 12.dp, horizontal = 6.dp)
+                        .heightIn(min = 100.dp, max = 300.dp)
                 )
             }
         }
     }
 }
-
 
 @Composable
 fun DetailsColumn(
@@ -330,9 +287,9 @@ fun DetailsColumn(
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top // stack from the top
+            verticalArrangement = Arrangement.Top
         ) {
-            // ─── GAMME ACTUELLE ─────────────────────────
+            // Gamme actuelle
             Column(
                 modifier = Modifier.onGloballyPositioned {
                     topY = it.positionInParent().y
@@ -352,26 +309,14 @@ fun DetailsColumn(
                 Spacer(Modifier.height(8.dp))
                 DetailsCard(
                     gamme = current,
-                    detailStyle = TextStyle(
-                        color = Color(0xFFEEEEEE),
-                        fontSize = 20.sp,
-                        fontFamily = FontFamily.SansSerif
-                    ),
-                    noSelectionStyle = TextStyle(
-                        color = Color.Red,
-                        fontSize = 20.sp,
-                        fontStyle = FontStyle.Italic
-                    )
+                    detailStyle = TextStyle(color = Color(0xFFEEEEEE), fontSize = 20.sp),
+                    noSelectionStyle = TextStyle(color = Color.Red, fontSize = 20.sp, fontStyle = FontStyle.Italic)
                 )
             }
-
             Spacer(Modifier.height(24.dp))
-
-            // ─── GAMME VISÉE ────────────────────────────
+            // Gamme visée
             Column(
-                modifier = Modifier.onGloballyPositioned {
-                    bottomY = it.positionInParent().y
-                },
+                modifier = Modifier.onGloballyPositioned { bottomY = it.positionInParent().y },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -386,58 +331,15 @@ fun DetailsColumn(
                 Spacer(Modifier.height(8.dp))
                 DetailsCard(
                     gamme = desired,
-                    detailStyle = TextStyle(
-                        color = Color(0xFFEEEEEE),
-                        fontSize = 20.sp,
-                        fontFamily = FontFamily.SansSerif
-                    ),
-                    noSelectionStyle = TextStyle(
-                        color = Color.Red,
-                        fontSize = 20.sp,
-                        fontStyle = FontStyle.Italic
-                    )
+                    detailStyle = TextStyle(color = Color(0xFFEEEEEE), fontSize = 20.sp),
+                    noSelectionStyle = TextStyle(color = Color.Red, fontSize = 20.sp, fontStyle = FontStyle.Italic)
                 )
             }
-
-            Spacer(Modifier.height(32.dp)) // ← extra gap before buttons
-
-            // ─── ACTION ROW ────────────────────────────
-            ActionRow(
-                current = current,
-                desired = desired,
-                role = role,
-                navController = navController,
-                viewModel = viewModel,
-                snackbarHost = snackbarHost,
-                zone = zone,
-                intervention = intervention,
-                scope = rememberCoroutineScope()
-            )
-
-
-
-            // ─── FOOTER ─────────────────────────────────
-            //Footer(zone = zone, intervention = intervention)
+            Spacer(Modifier.height(32.dp))
+            // Action row moved down to always show "Valider"
         }
-
-        TransitionArrow(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = arrowOffset)
-                .zIndex(1f),
-            width = 80.dp,
-            height = 30.dp
-        )
     }
 }
-
-
-
-
-
-
-
-
 
 @Composable
 fun TypeOperationScreen(
@@ -461,10 +363,11 @@ fun TypeOperationScreen(
 
     var isLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(Unit) {
         isLoading = true; loadError = null
         try { viewModel.chargerGammesDepuisApi(context) }
-        catch (e: Exception) { loadError = "Erreur : ${'$'}{e.message}" }
+        catch (e: Exception) { loadError = "Erreur : ${e.message}" }
         finally { isLoading = false }
     }
 
@@ -477,9 +380,16 @@ fun TypeOperationScreen(
         connectionStatus = isConnected
     ) { padding ->
         Box(
-            Modifier.fillMaxSize().padding(padding)
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()) // make scrollable
+                .padding(padding)
         ) {
-            val selection = @Composable {
+            Column(
+                Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Selection
                 SelectionColumn(
                     gammes = gammes,
                     selectedCodes = gammesSelectionnees,
@@ -492,9 +402,8 @@ fun TypeOperationScreen(
                     scope = scope,
                     isPortrait = isPortrait
                 )
-            }
-
-            val details = @Composable {
+                Spacer(Modifier.height(32.dp))
+                // Details
                 DetailsColumn(
                     current = current,
                     desired = desired,
@@ -507,17 +416,22 @@ fun TypeOperationScreen(
                 )
             }
 
-            if (isPortrait) {
-                Column(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f)) { selection() }
-                    Box(Modifier.weight(1f)) { details() }
-                }
-            } else {
-                Row(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f)) { selection() }
-                    Box(Modifier.weight(1f)) { details() }
-                }
-            }
+            // Always-visible "Valider" button
+            ActionRow(
+                current = current,
+                desired = desired,
+                role = role,
+                navController = navController,
+                viewModel = viewModel,
+                snackbarHost = snackbarHost,
+                zone = zone,
+                intervention = intervention,
+                scope = scope,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+            )
 
             SnackbarHost(
                 hostState = snackbarHost,
@@ -526,10 +440,6 @@ fun TypeOperationScreen(
         }
     }
 }
-
-
-
-
 
 @Composable
 private fun ActionRow(
@@ -541,17 +451,15 @@ private fun ActionRow(
     snackbarHost: SnackbarHostState,
     zone: String,
     intervention: String,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center
     ) {
-        // … vos boutons Retour / Admin …
-
         ElevatedButton(
             onClick = {
-                // On ne stocke QUE la désignation (String) dans le SavedStateHandle
                 val curDesig = current?.designation.orEmpty()
                 val desDesig = desired?.designation.orEmpty()
                 navController.currentBackStackEntry
@@ -560,7 +468,6 @@ private fun ActionRow(
                 navController.currentBackStackEntry
                     ?.savedStateHandle
                     ?.set("desiredDesignation", desDesig)
-
                 navController.navigate(Routes.StepWizard)
             },
             enabled = current != null && desired != null,
@@ -568,14 +475,10 @@ private fun ActionRow(
         ) {
             Icon(Icons.Default.Check, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Valider")
+            Text("Valider", fontSize = 18.sp)
         }
     }
 }
-
-
-
-
 
 @Composable
 private fun GammeGrid(
@@ -585,8 +488,8 @@ private fun GammeGrid(
     onSelect: (Gamme) -> Unit,
     restrict: Gamme?,
     modifier: Modifier,
-    titleStyle: TextStyle = MaterialTheme.typography.titleMedium,
-    cardShape: RoundedCornerShape = RoundedCornerShape(20.dp),
+    titleStyle: TextStyle = MaterialTheme.typography.headlineSmall.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold),
+    cardShape: RoundedCornerShape = RoundedCornerShape(16.dp),
     selectedColor: Color = MaterialTheme.colorScheme.primary,
     selectedBgColor: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
     defaultBgColor: Color = Color(0xFF1E1E1E),
@@ -596,10 +499,10 @@ private fun GammeGrid(
     cardPadding: PaddingValues = PaddingValues(vertical = 8.dp, horizontal = 4.dp)
 ) {
     Column {
-        Text(title, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+        Text(title, style = titleStyle)
         Spacer(modifier = Modifier.height(8.dp))
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+            columns = GridCells.Fixed(4),
             modifier = modifier,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -608,24 +511,24 @@ private fun GammeGrid(
                 val disabled = restrict != null && gamme == restrict
                 val borderColor by animateColorAsState(
                     when {
-                        disabled -> disabledColor
+                        disabled       -> disabledColor
                         gamme == selected -> selectedColor
-                        else -> Color.Gray
+                        else           -> Color.Gray
                     },
                     tween(500)
                 )
                 val bgColor by animateColorAsState(
                     when {
-                        disabled -> disabledBgColor
+                        disabled       -> disabledBgColor
                         gamme == selected -> selectedBgColor
-                        else -> defaultBgColor
+                        else           -> defaultBgColor
                     },
                     tween(500)
                 )
                 val textColor = when {
-                    disabled -> disabledColor
+                    disabled       -> disabledColor
                     gamme == selected -> selectedColor
-                    else -> defaultColor
+                    else           -> defaultColor
                 }
                 val fontWeight = if (gamme == selected) FontWeight.Bold else FontWeight.Normal
                 val scale by animateFloatAsState(if (gamme == selected) 1.05f else 1f, tween(300))
@@ -643,14 +546,13 @@ private fun GammeGrid(
                         text = gamme.designation.safeText(),
                         color = textColor,
                         fontWeight = fontWeight,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp)
                     )
                 }
             }
         }
     }
 }
-
 
 @Composable
 private fun Footer(zone: String, intervention: String) {

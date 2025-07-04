@@ -1,3 +1,4 @@
+// file: app/src/main/java/com/riva/atsmobile/ui/screens/StepWizardScreen.kt
 package com.riva.atsmobile.ui.screens
 
 import android.content.Context
@@ -18,19 +19,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.riva.atsmobile.logic.StepFilterManager
 import com.riva.atsmobile.model.Etape
-import com.riva.atsmobile.utils.ApiConfig
+import com.riva.atsmobile.model.EtapeValidationDto
+import com.riva.atsmobile.model.Gamme
+import com.riva.atsmobile.ui.shared.BaseScreen
 import com.riva.atsmobile.viewmodel.EtapeViewModel
 import com.riva.atsmobile.viewmodel.SelectionViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
-
 
 @Composable
 fun StepWizardScreen(
@@ -39,89 +35,117 @@ fun StepWizardScreen(
     etapeViewModel: EtapeViewModel
 ) {
     val context = LocalContext.current
-    val etapes by etapeViewModel.etapes.collectAsState()
-    val soudeuseEtapes = etapes.filter { it.affectation_etape?.contains("operateur_soudeuse") == true }
-    val trefileuseEtapes = etapes.filter { it.affectation_etape?.contains("operateur_t1") == true }
-    val trefileuse2Etapes = etapes.filter { it.affectation_etape?.contains("operateur_t2") == true }
 
-    var currentIndexSoudeuse by remember { mutableStateOf(0) }
-    var currentIndexTrefileuse by remember { mutableStateOf(0) }
-    var currentIndexTrefileuse2 by remember { mutableStateOf(0) }
-    var soudeuseExpanded by remember { mutableStateOf(true) }
-    var trefileuseExpanded by remember { mutableStateOf(true) }
-    var trefileuse2Expanded by remember { mutableStateOf(true) }
-    val coroutineScope = rememberCoroutineScope()
-
-    val currentGamme = selectionViewModel.memoireGammeActuelle
-    val desiredGamme = selectionViewModel.memoireGammeVisee
-    val nbFilsActuel = currentGamme?.nbFilChaine
-    val nbFilsVise = desiredGamme?.nbFilChaine
-
-
-    LaunchedEffect(true) {
+    LaunchedEffect(Unit) {
+        StepFilterManager.init(context)
         etapeViewModel.loadEtapes(context)
-
-        if (nbFilsActuel != null && nbFilsVise != null && nbFilsActuel != nbFilsVise) {
-            Log.d("StepWizardScreen", "Changement de ${nbFilsActuel} à ${nbFilsVise} fils de chaîne détecté")
-        }
     }
 
-    if (soudeuseEtapes.isEmpty() && trefileuseEtapes.isEmpty() && trefileuse2Etapes.isEmpty()) {
-        Text("Aucune étape trouvée.", color = Color.White, modifier = Modifier.fillMaxSize().padding(32.dp))
-        return
+    val etapes by etapeViewModel.etapes.collectAsState()
+    val currentGamme: Gamme? = selectionViewModel.memoireGammeActuelle
+    val desiredGamme: Gamme? = selectionViewModel.memoireGammeVisee
+    val nbFilsActuel by selectionViewModel.nbFilsActuelFlow.collectAsState()
+    val nbFilsVise by selectionViewModel.nbFilsViseFlow.collectAsState()
+
+    var idsToExclude by remember { mutableStateOf(emptyList<Int>()) }
+    LaunchedEffect(nbFilsActuel, nbFilsVise) {
+        idsToExclude = StepFilterManager.getExcludedSteps(nbFilsActuel, nbFilsVise)
+        Log.d("StepWizard", "Exclusions: $idsToExclude")
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        Text("✔ ${etapes.count { it.etat_etape == "VALIDE" }} / ${etapes.size} étapes validées", color = Color.White, style = MaterialTheme.typography.titleLarge)
+    val etapesFiltres by remember(etapes, idsToExclude) {
+        derivedStateOf { etapes.filter { it.id_Etape !in idsToExclude } }
+    }
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    BaseScreen(
+        title = "Étapes de changement",
+        navController = navController,
+        viewModel = selectionViewModel,
+        showBack = true,
+        showLogout = false,
+        connectionStatus = true
+    ) { padding ->
+        if (etapesFiltres.isEmpty()) {
             Text(
-                text = "Actuelle: ${currentGamme?.designation ?: "-"} (${nbFilsActuel ?: "-"} fils)",
-                color = Color.LightGray
+                "Aucune étape trouvée.",
+                color = Color.White,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp)
+                    .padding(padding)
             )
-            Text(
-                text = "Visée: ${desiredGamme?.designation ?: "-"} (${nbFilsVise ?: "-"} fils)",
-                color = Color.LightGray
-            )
+            return@BaseScreen
         }
 
-        ExpandableCard(
-            title = "Soudeuse",
-            expanded = soudeuseExpanded,
-            onToggle = { soudeuseExpanded = !soudeuseExpanded },
-            content = {
-                EtapeCardGroup("Soudeuse", soudeuseEtapes, currentIndexSoudeuse, { currentIndexSoudeuse = it }, etapeViewModel, Color(0xFF263238))
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            Text(
+                "✔ ${etapesFiltres.count { it.etat_Etape == "VALIDE" }} / ${etapesFiltres.size} étapes validées",
+                color = Color.White,
+                style = MaterialTheme.typography.titleLarge
+            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Actuelle: ${currentGamme?.designation ?: "-"} (${nbFilsActuel ?: "-"})",
+                    color = Color.LightGray
+                )
+                Text(
+                    "Visée: ${desiredGamme?.designation ?: "-"} (${nbFilsVise ?: "-"})",
+                    color = Color.LightGray
+                )
             }
-        )
 
-        ExpandableCard(
-            title = "Tréfileuse T1",
-            expanded = trefileuseExpanded,
-            onToggle = { trefileuseExpanded = !trefileuseExpanded },
-            content = {
-                EtapeCardGroup("Tréfileuse T1", trefileuseEtapes, currentIndexTrefileuse, { currentIndexTrefileuse = it }, etapeViewModel, Color(0xFF1E272E))
-            }
-        )
+            var soudeuseExpanded by remember { mutableStateOf(true) }
+            var tref1Expanded by remember { mutableStateOf(true) }
+            var tref2Expanded by remember { mutableStateOf(true) }
 
-        ExpandableCard(
-            title = "Tréfileuse T2",
-            expanded = trefileuse2Expanded,
-            onToggle = { trefileuse2Expanded = !trefileuse2Expanded },
-            content = {
-                EtapeCardGroup("Tréfileuse T2", trefileuse2Etapes, currentIndexTrefileuse2, { currentIndexTrefileuse2 = it }, etapeViewModel, Color(0xFF2C3E50))
+            ExpandableCard("Soudeuse", soudeuseExpanded, { soudeuseExpanded = !soudeuseExpanded }) {
+                EtapeCardGroup(
+                    title = "Soudeuse",
+                    etapes = etapesFiltres.filter { it.affectation_Etape?.contains("operateur_soudeuse") == true },
+                    etapeViewModel = etapeViewModel,
+                    context = context,
+                    cardColor = Color(0xFF263238)
+                )
             }
-        )
+            ExpandableCard("Tréfileuse T1", tref1Expanded, { tref1Expanded = !tref1Expanded }) {
+                EtapeCardGroup(
+                    title = "Tréfileuse T1",
+                    etapes = etapesFiltres.filter { it.affectation_Etape?.contains("operateur_t1") == true },
+                    etapeViewModel = etapeViewModel,
+                    context = context,
+                    cardColor = Color(0xFF1E272E)
+                )
+            }
+            ExpandableCard("Tréfileuse T2", tref2Expanded, { tref2Expanded = !tref2Expanded }) {
+                EtapeCardGroup(
+                    title = "Tréfileuse T2",
+                    etapes = etapesFiltres.filter { it.affectation_Etape?.contains("operateur_t2") == true },
+                    etapeViewModel = etapeViewModel,
+                    context = context,
+                    cardColor = Color(0xFF2C3E50)
+                )
+            }
+        }
     }
 }
 
 @Composable
-fun ExpandableCard(title: String, expanded: Boolean, onToggle: () -> Unit, content: @Composable () -> Unit) {
+private fun ExpandableCard(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
     Column {
         Text(
             text = title,
@@ -133,185 +157,132 @@ fun ExpandableCard(title: String, expanded: Boolean, onToggle: () -> Unit, conte
                 .padding(vertical = 8.dp)
         )
         if (expanded) {
-            content()
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF121212))
+                    .padding(8.dp),
+                content = content
+            )
         }
     }
 }
 
-
 @Composable
-fun EtapeCardGroup(
+private fun EtapeCardGroup(
     title: String,
     etapes: List<Etape>,
-    currentIndex: Int,
-    onIndexChange: (Int) -> Unit,
     etapeViewModel: EtapeViewModel,
+    context: Context,
     cardColor: Color
 ) {
-    val context = LocalContext.current
+    var currentIndex by remember { mutableStateOf(0) }
+    val etape = etapes.getOrNull(currentIndex) ?: return
     val coroutineScope = rememberCoroutineScope()
-    val etape = etapes[currentIndex]
 
-    var commentaire by remember(etape.id_etape) { mutableStateOf(etape.commentaire_etape_1 ?: "") }
-    var description by remember(etape.id_etape) { mutableStateOf(etape.description_etape ?: "") }
-    var isValidated by remember(etape.id_etape) { mutableStateOf(etape.etat_etape == "VALIDE") }
-    var startTime by remember(etape.id_etape) { mutableStateOf(System.currentTimeMillis()) }
+    // On initialise ces 3 champs et on les remet à jour si l'API évolue
+    var description by remember(etape.id_Etape) { mutableStateOf(etape.description_Etape ?: "") }
+    LaunchedEffect(etape.description_Etape) { description = etape.description_Etape ?: "" }
+
+    var commentaire by remember(etape.id_Etape) { mutableStateOf(etape.commentaire_Etape_1 ?: "") }
+    LaunchedEffect(etape.commentaire_Etape_1) { commentaire = etape.commentaire_Etape_1 ?: "" }
+
+    var isValidated by remember { mutableStateOf(etape.etat_Etape == "VALIDE") }
+    LaunchedEffect(etape.etat_Etape) { isValidated = (etape.etat_Etape == "VALIDE") }
+
+    var startTime by remember(etape.id_Etape) { mutableStateOf(System.currentTimeMillis()) }
     var bgColor by remember { mutableStateOf(Color.Transparent) }
-    val animatedBgColor by animateColorAsState(targetValue = bgColor, label = "bgColorAnim")
+    val animatedBgColor by animateColorAsState(targetValue = bgColor)
 
-    LaunchedEffect(etape.id_etape) {
+    LaunchedEffect(etape.id_Etape) {
         startTime = System.currentTimeMillis()
         bgColor = Color.Transparent
     }
 
     Card(
-        modifier = Modifier
+        Modifier
             .fillMaxWidth()
             .background(animatedBgColor),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text("$title - Étape ${currentIndex + 1}/${etapes.size}", color = Color.White, style = MaterialTheme.typography.titleMedium)
-            Text(etape.libelle_etape, color = Color.White, style = MaterialTheme.typography.titleLarge)
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                text = "$title – Étape ${currentIndex + 1} / ${etapes.size}",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(etape.libelle_Etape, color = Color.White, style = MaterialTheme.typography.titleLarge)
 
             Spacer(Modifier.height(12.dp))
-            Text("Description", color = Color.White)
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Description") },
                 enabled = !isValidated,
-                placeholder = { Text("Entrer une description...", color = Color.Gray) },
-                textStyle = TextStyle(color = Color.White),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.Gray,
-                    unfocusedBorderColor = Color.DarkGray,
-                    cursorColor = Color.White
-                )
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = TextStyle(color = Color.White)
             )
 
             Spacer(Modifier.height(12.dp))
-            Text("Commentaire", color = Color.White)
             OutlinedTextField(
                 value = commentaire,
                 onValueChange = { commentaire = it },
-                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Commentaire") },
                 enabled = !isValidated,
-                placeholder = { Text("Entrer un commentaire...", color = Color.Gray) },
-                textStyle = TextStyle(color = Color.White),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.Gray,
-                    unfocusedBorderColor = Color.DarkGray,
-                    cursorColor = Color.White
-                )
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = TextStyle(color = Color.White)
             )
 
             Spacer(Modifier.height(12.dp))
-            Text(if (isValidated) "✅ Étape validée" else "⏳ Étape en attente", color = if (isValidated) Color.Green else Color.Yellow)
+            Text(
+                text = if (isValidated) "✅ Validée" else "⏳ En attente",
+                color = if (isValidated) Color.Green else Color.Yellow
+            )
 
             Spacer(Modifier.height(20.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(onClick = { if (currentIndex > 0) onIndexChange(currentIndex - 1) }, enabled = currentIndex > 0, modifier = Modifier.weight(1f)) {
-                    Text("Précédent", style = MaterialTheme.typography.titleMedium)
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Button(
+                    onClick = { if (currentIndex > 0) currentIndex-- },
+                    enabled = currentIndex > 0,
+                    modifier = Modifier.weight(1f)
+                ) { Text("Précédent") }
+
                 Button(
                     onClick = {
                         coroutineScope.launch {
                             val elapsed = ((System.currentTimeMillis() - startTime) / 1000).toInt()
-                            val filteredComment = if (commentaire.trim() == "Entrer un commentaire...") "" else commentaire.trim()
-                            val filteredDesc = if (description.trim() == "Entrer une description...") "" else description.trim()
+                            val dto = EtapeValidationDto(
+                                id_Etape    = etape.id_Etape,
+                                commentaire = commentaire.trim(),
+                                description = description.trim(),
+                                tempsReel   = if (isValidated) 0 else elapsed
+                            )
                             val success = if (isValidated) {
-                                postDevalidation(context, etape.id_etape, filteredComment, filteredDesc)
+                                etapeViewModel.devaliderEtape(context, dto)
                             } else {
-                                postCommentaire(context, etape.id_etape, filteredComment, filteredDesc, elapsed)
+                                etapeViewModel.validerEtape(context, dto)
                             }
-
                             if (success) {
+                                // on signale visuellement la réussite
                                 bgColor = if (!isValidated) Color(0x3300FF00) else Color(0x33FFFF00)
                                 etapeViewModel.loadEtapes(context)
-                                isValidated = !isValidated
-                            } else {
-                                Log.e("ETAPE", "Erreur lors de l'action")
                             }
                         }
                     },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(if (isValidated) "🔄 Dévalider" else "✅ Valider", style = MaterialTheme.typography.titleMedium)
+                    Text(if (isValidated) "🔄 Annuler" else "✅ Valider")
                 }
-                Button(onClick = { if (currentIndex < etapes.size - 1) onIndexChange(currentIndex + 1) }, enabled = currentIndex < etapes.size - 1, modifier = Modifier.weight(1f)) {
-                    Text("Suivant", style = MaterialTheme.typography.titleMedium)
-                }
+
+                Button(
+                    onClick = { if (currentIndex < etapes.lastIndex) currentIndex++ },
+                    enabled = currentIndex < etapes.lastIndex,
+                    modifier = Modifier.weight(1f)
+                ) { Text("Suivant") }
             }
         }
-    }
-}
-
-suspend fun postCommentaire(
-    context: Context,
-    etapeId: Int,
-    commentaire: String,
-    description: String,
-    tempsReel: Int
-): Boolean = withContext(Dispatchers.IO) {
-    try {
-        val url = "${ApiConfig.getBaseUrl(context)}/api/etapes/valider"
-        val json = JSONObject().apply {
-            put("id_etape", etapeId)
-            put("commentaire", commentaire)
-            put("description", description)
-            put("tempsReel", tempsReel)
-        }.toString()
-
-        val request = Request.Builder()
-            .url(url)
-            .post(json.toRequestBody("application/json".toMediaType()))
-            .addHeader("Accept", "application/json")
-            .build()
-
-        OkHttpClient().newCall(request).execute().use { response ->
-            Log.d("POST_COMMENTAIRE", "HTTP ${response.code} - ${response.body?.string()}")
-            response.isSuccessful
-        }
-    } catch (e: Exception) {
-        Log.e("POST_COMMENTAIRE", "Erreur réseau : ${e.message}", e)
-        false
-    }
-}
-
-suspend fun postDevalidation(
-    context: Context,
-    etapeId: Int,
-    commentaire: String,
-    description: String
-): Boolean = withContext(Dispatchers.IO) {
-    try {
-        val url = "${ApiConfig.getBaseUrl(context)}/api/etapes/devalider"
-        val json = JSONObject().apply {
-            put("id_etape", etapeId)
-            put("commentaire", commentaire)
-            put("description", description)
-            put("tempsReel", 0)
-        }.toString()
-
-        val request = Request.Builder()
-            .url(url)
-            .post(json.toRequestBody("application/json".toMediaType()))
-            .addHeader("Accept", "application/json")
-            .build()
-
-        OkHttpClient().newCall(request).execute().use { response ->
-            Log.d("POST_DEVALIDATION", "HTTP ${response.code} - ${response.body?.string()}")
-            response.isSuccessful
-        }
-    } catch (e: Exception) {
-        Log.e("POST_DEVALIDATION", "Erreur réseau : ${e.message}", e)
-        false
     }
 }

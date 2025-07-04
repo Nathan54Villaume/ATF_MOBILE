@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -31,7 +32,7 @@ fun ChangementGammeScreen(
     val selectedCodes by viewModel.gammesSelectionnees.collectAsState()
 
     BaseScreen(
-        title            = "Changement de gamme",
+        title            = "Type d'Operation",
         navController    = navController,
         viewModel        = viewModel,
         showBack         = true,
@@ -47,7 +48,7 @@ fun ChangementGammeScreen(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text  = "🔧 Changement de gamme",
+                    text  = "🔧 Type d'Operation",
                     style = MaterialTheme.typography.headlineLarge
                 )
                 Spacer(Modifier.height(24.dp))
@@ -60,7 +61,20 @@ fun ChangementGammeScreen(
                 ) {
                     Icon(Icons.Default.WbSunny, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Type Opération")
+                    Text("Changement de Gamme")
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+
+                        navController.navigate(Routes.TypeOperationParametres)
+                    }
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Reglages")
                 }
             }
         }

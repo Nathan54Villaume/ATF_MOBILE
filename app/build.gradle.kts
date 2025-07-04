@@ -66,6 +66,12 @@ android {
 }
 
 dependencies {
+    // --- Coroutines (pour Retrofit + ViewModel, etc.) ---
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+
+    // --- OkHttp Logging (pour voir les requêtes/réponses dans Logcat) ---
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     // --- Compose & Material3 ---
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.core.ktx)

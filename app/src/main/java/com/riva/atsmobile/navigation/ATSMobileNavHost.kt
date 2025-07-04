@@ -94,6 +94,24 @@ fun ATSMobileNavHost(
                 )
             }
         }
+
+        composable("param_exclusions") {
+            if (role == "ADMIN") {
+                val etapeViewModel = viewModel<EtapeViewModel>()
+                ParametresExclusionsScreen(
+                    navController = navController,
+                    selectionViewModel = selectionViewModel,
+                    etapeViewModel = etapeViewModel
+                )
+            } else {
+                LaunchedEffect(Unit) {
+                    navController.navigate(Routes.Login) { popUpTo(0) }
+                }
+            }
+        }
+
+
+
     }
 }
 

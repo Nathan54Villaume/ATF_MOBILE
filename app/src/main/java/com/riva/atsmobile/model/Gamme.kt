@@ -18,7 +18,7 @@ data class Gamme(
     @SerializedName("Masse_panneau") val massePanneau: Double,
     @SerializedName("Masse_paquet") val massePaquet: Double,
     @SerializedName("Horo_maj") val horoMaj: String,
-    @SerializedName("Valid") val valid: Int
+    @SerializedName("Valid") val valid: Int,
 ) {
     val nbFilChaine: Int?
         get() {

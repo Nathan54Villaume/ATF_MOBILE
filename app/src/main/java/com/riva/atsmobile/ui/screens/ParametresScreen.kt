@@ -154,6 +154,19 @@ fun ParametresScreen(navController: NavController, viewModel: SelectionViewModel
                     ) {
                         Text("Changer le mot de passe")
                     }
+
+                    if (role == "ADMIN") {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = { navController.navigate("param_exclusions") },
+                            modifier = Modifier
+                                .fillMaxWidth(0.7f)
+                                .height(48.dp)
+                        ) {
+                            Text("⚙️ Gérer exclusions d’étapes")
+                        }
+                    }
+
                 }
             }
         }
