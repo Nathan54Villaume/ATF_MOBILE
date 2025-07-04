@@ -38,11 +38,9 @@ fun ParametresExclusionsScreen(
     val allEtapes by etapeViewModel.etapes.collectAsState()
     val exclusions = remember { mutableStateMapOf<String, MutableSet<Int>>() }
 
-    // Dialogue état
     var showDialog by remember { mutableStateOf(false) }
     var editingEtape by remember { mutableStateOf<Etape?>(null) }
 
-    // Form fields
     var libelle by remember { mutableStateOf("") }
     var affectation by remember { mutableStateOf("") }
     var roleLog by remember { mutableStateOf("") }
@@ -51,7 +49,6 @@ fun ParametresExclusionsScreen(
     var predecessor by remember { mutableStateOf("") }
     var successor by remember { mutableStateOf("") }
 
-    // Initial load
     LaunchedEffect(Unit) {
         StepFilterManager.init(context)
         exclusions.clear()
@@ -62,7 +59,6 @@ fun ParametresExclusionsScreen(
         etapeViewModel.loadEtapes(context)
     }
 
-    // Simple lookup, pas de derivedStateOf
     val selectedSet = exclusions.getOrPut(selectedCouple) { mutableSetOf() }
 
     BaseScreen(
@@ -126,9 +122,9 @@ fun ParametresExclusionsScreen(
                                 affectation = etape.affectation_Etape
                                 roleLog = etape.role_Log
                                 phase = etape.phase_Etape
-                                duree = etape.duree_Etape.toString()
-                                predecessor = etape.predecesseur_etape.toString()
-                                successor = etape.successeur_etape.toString()
+                                duree = etape.duree_Etape?.toString() ?: ""
+                                predecessor = etape.predecesseur_Etape ?: ""    // corrected
+                                successor = etape.successeur_Etape ?: ""       // corrected
                                 showDialog = true
                             }
                     ) {
@@ -162,7 +158,6 @@ fun ParametresExclusionsScreen(
             }
         }
 
-        // Dialog Création / Édition
         if (showDialog) {
             AlertDialog(
                 onDismissRequest = { showDialog = false },
@@ -220,15 +215,17 @@ fun ParametresExclusionsScreen(
                         OutlinedTextField(
                             value = predecessor,
                             onValueChange = { predecessor = it },
-                            label = { Text("Prédécesseur (id)") },
-                            modifier = Modifier.fillMaxWidth(), singleLine = true
+                            label = { Text("Prédécesseurs (ids séparés par !)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
                         )
                         Spacer(Modifier.height(8.dp))
                         OutlinedTextField(
                             value = successor,
                             onValueChange = { successor = it },
-                            label = { Text("Successeur (id)") },
-                            modifier = Modifier.fillMaxWidth(), singleLine = true
+                            label = { Text("Successeurs (ids séparés par !)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
                         )
                     }
                 },

@@ -1,3 +1,4 @@
+// file: app/src/main/java/com/riva/atsmobile/viewmodel/SelectionViewModel.kt
 package com.riva.atsmobile.viewmodel
 
 import android.content.Context
@@ -21,6 +22,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
+/**
+ * ViewModel de sélection, gère l'état de l'utilisateur et des gammes
+ */
 class SelectionViewModel : ViewModel() {
 
     private val _matricule = MutableStateFlow("")
@@ -31,6 +35,13 @@ class SelectionViewModel : ViewModel() {
 
     private val _role = MutableStateFlow("")
     val role = _role.asStateFlow()
+
+    /**
+     * Flow indiquant si l'utilisateur a le rôle ADMIN (insensible à la casse)
+     */
+    val isAdmin: StateFlow<Boolean> = _role
+        .map { it.equals("ADMIN", ignoreCase = true) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _annee = MutableStateFlow(2025)
     val annee = _annee.asStateFlow()
@@ -43,7 +54,6 @@ class SelectionViewModel : ViewModel() {
 
     private val _isOnline = MutableStateFlow(false)
     val isOnline = _isOnline.asStateFlow()
-
     private var isNetworkLoopStarted = false
 
     private val _gammes = MutableStateFlow<List<Gamme>>(emptyList())

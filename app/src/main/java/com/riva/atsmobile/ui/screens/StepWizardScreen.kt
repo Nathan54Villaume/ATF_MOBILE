@@ -46,6 +46,8 @@ fun StepWizardScreen(
     val desiredGamme: Gamme? = selectionViewModel.memoireGammeVisee
     val nbFilsActuel by selectionViewModel.nbFilsActuelFlow.collectAsState()
     val nbFilsVise by selectionViewModel.nbFilsViseFlow.collectAsState()
+    // --- Récupération du flag ADMIN ---
+    val isAdmin by selectionViewModel.isAdmin.collectAsState()  // :contentReference[oaicite:2]{index=2}
 
     var idsToExclude by remember { mutableStateOf(emptyList<Int>()) }
     LaunchedEffect(nbFilsActuel, nbFilsVise) {
@@ -114,7 +116,8 @@ fun StepWizardScreen(
                     etapes = etapesFiltres.filter { it.affectation_Etape?.contains("operateur_soudeuse") == true },
                     etapeViewModel = etapeViewModel,
                     context = context,
-                    cardColor = Color(0xFF263238)
+                    cardColor = Color(0xFF263238),
+                    isAdmin = isAdmin    // :contentReference[oaicite:3]{index=3}
                 )
             }
             ExpandableCard("Tréfileuse T1", tref1Expanded, { tref1Expanded = !tref1Expanded }) {
@@ -123,7 +126,8 @@ fun StepWizardScreen(
                     etapes = etapesFiltres.filter { it.affectation_Etape?.contains("operateur_t1") == true },
                     etapeViewModel = etapeViewModel,
                     context = context,
-                    cardColor = Color(0xFF1E272E)
+                    cardColor = Color(0xFF1E272E),
+                    isAdmin = isAdmin
                 )
             }
             ExpandableCard("Tréfileuse T2", tref2Expanded, { tref2Expanded = !tref2Expanded }) {
@@ -132,7 +136,8 @@ fun StepWizardScreen(
                     etapes = etapesFiltres.filter { it.affectation_Etape?.contains("operateur_t2") == true },
                     etapeViewModel = etapeViewModel,
                     context = context,
-                    cardColor = Color(0xFF2C3E50)
+                    cardColor = Color(0xFF2C3E50),
+                    isAdmin = isAdmin
                 )
             }
         }
@@ -174,13 +179,14 @@ private fun EtapeCardGroup(
     etapes: List<Etape>,
     etapeViewModel: EtapeViewModel,
     context: Context,
-    cardColor: Color
+    cardColor: Color,
+    isAdmin: Boolean     // ajout du flag
 ) {
     var currentIndex by remember { mutableStateOf(0) }
     val etape = etapes.getOrNull(currentIndex) ?: return
     val coroutineScope = rememberCoroutineScope()
 
-    // On initialise ces 3 champs et on les remet à jour si l'API évolue
+    // Initialisation des champs selon l'API
     var description by remember(etape.id_Etape) { mutableStateOf(etape.description_Etape ?: "") }
     LaunchedEffect(etape.description_Etape) { description = etape.description_Etape ?: "" }
 
@@ -216,15 +222,18 @@ private fun EtapeCardGroup(
             Spacer(Modifier.height(8.dp))
             Text(etape.libelle_Etape, color = Color.White, style = MaterialTheme.typography.titleLarge)
 
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text("Description") },
-                enabled = !isValidated,
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(color = Color.White)
-            )
+            //–– Champ Description : affichage conditionnel & non modifiable sauf ADMIN ––
+            if (!etape.description_Etape.isNullOrBlank() || isAdmin) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { if (isAdmin) description = it },
+                    label = { Text("Description") },
+                    enabled = isAdmin,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = Color.White)
+                )
+            }
 
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
@@ -266,7 +275,6 @@ private fun EtapeCardGroup(
                                 etapeViewModel.validerEtape(context, dto)
                             }
                             if (success) {
-                                // on signale visuellement la réussite
                                 bgColor = if (!isValidated) Color(0x3300FF00) else Color(0x33FFFF00)
                                 etapeViewModel.loadEtapes(context)
                             }

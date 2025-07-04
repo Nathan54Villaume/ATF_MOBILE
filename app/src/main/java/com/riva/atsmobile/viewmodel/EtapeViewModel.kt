@@ -7,10 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.riva.atsmobile.model.*
 import com.riva.atsmobile.network.ATSApiService
 import com.riva.atsmobile.utils.ApiConfig
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class EtapeViewModel : ViewModel() {
 
@@ -23,32 +23,50 @@ class EtapeViewModel : ViewModel() {
     /** Charge toutes les étapes */
     fun loadEtapes(context: Context) {
         viewModelScope.launch {
-            runCatching {
+            try {
                 val api = ATSApiService.create(ApiConfig.getBaseUrl(context))
-                api.getEtapes()
-            }.onSuccess { _etapes.value = it }
-                .onFailure { it.printStackTrace() }
+                val response = api.getEtapes()
+                if (response.isSuccessful) {
+                    _etapes.value = response.body() ?: emptyList()
+                } else {
+                    // gérer l'erreur si besoin, ex: log ou toast
+                    _etapes.value = emptyList()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _etapes.value = emptyList()
+            }
         }
     }
 
     /** Charge une étape par son ID */
     fun loadEtapeById(context: Context, id: Int) {
         viewModelScope.launch {
-            runCatching {
+            try {
                 val api = ATSApiService.create(ApiConfig.getBaseUrl(context))
-                api.getEtapeById(id)
-            }.onSuccess { _selectedEtape.value = it }
-                .onFailure { it.printStackTrace() }
+                val response = api.getEtapeById(id)
+                if (response.isSuccessful) {
+                    _selectedEtape.value = response.body()
+                } else {
+                    _selectedEtape.value = null
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _selectedEtape.value = null
+            }
         }
     }
 
     /** Crée une étape */
     fun createEtape(context: Context, dto: EtapeCreateDto, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val success = runCatching {
+            val success = try {
                 val api = ATSApiService.create(ApiConfig.getBaseUrl(context))
                 api.createEtape(dto).isSuccessful
-            }.getOrDefault(false)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
             onResult(success)
         }
     }
@@ -56,23 +74,36 @@ class EtapeViewModel : ViewModel() {
     /** Met à jour une étape */
     fun updateEtape(context: Context, id: Int, dto: EtapeUpdateDto, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val success = runCatching {
+            val success = try {
                 val api = ATSApiService.create(ApiConfig.getBaseUrl(context))
                 api.updateEtape(id, dto).isSuccessful
-            }.getOrDefault(false)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
             onResult(success)
         }
     }
 
     /** Valide une étape : retourne TRUE si l'appel a réussi */
     suspend fun validerEtape(context: Context, dto: EtapeValidationDto): Boolean {
-        val api = ATSApiService.create(ApiConfig.getBaseUrl(context))
-        return api.validerEtape(dto).isSuccessful
+        return try {
+            val api = ATSApiService.create(ApiConfig.getBaseUrl(context))
+            api.validerEtape(dto).isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 
     /** Dévalide une étape et retourne true si succès */
     suspend fun devaliderEtape(context: Context, dto: EtapeValidationDto): Boolean {
-        val api = ATSApiService.create(ApiConfig.getBaseUrl(context))
-        return api.devaliderEtape(dto).isSuccessful
+        return try {
+            val api = ATSApiService.create(ApiConfig.getBaseUrl(context))
+            api.devaliderEtape(dto).isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 }

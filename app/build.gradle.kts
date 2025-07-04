@@ -1,21 +1,38 @@
+// 1. En-tête : imports et gestion de version.properties
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.Properties
 
+// Chemin vers le fichier de propriétés
 val versionPropsFile = rootProject.file("version.properties")
+
+// Chargement des propriétés existantes
 val versionProps = Properties().apply {
-    load(versionPropsFile.inputStream())
+    if (versionPropsFile.exists()) {
+        load(versionPropsFile.inputStream())
+    } else {
+        // Si le fichier n'existe pas, on le crée avec des valeurs par défaut
+        setProperty("versionCode", "1")
+        setProperty("versionName", "1.00")
+        store(versionPropsFile.outputStream(), null)
+    }
 }
 
-val currentCode = versionProps["versionCode"].toString().toInt()
-val currentName = versionProps["versionName"].toString().replace(",", ".").toDouble()
+// Récupère et incrémente les versions
+val currentCode = versionProps.getProperty("versionCode").toInt()
+val currentName = versionProps.getProperty("versionName").toDouble()
 val nextCode = currentCode + 1
 val nextName = String.format(Locale.US, "%.2f", currentName + 0.01)
 
-versionProps["versionCode"] = nextCode.toString()
-versionProps["versionName"] = nextName
+// Écrit les nouvelles versions dans le fichier
+versionProps.setProperty("versionCode", nextCode.toString())
+versionProps.setProperty("versionName", nextName)
 versionProps.store(versionPropsFile.outputStream(), null)
+
+// Expose les versions dans des extra properties
+extra["nextVersionCode"] = nextCode
+extra["nextVersionName"] = nextName
 
 plugins {
     alias(libs.plugins.android.application)
@@ -31,11 +48,16 @@ android {
         applicationId = "com.riva.atsmobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = nextCode
-        versionName = nextName
-        buildConfigField("String", "BUILD_VERSION", "\"$nextName\"")
-        val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+
+        // On utilise les extra properties
+        versionCode = (extra["nextVersionCode"] as Int)
+        versionName = (extra["nextVersionName"] as String)
+
+        buildConfigField("String", "BUILD_VERSION", "\"${versionName}\"")
+        val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            .format(Date())
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -64,6 +86,7 @@ android {
         kotlinCompilerExtensionVersion = "1.5.10"
     }
 }
+
 
 dependencies {
     // --- Coroutines (pour Retrofit + ViewModel, etc.) ---
