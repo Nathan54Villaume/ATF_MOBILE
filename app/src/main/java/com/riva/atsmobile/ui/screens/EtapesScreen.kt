@@ -1,6 +1,7 @@
 // file: app/src/main/java/com/riva/atsmobile/ui/screens/StepWizardScreen.kt
 package com.riva.atsmobile.ui.screens
 
+import androidx.compose.ui.unit.sp
 import android.content.Context
 import android.util.Log
 import androidx.compose.animation.animateColorAsState
@@ -85,18 +86,26 @@ fun StepWizardScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Text(
-                "✔ ${etapesFiltresTriees.count { it.etat_Etape == "VALIDE" }} / ${etapesFiltresTriees.size} étapes validées",
-                color = Color.White,
-                style = MaterialTheme.typography.titleLarge
-            )
+            //Text(
+           //     "✔ ${etapesFiltresTriees.count { it.etat_Etape == "VALIDE" }} / ${etapesFiltresTriees.size} étapes validées",
+           //     color = Color.White,
+           //     style = MaterialTheme.typography.titleLarge
+           // )
 
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Actuelle: ${currentGamme?.designation ?: "-"} (${nbFilsActuel ?: "-"})", color = Color.LightGray)
-                Text("Visée: ${desiredGamme?.designation ?: "-"} (${nbFilsVise ?: "-"})", color = Color.LightGray)
+                Text(
+                    "Gamme Actuelle : ${currentGamme?.designation ?: "-"} (${nbFilsActuel ?: "-"})",
+                    color = Color.LightGray,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    "Gamme Visée : ${desiredGamme?.designation ?: "-"} (${nbFilsVise ?: "-"})",
+                    color = Color.LightGray,
+                    style = MaterialTheme.typography.titleLarge
+                )
             }
 
             var soudeuseExpanded by remember { mutableStateOf(true) }
