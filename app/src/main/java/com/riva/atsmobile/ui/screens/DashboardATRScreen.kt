@@ -40,7 +40,9 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
                     "$db.DBX0.0", "$db.DBD2", "$db.DBD6", "$db.DBD10", "$db.DBD14", "$db.DBD18"
                 )
             }
-            data = ApiAutomateClient.fetchGroupedValues(addresses, baseUrl )
+            data = ApiAutomateClient.fetchGroupedValues(addresses, baseUrl)
+            // Log pour vérifier les données reçues et décodées
+            Log.d("DashboardData", "Fetched data: $data")
             delay(1000)
         }
     }
@@ -63,18 +65,21 @@ fun DashboardATRScreen(navController: NavController, viewModel: SelectionViewMod
                 if (values != null) {
                     Log.d("Dashboard", "$label → $values")
 
+                    // Assurer que les valeurs sont traitées comme des Float
+                    val vitesseConsigne = (values["$db.DBD2"] as? Number)?.toFloat() ?: 0f
+                    val vitesseActuelle = (values["$db.DBD6"] as? Number)?.toFloat() ?: 0f
+                    val diametre = (values["$db.DBD10"] as? Number)?.toFloat() ?: 0f
+                    val longueurBobine = (values["$db.DBD14"] as? Number)?.toFloat() ?: 0f
+                    val poidsBobine = (values["$db.DBD18"] as? Number)?.toFloat() ?: 0f
+
                     TrefileuseCard(
                         titre = label,
-                        isActive = when (val v = values["$db.DBX0.0"]) {
-                            is Boolean -> v
-                            is Number -> v.toInt() != 0
-                            else -> false
-                        },
-                        vitesseConsigne = round(((values["$db.DBD2"] as? Number)?.toFloat() ?: 0f ) / 100f) /10f,
-                        vitesseActuelle = round(((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f ) / 100f) /10f,
-                        diametre = (values["$db.DBD10"] as? Number)?.toFloat() ?: 0f,
-                        longueurBobine = round(((values["$db.DBD14"] as? Number)?.toFloat() ?: 0f ) / 1f) /10f,
-                        poidsBobine = round(((values["$db.DBD18"] as? Number)?.toFloat() ?: 0f ) / 1f) /10f
+                        // SUPPRESSION ICI : Le paramètre 'isActive' n'est plus utilisé par TrefileuseCard
+                        vitesseConsigne = round(vitesseConsigne / 100f) / 10f, // Vérifiez l'unité m/s ici
+                        vitesseActuelle = round(vitesseActuelle / 100f) / 10f, // Vérifiez l'unité m/s ici
+                        diametre = diametre,
+                        longueurBobine = round(longueurBobine / 1f) / 10f,
+                        poidsBobine = round(poidsBobine / 1f) / 10f
                     )
                 }
             }

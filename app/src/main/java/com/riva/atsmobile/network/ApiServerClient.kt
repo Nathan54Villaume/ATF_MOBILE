@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/riva/atsmobile/network/ATSApiService.kt
+// file: app/src/main/java/com/riva/atsmobile/network/ApiServerClient.kt
 package com.riva.atsmobile.network
 
 import com.riva.atsmobile.model.Etape
@@ -13,7 +13,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 
-interface ATSApiService {
+interface ApiServerClient {
     @GET("api/Etapes")
     suspend fun getEtapes(): Response<List<Etape>>
 
@@ -43,7 +43,7 @@ interface ATSApiService {
     suspend fun getGammes(): Response<List<Gamme>>
 
     companion object {
-        fun create(baseUrl: String): ATSApiService {
+        fun create(baseUrl: String): ApiServerClient {
             val logging = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
             }
@@ -56,7 +56,7 @@ interface ATSApiService {
                 .client(client)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
-                .create(ATSApiService::class.java)
+                .create(ApiServerClient::class.java)
         }
     }
 }

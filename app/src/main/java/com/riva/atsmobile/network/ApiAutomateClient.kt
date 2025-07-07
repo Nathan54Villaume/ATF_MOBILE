@@ -79,10 +79,18 @@ object ApiAutomateClient {
         return when (rawVal) {
             is Boolean -> rawVal
             is Double -> {
+                // On récupère le suffixe après le dernier point, ex. "DBD10", puis on isole les lettres "DBD"
+                val fieldType = addr
+                    .substringAfterLast('.')
+                    .takeWhile { it.isLetter() }
+                    .uppercase()
+
                 when {
-                    addr.endsWith(".DBD", ignoreCase = true) -> Float.fromBits(rawVal.toInt())
-                    addr.endsWith(".DBW", ignoreCase = true) -> rawVal.toInt().toShort()
-                    addr.endsWith(".DBB", ignoreCase = true) -> rawVal.toInt().toByte()
+                    // CORRECTION : Caster directement en Float si c'est un DBD (Double ou Float de l'API)
+                    fieldType == "DBD" -> rawVal.toFloat() // La valeur est déjà un Double, il suffit de la caster en Float
+                    fieldType == "DBW" -> rawVal.toInt().toShort()
+                    fieldType == "DBB" -> rawVal.toInt().toByte()
+                    // si c'est un double entier, on cast en Int
                     rawVal % 1.0 == 0.0 -> rawVal.toInt()
                     else -> rawVal
                 }

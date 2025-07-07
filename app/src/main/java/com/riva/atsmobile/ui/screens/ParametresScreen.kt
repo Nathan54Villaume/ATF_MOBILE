@@ -36,13 +36,44 @@ fun ParametresScreen(
     selectionViewModel: SelectionViewModel,
     etapeViewModel: EtapeViewModel
 ) {
-    val tabs = listOf("Général", "Gammes", "Exclusions")
+    // Collecte le rôle de l'utilisateur
+    val role by selectionViewModel.role.collectAsState()
+
+    // Définit la liste complète des onglets
+    val allTabs = listOf("Général", "Gammes", "Exclusions")
+
+    // Filtre les onglets en fonction du rôle
+    val filteredTabs = remember(role) {
+        allTabs.filter { tab ->
+            when (tab) {
+                "Général" -> true // L'onglet Général est toujours visible
+                "Gammes" -> role == "ADMIN" // L'onglet Gammes n'est visible que pour les ADMIN
+                "Exclusions" -> role == "ADMIN" // L'onglet Exclusions n'est visible que pour les ADMIN
+                else -> false
+            }
+        }
+    }
+
     var selectedTab by remember { mutableStateOf(0) }
+
+    // S'assurer que l'onglet sélectionné est toujours valide après filtrage
+    // Si l'onglet sélectionné précédemment n'est plus dans filteredTabs (par exemple, si l'utilisateur change de rôle),
+    // on réinitialise à l'onglet "Général" (index 0 de filteredTabs).
+    LaunchedEffect(filteredTabs) {
+        if (selectedTab >= filteredTabs.size) {
+            selectedTab = 0
+        }
+        // Ou, si on veut être plus précis, on peut vérifier si l'élément courant existe encore.
+        // val currentSelectedTitle = allTabs[selectedTab]
+        // if (!filteredTabs.contains(currentSelectedTitle)) {
+        //     selectedTab = filteredTabs.indexOf("Général").coerceAtLeast(0)
+        // }
+    }
+
 
     // États section "Général"
     val nom by selectionViewModel.nom.collectAsState()
     val matricule by selectionViewModel.matricule.collectAsState()
-    val role by selectionViewModel.role.collectAsState()
     val devMode by selectionViewModel.devModeEnabled.collectAsState()
     val isConnected by selectionViewModel.isOnline.collectAsState()
     val estConnecte = nom.isNotBlank() && matricule.isNotBlank() && role.isNotBlank()
@@ -66,7 +97,8 @@ fun ParametresScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             TabRow(selectedTabIndex = selectedTab) {
-                tabs.forEachIndexed { index, title ->
+                // Utilise filteredTabs ici pour afficher seulement les onglets autorisés
+                filteredTabs.forEachIndexed { index, title ->
                     Tab(
                         text = { Text(title) },
                         selected = selectedTab == index,
@@ -76,8 +108,10 @@ fun ParametresScreen(
             }
             Spacer(Modifier.height(16.dp))
 
-            when (selectedTab) {
-                0 -> GeneralSection(
+            // Affiche le contenu de l'onglet sélectionné
+            // Note: On utilise filteredTabs[selectedTab] pour obtenir le titre de l'onglet actuel
+            when (filteredTabs[selectedTab]) {
+                "Général" -> GeneralSection(
                     nom = nom,
                     matricule = matricule,
                     role = role,
@@ -93,11 +127,11 @@ fun ParametresScreen(
                     selectionViewModel = selectionViewModel,
                     context = context
                 )
-                1 -> TypeOperationParamScreen(
+                "Gammes" -> TypeOperationParamScreen(
                     viewModel = selectionViewModel,
                     navController = navController
                 )
-                2 -> ExclusionsParamSection(
+                "Exclusions" -> ExclusionsParamSection(
                     selectionViewModel = selectionViewModel,
                     etapeViewModel = etapeViewModel
                 )

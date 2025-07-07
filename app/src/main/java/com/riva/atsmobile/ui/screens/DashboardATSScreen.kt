@@ -102,13 +102,9 @@ fun DashboardATSScreen(navController: NavController, viewModel: SelectionViewMod
 
                     TrefileuseCard(
                         titre = "Trefileuse $label",
-                        isActive = when (val v = values["$db.DBX0.0"]) {
-                            is Boolean -> v
-                            is Number -> v.toInt() != 0
-                            else -> false
-                        },
-                        vitesseConsigne = round(((values["$db.DBD2"] as? Number)?.toFloat() ?: 0f) / 100f) / 10f,
-                        vitesseActuelle = round(((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f) / 100f) / 10f,
+                        // SUPPRESSION ICI : Le paramètre 'isActive' n'est plus utilisé par TrefileuseCard
+                        vitesseConsigne = round(((values["$db.DBD2"] as? Number)?.toFloat() ?: 0f) / 100f) / 10f, // Vérifiez l'unité m/s ici
+                        vitesseActuelle = round(((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f) / 100f) / 10f, // Vérifiez l'unité m/s ici
                         diametre = (values["$db.DBD10"] as? Number)?.toFloat() ?: 0f,
                         longueurBobine = round(((values["$db.DBD14"] as? Number)?.toFloat() ?: 0f ) / 1f) /10f,
                         poidsBobine = round(((values["$db.DBD18"] as? Number)?.toFloat() ?: 0f ) / 1f) /10f
@@ -147,11 +143,7 @@ fun DashboardATSScreen(navController: NavController, viewModel: SelectionViewMod
 
                     SoudeuseCard(
                         titre = label,
-                        isActive = when (val v = values["$db.DBX0.0"]) {
-                            is Boolean -> v
-                            is Number -> v.toInt() != 0
-                            else -> false
-                        },
+                        // SUPPRESSION ICI : Le paramètre 'isActive' n'est plus utilisé par SoudeuseCard
                         vitesseConsigne = round(((values["$db.DBD2"] as? Number)?.toFloat() ?: 0f) / 100f) / 10f,
                         vitesseActuelle = round(((values["$db.DBD6"] as? Number)?.toFloat() ?: 0f) / 100f) / 10f,
                         diamFil = (values["$db.DBD10"] as? Number)?.toFloat() ?: 0f,

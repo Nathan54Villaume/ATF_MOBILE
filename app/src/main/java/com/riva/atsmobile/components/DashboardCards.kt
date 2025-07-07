@@ -1,11 +1,17 @@
 package com.riva.atsmobile.ui.components
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -14,27 +20,39 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.riva.atsmobile.components.VitesseGauge
 
 @Composable
 fun TrefileuseCard(
     titre: String,
-    isActive: Boolean,
+    // isActive: Boolean, // Ce paramètre n'est plus nécessaire ici
     vitesseActuelle: Float,
     vitesseConsigne: Float,
     diametre: Float,
     longueurBobine: Float,
     poidsBobine: Float
 ) {
+    var expanded by remember { mutableStateOf(false) } // État d'expansion de la carte
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(8.dp)
+            .animateContentSize(animationSpec = tween(durationMillis = 300)), // Animation pour l'expansion
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF222222))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // En-tête
+        Column(
+            modifier = Modifier
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color(0xFF333333), Color(0xFF222222))
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                )
+                .clickable { expanded = !expanded } // Rendre la carte cliquable pour expand/collapse
+                .padding(16.dp)
+        ) {
+            // En-tête (toujours visible)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -42,39 +60,52 @@ fun TrefileuseCard(
             ) {
                 Text(
                     text = titre,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color(0xFF64FFDA)
                 )
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .background(
-                            color = if (isActive) Color(0xFF4CAF50) else Color(0xFFFF5252),
-                            shape = CircleShape
-                        )
-                )
+                // Résumé dans l'en-tête (visible même quand replié)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "$diametre mm", // Afficher le diamètre
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(
+                        text = "$vitesseActuelle m/s", // Vitesse actuelle
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(
+                                color = if (vitesseActuelle > 0f) Color(0xFF00C853) else Color(0xFFD50000),
+                                shape = CircleShape
+                            )
+                    )
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                        contentDescription = if (expanded) "Replier" else "Dérouler",
+                        tint = Color.White,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Le compteur de vitesse
-            VitesseGauge(
-                vitesseActuelle = vitesseActuelle,
-                vitesseConsigne = vitesseConsigne,
-                // tu peux ajuster vitesseMax si nécessaire
-                vitesseMax = maxOf(vitesseActuelle, vitesseConsigne) * 1.2f,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Les autres infos
-            InfoRow("Diamètre", "$diametre mm")
-            InfoRow("Longueur bobine", "$longueurBobine m")
-            InfoRow("Poids bobine", "${poidsBobine.toInt()} kg")
+            // Contenu déroulant
+            if (expanded) {
+                Spacer(modifier = Modifier.height(16.dp))
+                InfoRow("Vitesse consigne", "$vitesseConsigne m/s") // Correction m/s
+                Spacer(modifier = Modifier.height(4.dp)) // Espacement réduit après la première ligne
+                InfoRow("Longueur bobine", "$longueurBobine m")
+                Spacer(modifier = Modifier.height(4.dp))
+                InfoRow("Poids bobine", "${poidsBobine.toInt()} kg")
+            }
         }
     }
 }
@@ -82,9 +113,9 @@ fun TrefileuseCard(
 @Composable
 fun SoudeuseCard(
     titre: String,
-    isActive: Boolean,
-    vitesseActuelle: Float,   // en m/min
-    vitesseConsigne: Float,   // en m/min
+    // isActive: Boolean, // Ce paramètre n'est plus nécessaire si la pastille est basée sur la vitesse
+    vitesseActuelle: Float,   // en m/s
+    vitesseConsigne: Float,   // en m/s
     diamFil: Float,
     diamTrame: Float,
     longueur: Float,
@@ -92,19 +123,28 @@ fun SoudeuseCard(
     energie: Int,
     nbPanneaux: Int
 ) {
-    // conversion m/min → m/s pour le gauge
-    val vitesseActuelleMs = vitesseActuelle / 60f
-    val vitesseConsigneMs = vitesseConsigne / 60f
+    var expanded by remember { mutableStateOf(false) } // État d'expansion de la carte
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(8.dp)
+            .animateContentSize(animationSpec = tween(durationMillis = 300)), // Animation pour l'expansion
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF222222))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // En-tête
+        Column(
+            modifier = Modifier
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color(0xFF333333), Color(0xFF222222))
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                )
+                .clickable { expanded = !expanded } // Rendre la carte cliquable pour expand/collapse
+                .padding(16.dp)
+        ) {
+            // En-tête (toujours visible)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -112,39 +152,50 @@ fun SoudeuseCard(
             ) {
                 Text(
                     text = titre,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color =  Color(0xFF64FFDA)
                 )
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .background(
-                            color = if (isActive) Color(0xFF4CAF50) else Color(0xFFFF5252),
-                            shape = CircleShape
-                        )
-                )
+                // Résumé dans l'en-tête (visible même quand replié)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "$vitesseActuelle m/s", // Vitesse actuelle
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(
+                                // MODIFICATION ICI : Pastille de Soudeuse basée sur vitesseActuelle
+                                color = if (vitesseActuelle > 0f) Color(0xFF00C853) else Color(0xFFD50000),
+                                shape = CircleShape
+                            )
+                    )
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                        contentDescription = if (expanded) "Replier" else "Dérouler",
+                        tint = Color.White,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Compteur de vitesse (m/s)
-            VitesseGauge(
-                vitesseActuelle = vitesseActuelleMs,
-                vitesseConsigne = vitesseConsigneMs,
-                vitesseMax = maxOf(vitesseActuelleMs, vitesseConsigneMs) * 1.2f,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Autres infos
-            InfoRow("Diam. fil / trame", "$diamFil / $diamTrame mm")
-            InfoRow("Dim. panneau", "$longueur x $largeur mm")
-            InfoRow("Énergie", "$energie Wh")
-            InfoRow("Panneaux/pac", "$nbPanneaux")
+            // Contenu déroulant
+            if (expanded) {
+                Spacer(modifier = Modifier.height(16.dp))
+                InfoRow("Vitesse consigne", "$vitesseConsigne m/s") // Correction m/s
+                Spacer(modifier = Modifier.height(4.dp))
+                InfoRow("Diam. fil / trame", "$diamFil / $diamTrame mm")
+                Spacer(modifier = Modifier.height(4.dp))
+                InfoRow("Dim. panneau", "$longueur x $largeur mm")
+                Spacer(modifier = Modifier.height(4.dp))
+                InfoRow("Énergie", "$energie Wh")
+                Spacer(modifier = Modifier.height(4.dp))
+                InfoRow("Panneaux/pac", "$nbPanneaux")
+            }
         }
     }
 }
@@ -154,10 +205,20 @@ private fun InfoRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = label, color = Color.LightGray, fontSize = 14.sp)
-        Text(text = value, color = Color.White, fontSize = 14.sp, textAlign = TextAlign.End)
+        Text(
+            text = label,
+            color = Color(0xFFBDBDBD),
+            fontSize = 16.sp
+        )
+        Text(
+            text = value,
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.End
+        )
     }
 }
