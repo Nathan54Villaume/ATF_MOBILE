@@ -99,14 +99,7 @@ class EtapeViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Retourne la liste des étapes triées topologiquement pour un opérateur donné
-     */
-    fun getEtapesOrderedByOperator(operateur: String): List<Etape> {
-        return _etapes.value
-            .filter { it.affectation_Etape.contains(operateur) }
-            .topoSortForOperator(operateur)
-    }
+
 }
 
 /** Extension pour trier topologiquement une liste d'étapes. */
@@ -133,25 +126,4 @@ private fun List<Etape>.topoSortForOperator(operateur: String): List<Etape> {
     return result
 }
 
-fun getOrderedSteps(etapes: List<Etape>): List<Etape> {
-    val etapeMap = etapes.associateBy { it.id_Etape }
-    val visited = mutableSetOf<Int>()
-    val orderedList = mutableListOf<Etape>()
 
-    fun visit(etape: Etape) {
-        if (visited.contains(etape.id_Etape)) return
-        visited.add(etape.id_Etape)
-
-        etape.predecesseurs.forEach { pre ->
-            pre.ids.forEach { preId ->
-                if (preId != 0) {
-                    etapeMap[preId]?.let { visit(it) }
-                }
-            }
-        }
-        if (!orderedList.contains(etape)) orderedList.add(etape)
-    }
-
-    etapes.forEach { visit(it) }
-    return orderedList
-}

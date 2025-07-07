@@ -1,4 +1,4 @@
-// file: app/src/main/java/com/riva/atsmobile/ui/screens/TypeOperationScreen.kt
+// file: app/src/main/java/com/riva/atsmobile/ui/screens/SelectionGammes.kt
 package com.riva.atsmobile.ui.screens
 
 import android.content.res.Configuration
@@ -31,7 +31,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent

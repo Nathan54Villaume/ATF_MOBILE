@@ -99,7 +99,7 @@ fun HomeScreen(viewModel: SelectionViewModel, navController: NavController) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Bienvenue ${nomAffiche.trim()} ,",
+                        text = "Bienvenue Mr  ${nomAffiche.trim()} ,",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 26.sp,

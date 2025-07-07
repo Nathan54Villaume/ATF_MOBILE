@@ -64,18 +64,7 @@ fun ChangementGammeScreen(
                     Text("Changement de Gamme")
                 }
 
-                Spacer(Modifier.height(24.dp))
 
-                Button(
-                    onClick = {
-
-                        navController.navigate(Routes.TypeOperationParametres)
-                    }
-                ) {
-                    Icon(Icons.Default.Settings, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Reglages")
-                }
             }
         }
     }

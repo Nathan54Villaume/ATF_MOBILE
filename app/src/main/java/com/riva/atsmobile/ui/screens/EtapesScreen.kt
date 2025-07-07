@@ -1,7 +1,6 @@
-// file: app/src/main/java/com/riva/atsmobile/ui/screens/StepWizardScreen.kt
+// file: app/src/main/java/com/riva/atsmobile/ui/screens/EtapesScreen.kt
 package com.riva.atsmobile.ui.screens
 
-import androidx.compose.ui.unit.sp
 import android.content.Context
 import android.util.Log
 import androidx.compose.animation.animateColorAsState
@@ -25,7 +24,7 @@ import com.riva.atsmobile.ui.shared.BaseScreen
 import com.riva.atsmobile.viewmodel.*
 
 @Composable
-fun StepWizardScreen(
+fun EtapesScreen(
     navController: NavController,
     selectionViewModel: SelectionViewModel,
     etapeViewModel: EtapeViewModel

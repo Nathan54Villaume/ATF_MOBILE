@@ -50,7 +50,15 @@ fun ATSMobileNavHost(
         }
 
         composable(Routes.Settings) {
-            ParametresScreen(navController, selectionViewModel)
+            requireRoleOrDev(role, devMode, navController) {
+                // Injection du EtapeViewModel
+                val etapeViewModel: EtapeViewModel = viewModel()
+                ParametresScreen(
+                    navController      = navController,
+                    selectionViewModel = selectionViewModel,
+                    etapeViewModel     = etapeViewModel
+                )
+            }
         }
 
         composable(Routes.DevTools) {
@@ -86,32 +94,18 @@ fun ATSMobileNavHost(
         // 🆕 StepWizard, protégé
         composable("step_wizard") {
             requireRoleOrDev(role, devMode, navController) {
-                val etapeViewModel = viewModel<EtapeViewModel>()
-                StepWizardScreen(
-                    navController = navController,
-                    etapeViewModel = etapeViewModel,
+                val etapeViewModel: EtapeViewModel = viewModel()
+                EtapesScreen(
+                    navController      = navController,
+                    etapeViewModel     = etapeViewModel,
                     selectionViewModel = selectionViewModel
                 )
             }
         }
 
-        composable("param_exclusions") {
-            if (role == "ADMIN") {
-                val etapeViewModel = viewModel<EtapeViewModel>()
-                ParametresExclusionsScreen(
-                    navController = navController,
-                    selectionViewModel = selectionViewModel,
-                    etapeViewModel = etapeViewModel
-                )
-            } else {
-                LaunchedEffect(Unit) {
-                    navController.navigate(Routes.Login) { popUpTo(0) }
-                }
-            }
-        }
-
-
-
+        // **La route "param_exclusions" a été supprimée** :
+        // - Vous l'affichez désormais dans l'onglet "Exclusions"
+        //   de votre ParametresScreen, via ExclusionsParamSection.
     }
 }
 
