@@ -1,8 +1,8 @@
-// file: app/src/main/java/com/riva/atsmobile/ui/screens/EtapesScreen.kt
 package com.riva.atsmobile.ui.screens
 
 import android.content.Context
 import android.util.Log
+import android.widget.Toast // Ajout de l'import pour Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -85,12 +85,6 @@ fun EtapesScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            //Text(
-           //     "✔ ${etapesFiltresTriees.count { it.etat_Etape == "VALIDE" }} / ${etapesFiltresTriees.size} étapes validées",
-           //     color = Color.White,
-           //     style = MaterialTheme.typography.titleLarge
-           // )
-
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -187,7 +181,7 @@ private fun EtapeCardGroup(
     val etape = etapes.getOrNull(currentIndex) ?: return
     var startTime by remember(etape.id_Etape) { mutableStateOf(System.currentTimeMillis()) }
     var bgColor by remember { mutableStateOf(Color.Transparent) }
-    val animatedBgColor by animateColorAsState(targetValue = bgColor)
+    val animatedBgColor by animateColorAsState(targetValue = bgColor, label = "bgColorAnimation")
 
     var description by remember(etape.id_Etape) { mutableStateOf(etape.description_Etape.orEmpty()) }
     LaunchedEffect(etape.description_Etape) { description = etape.description_Etape.orEmpty() }
@@ -227,9 +221,22 @@ private fun EtapeCardGroup(
                     label = { Text("Description") },
                     enabled = isAdmin,
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(color = Color.White)
+                    textStyle = TextStyle(color = Color.White),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = Color.Gray,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        disabledTextColor = Color.White,
+                        disabledLabelColor = Color.Gray,
+                        disabledBorderColor = Color.Gray
+                    )
                 )
             }
+
+            // Le bloc pour Conditions_A_Valider a été supprimé comme demandé.
 
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
@@ -238,7 +245,18 @@ private fun EtapeCardGroup(
                 label = { Text("Commentaire") },
                 enabled = !isValidated,
                 modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(color = Color.White)
+                textStyle = TextStyle(color = Color.White),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color.Gray,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = Color.Gray,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    disabledTextColor = Color.White,
+                    disabledLabelColor = Color.Gray,
+                    disabledBorderColor = Color.Gray
+                )
             )
 
             Spacer(Modifier.height(12.dp))
@@ -255,8 +273,11 @@ private fun EtapeCardGroup(
                 Button(
                     onClick = { if (currentIndex > 0) currentIndex-- },
                     enabled = currentIndex > 0,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) { Text("Précédent") }
+
+                Spacer(Modifier.width(8.dp))
 
                 Button(
                     onClick = {
@@ -268,24 +289,40 @@ private fun EtapeCardGroup(
                             tempsReel = if (isValidated) 0 else elapsed
                         )
                         if (isValidated) {
-                            etapeViewModel.devaliderEtape(context, dto) { success ->
-                                if (success) bgColor = Color(0x33FFFF00)
+                            etapeViewModel.devaliderEtape(context, dto) { success, message ->
+                                if (success) {
+                                    bgColor = Color(0x33FFFF00)
+                                } else {
+                                    message?.let {
+                                        Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                                    }
+                                }
                             }
                         } else {
-                            etapeViewModel.validerEtape(context, dto) { success ->
-                                if (success) bgColor = Color(0x3300FF00)
+                            etapeViewModel.validerEtape(context, etape, dto) { success, message ->
+                                if (success) {
+                                    bgColor = Color(0x3300FF00)
+                                } else {
+                                    message?.let {
+                                        Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                                    }
+                                }
                             }
                         }
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text(if (isValidated) "🔄 Annuler" else "✅ Valider")
                 }
 
+                Spacer(Modifier.width(8.dp))
+
                 Button(
                     onClick = { if (currentIndex < etapes.lastIndex) currentIndex++ },
                     enabled = currentIndex < etapes.lastIndex,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) { Text("Suivant") }
             }
         }

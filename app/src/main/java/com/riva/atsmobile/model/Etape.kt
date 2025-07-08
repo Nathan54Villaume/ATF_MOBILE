@@ -48,5 +48,8 @@ data class Etape(
     val predecesseurs: List<EtapeRelation>,
 
     @SerializedName("successeurs")
-    val successeurs: List<EtapeRelation>
+    val successeurs: List<EtapeRelation>,
+
+    @SerializedName("conditions_a_valider")
+    val conditions_A_Valider: String? // Nouvelle colonne
 )

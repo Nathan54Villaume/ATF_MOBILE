@@ -1,4 +1,3 @@
-// file: app/src/main/java/com/riva/atsmobile/viewmodel/EtapeViewModel.kt
 package com.riva.atsmobile.viewmodel
 
 import android.content.Context
@@ -17,7 +16,7 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel gérant les étapes et leurs validations
- .
+.
  */
 class EtapeViewModel : ViewModel() {
 
@@ -38,18 +37,60 @@ class EtapeViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Vérifie si toutes les étapes pré-requises pour la validation d'une étape donnée sont validées.
+     * Les IDs des étapes pré-requises sont contenus dans la chaîne conditions_A_Valider,
+     * séparés par le délimiteur "!".
+     */
+    private fun checkValidationPreconditions(etape: Etape): String? {
+        val conditions = etape.conditions_A_Valider
+        if (conditions.isNullOrBlank()) {
+            return null // Pas de conditions, donc c'est OK
+        }
+
+        val requiredEtapeIds = conditions.split("!").mapNotNull { it.trim().toIntOrNull() }
+
+        for (requiredId in requiredEtapeIds) {
+            // Ne pas vérifier l'étape elle-même si elle est listée par erreur dans ses propres conditions
+            if (requiredId == etape.id_Etape) continue
+
+            val requiredEtape = _etapes.value.find { it.id_Etape == requiredId }
+            if (requiredEtape == null) {
+                return "L'étape de condition préalable (ID: $requiredId) n'existe pas."
+            }
+            if (requiredEtape.etat_Etape != "VALIDE") {
+                return "L'étape préalable '${requiredEtape.libelle_Etape}' (ID: $requiredId) n'est pas validée."
+            }
+        }
+        return null // Toutes les conditions sont remplies
+    }
+
     /** Valide une étape et recharge la liste */
     fun validerEtape(
         context: Context,
+        etapeToValidate: Etape, // Ajout du paramètre pour l'étape à valider
         dto: EtapeValidationDto,
-        onComplete: (Boolean) -> Unit
+        onComplete: (Boolean, String?) -> Unit // Modification du callback
     ) {
+        // Vérification des pré-conditions
+        val preconditionError = checkValidationPreconditions(etapeToValidate)
+        if (preconditionError != null) {
+            onComplete(false, preconditionError)
+            return
+        }
+
         val baseUrl = ApiConfig.getBaseUrl(context)
         val repository = EtapesRepository(baseUrl)
         viewModelScope.launch {
-            val success = repository.validate(dto).isSuccessful
-            if (success) loadEtapes(context)
-            onComplete(success)
+            val response = repository.validate(dto)
+            val success = response.isSuccessful
+            if (success) {
+                loadEtapes(context) // Recharger toutes les étapes si succès
+                onComplete(true, null)
+            } else {
+                val errorMessage = response.errorBody()?.string() ?: "Erreur de validation de l'étape."
+                onComplete(false, errorMessage)
+            }
         }
     }
 
@@ -57,14 +98,20 @@ class EtapeViewModel : ViewModel() {
     fun devaliderEtape(
         context: Context,
         dto: EtapeValidationDto,
-        onComplete: (Boolean) -> Unit
+        onComplete: (Boolean, String?) -> Unit // Modification du callback
     ) {
         val baseUrl = ApiConfig.getBaseUrl(context)
         val repository = EtapesRepository(baseUrl)
         viewModelScope.launch {
-            val success = repository.unvalidate(dto).isSuccessful
-            if (success) loadEtapes(context)
-            onComplete(success)
+            val response = repository.unvalidate(dto)
+            val success = response.isSuccessful
+            if (success) {
+                loadEtapes(context) // Recharger toutes les étapes si succès
+                onComplete(true, null)
+            } else {
+                val errorMessage = response.errorBody()?.string() ?: "Erreur de dévalidation de l'étape."
+                onComplete(false, errorMessage)
+            }
         }
     }
 
@@ -98,32 +145,4 @@ class EtapeViewModel : ViewModel() {
             onComplete(success)
         }
     }
-
-
 }
-
-/** Extension pour trier topologiquement une liste d'étapes. */
-private fun List<Etape>.topoSortForOperator(operateur: String): List<Etape> {
-    val byId = associateBy { it.id_Etape }
-    val predMap = mutableMapOf<Int, MutableSet<Int>>()
-    for (e in this) {
-        val preds = e.predecesseurs
-            .filter { it.operateur == operateur }
-            .flatMap { it.ids }
-        predMap[e.id_Etape] = preds.toMutableSet()
-    }
-    val ready = ArrayDeque(predMap.filterValues { it.isEmpty() }.keys)
-    val result = mutableListOf<Etape>()
-    while (ready.isNotEmpty()) {
-        val id = ready.removeFirst()
-        byId[id]?.let { result += it }
-        for ((otherId, preds) in predMap) {
-            if (preds.remove(id) && preds.isEmpty()) ready += otherId
-        }
-    }
-    val remaining = this.map { it.id_Etape }.toSet() - result.map { it.id_Etape }.toSet()
-    result += remaining.mapNotNull { byId[it] }
-    return result
-}
-
-

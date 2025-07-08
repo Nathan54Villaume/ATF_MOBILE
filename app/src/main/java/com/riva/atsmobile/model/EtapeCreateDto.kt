@@ -35,5 +35,8 @@ data class EtapeCreateDto(
     val predecesseur_etape: String?,
 
     @SerializedName("successeur_etape")
-    val successeur_etape: String?
+    val successeur_etape: String?,
+
+    @SerializedName("conditions_a_valider")
+    val conditions_A_Valider: String?
 )

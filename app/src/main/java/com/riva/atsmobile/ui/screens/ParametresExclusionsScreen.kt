@@ -43,6 +43,7 @@ fun ExclusionsParamSection(
     var duree by remember { mutableStateOf("") }
     var predecessor by remember { mutableStateOf("") }
     var successor by remember { mutableStateOf("") }
+    var conditionsAValider by remember { mutableStateOf("") } // Nouveau champ d'état
 
     LaunchedEffect(Unit) {
         StepFilterManager.init(context)
@@ -83,6 +84,7 @@ fun ExclusionsParamSection(
                 duree = ""
                 predecessor = ""
                 successor = ""
+                conditionsAValider = "" // Réinitialiser pour une nouvelle étape
                 showDialog = true
             },
             modifier = Modifier.fillMaxWidth()
@@ -117,6 +119,7 @@ fun ExclusionsParamSection(
                             duree = etape.duree_Etape?.toString() ?: ""
                             predecessor = etape.predecesseurs.flatMap { it.ids }.joinToString("!")
                             successor = etape.successeurs.flatMap { it.ids }.joinToString("!")
+                            conditionsAValider = etape.conditions_A_Valider.orEmpty() // Charger la valeur existante
                             showDialog = true
                         }
                 ) {
@@ -221,6 +224,14 @@ fun ExclusionsParamSection(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = conditionsAValider,
+                        onValueChange = { conditionsAValider = it },
+                        label = { Text("Conditions à Valider") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
                 }
             },
             confirmButton = {
@@ -236,20 +247,23 @@ fun ExclusionsParamSection(
                         temps_Reel_Etape   = editingEtape?.temps_Reel_Etape,
                         commentaire_Etape_1= editingEtape?.commentaire_Etape_1,
                         predecesseur_etape = predecessor,
-                        successeur_etape   = successor
+                        successeur_etape   = successor,
+                        conditions_A_Valider = conditionsAValider
                     )
                     val updateDto = EtapeUpdateDto(
-                        libelle_Etape      = createDto.libelle_Etape,
-                        affectation_Etape  = createDto.affectation_Etape,
-                        role_Log           = createDto.role_Log,
-                        phase_Etape        = createDto.phase_Etape,
-                        duree_Etape        = createDto.duree_Etape,
-                        description_Etape  = createDto.description_Etape,
-                        etat_Etape         = createDto.etat_Etape,
-                        temps_Reel_Etape   = createDto.temps_Reel_Etape,
-                        commentaire_Etape_1= createDto.commentaire_Etape_1,
-                        predecesseur_etape = createDto.predecesseur_etape,
-                        successeur_etape   = createDto.successeur_etape
+                        //id_Etape           = editingEtape!!.id_Etape, // ID nécessaire pour la mise à jour
+                        libelle_Etape      = libelle, // Utiliser directement le champ d'état libelle
+                        affectation_Etape  = affectation,
+                        role_Log           = roleLog,
+                        phase_Etape        = phase,
+                        duree_Etape        = duree.toIntOrNull(),
+                        description_Etape  = editingEtape?.description_Etape,
+                        etat_Etape         = editingEtape?.etat_Etape,
+                        temps_Reel_Etape   = editingEtape?.temps_Reel_Etape,
+                        commentaire_Etape_1= editingEtape?.commentaire_Etape_1,
+                        predecesseur_etape = predecessor,
+                        successeur_etape   = successor,
+                        conditions_A_Valider = conditionsAValider
                     )
                     if (editingEtape == null) etapeViewModel.createEtape(context, createDto) {}
                     else etapeViewModel.updateEtape(context, editingEtape!!.id_Etape, updateDto) {}
