@@ -34,6 +34,7 @@ versionProps.store(versionPropsFile.outputStream(), null)
 extra["nextVersionCode"] = nextCode
 extra["nextVersionName"] = nextName
 
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)

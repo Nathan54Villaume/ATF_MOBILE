@@ -25,6 +25,7 @@ fun BaseScreen(
     showLogout: Boolean = false,
     connectionStatus: Boolean? = null,
     onLogout: (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null, // callback optionnel pour le bouton retour
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
@@ -34,8 +35,9 @@ fun BaseScreen(
     val role = if (devMode) "ADMIN" else rawRole
     val isOnline by viewModel.isOnline.collectAsState()
 
+    // Démarre l'observateur réseau une seule fois
     LaunchedEffect(Unit) {
-        viewModel.InitNetworkObserverIfNeeded(context)
+        viewModel.initNetworkObserverIfNeeded(context)
     }
 
     val resolvedConnection = connectionStatus ?: isOnline
@@ -58,8 +60,13 @@ fun BaseScreen(
                 },
                 navigationIcon = {
                     if (showBack) {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                        IconButton(onClick = {
+                            onBack?.invoke() ?: navController.popBackStack()
+                        }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Retour"
+                            )
                         }
                     }
                 },

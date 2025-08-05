@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
 
         // Démarrage du monitoring réseau
         NetworkMonitor.register(applicationContext)
-        viewModel.InitNetworkObserverIfNeeded(this)
+        //viewModel.InitNetworkObserverIfNeeded(this)
 
         // Chargement session utilisateur et gammes
         viewModel.chargerSessionLocale(this)

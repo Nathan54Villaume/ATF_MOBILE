@@ -1,5 +1,7 @@
+// file: app/src/main/java/com/riva/atsmobile/ui/screens/HomeScreen.kt
 package com.riva.atsmobile.ui.screens
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -15,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -23,9 +26,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.riva.atsmobile.R
+import com.riva.atsmobile.navigation.Routes
 import com.riva.atsmobile.ui.shared.BaseScreen
+import com.riva.atsmobile.utils.SessionManager
 import com.riva.atsmobile.viewmodel.SelectionViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(viewModel: SelectionViewModel, navController: NavController) {
@@ -33,6 +39,8 @@ fun HomeScreen(viewModel: SelectionViewModel, navController: NavController) {
     val roleOriginal by viewModel.role.collectAsState()
     val isOnline by viewModel.isOnline.collectAsState()
     val devMode by viewModel.devModeEnabled.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val role = if (devMode) "ADMIN" else roleOriginal
 
@@ -57,6 +65,9 @@ fun HomeScreen(viewModel: SelectionViewModel, navController: NavController) {
     val rotation = remember { Animatable(0f) }
     var visible by remember { mutableStateOf(true) }
 
+    val showResumeDialog = remember { mutableStateOf(false) }
+    val resumeConfirmed = remember { mutableStateOf<Boolean?>(null) }
+
     LaunchedEffect(Unit) {
         rotation.animateTo(
             targetValue = 360f,
@@ -66,7 +77,46 @@ fun HomeScreen(viewModel: SelectionViewModel, navController: NavController) {
 
     LaunchedEffect(roleOriginal) {
         if (roleOriginal == "OPERATEUR") {
-            delay(1500)
+            val session = SessionManager.loadSession(context)
+            if (session != null) {
+                showResumeDialog.value = true
+            } else {
+                delay(1500)
+                visible = false
+                delay(300)
+                navController.navigate("changement_gamme")
+            }
+        }
+    }
+
+    if (showResumeDialog.value) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Reprendre la session ?") },
+            text = { Text("Une session précédente a été détectée. Souhaitez-vous la reprendre ?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showResumeDialog.value = false
+                    resumeConfirmed.value = true
+                }) { Text("Reprendre") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    SessionManager.clearSession(context)
+                    showResumeDialog.value = false
+                    resumeConfirmed.value = false
+                }) { Text("Réinitialiser") }
+            }
+        )
+    }
+
+    LaunchedEffect(resumeConfirmed.value) {
+        if (resumeConfirmed.value == true) {
+            viewModel.chargerSessionEnCours(context)
+            delay(300)
+            navController.navigate(Routes.StepWizard)
+        } else if (resumeConfirmed.value == false) {
+            delay(300)
             visible = false
             delay(300)
             navController.navigate("changement_gamme")

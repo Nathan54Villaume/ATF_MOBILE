@@ -2,6 +2,7 @@
 package com.riva.atsmobile.viewmodel
 
 import android.content.Context
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.riva.atsmobile.data.EtapesRepository
@@ -9,6 +10,7 @@ import com.riva.atsmobile.model.Etape
 import com.riva.atsmobile.model.EtapeCreateDto
 import com.riva.atsmobile.model.EtapeUpdateDto
 import com.riva.atsmobile.model.EtapeValidationDto
+import com.riva.atsmobile.network.ApiServerClient
 import com.riva.atsmobile.utils.ApiConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,6 +79,19 @@ class EtapeViewModel : ViewModel() {
             val message = if (!success) response.errorBody()?.string() else null
             if (success) loadEtapes(context)
             onComplete(success, message)
+        }
+    }
+    fun resetSession(context: Context) {
+        viewModelScope.launch {
+            try {
+                val api = ApiServerClient.create("http://10.250.13.4:8088/") // ou ton URL API
+                val response = api.resetSession()
+                if (!response.isSuccessful) {
+                    Toast.makeText(context, "Erreur API : ${response.code()}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Erreur réseau : ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

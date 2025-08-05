@@ -416,7 +416,10 @@ fun TypeOperationScreen(
             }
 
             // Always-visible "Valider" button
+            val context = LocalContext.current
+
             ActionRow(
+                context = context,
                 current = current,
                 desired = desired,
                 role = role,
@@ -432,6 +435,7 @@ fun TypeOperationScreen(
                     .padding(16.dp)
             )
 
+
             SnackbarHost(
                 hostState = snackbarHost,
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -441,34 +445,46 @@ fun TypeOperationScreen(
 }
 
 @Composable
-private fun ActionRow(
-    current: Gamme?,
-    desired: Gamme?,
-    role: String,
-    navController: NavController,
-    viewModel: SelectionViewModel,
-    snackbarHost: SnackbarHostState,
-    zone: String,
-    intervention: String,
-    scope: CoroutineScope,
+fun ActionRow(
+    current: Gamme?, desired: Gamme?, role: String, navController: NavController,
+    viewModel: SelectionViewModel, snackbarHost: SnackbarHostState, zone: String,
+    intervention: String, scope: CoroutineScope, context: android.content.Context,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        ElevatedButton(
-            onClick = {
-                val curDesig = current?.designation.orEmpty()
-                val desDesig = desired?.designation.orEmpty()
-                navController.currentBackStackEntry
-                    ?.savedStateHandle
-                    ?.set("currentDesignation", curDesig)
-                navController.currentBackStackEntry
-                    ?.savedStateHandle
-                    ?.set("desiredDesignation", desDesig)
-                navController.navigate(Routes.StepWizard)
+    val openDialog = remember { mutableStateOf(false) }
+
+    if (openDialog.value) {
+        AlertDialog(
+            onDismissRequest = { openDialog.value = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    openDialog.value = false
+                    scope.launch {
+                        val success = viewModel.demarrerNouvelleSession()
+                        if (success) {
+                            viewModel.sauvegarderSessionLocalement(context)
+                            navController.currentBackStackEntry?.savedStateHandle?.set("currentDesignation", current?.designation.orEmpty())
+                            navController.currentBackStackEntry?.savedStateHandle?.set("desiredDesignation", desired?.designation.orEmpty())
+                            navController.navigate(Routes.StepWizard)
+                        } else {
+                            snackbarHost.showSnackbar("Erreur lors du démarrage de session")
+                        }
+                    }
+                }) { Text("Continuer") }
             },
+            dismissButton = {
+                TextButton(onClick = { openDialog.value = false }) {
+                    Text("Annuler")
+                }
+            },
+            title = { Text("Démarrer une session ?") },
+            text = { Text("Une session va commencer. Vous ne pourrez pas revenir en arrière sans perdre la progression.") }
+        )
+    }
+
+    Row(modifier = modifier, horizontalArrangement = Arrangement.Center) {
+        ElevatedButton(
+            onClick = { openDialog.value = true },
             enabled = current != null && desired != null,
             modifier = Modifier.defaultMinSize(minWidth = 140.dp, minHeight = 56.dp)
         ) {
@@ -478,6 +494,7 @@ private fun ActionRow(
         }
     }
 }
+
 
 @Composable
 private fun GammeGrid(

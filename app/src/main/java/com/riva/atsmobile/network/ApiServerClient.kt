@@ -39,6 +39,9 @@ interface ApiServerClient {
         @Body dto: EtapeValidationDto
     ): Response<Void>
 
+    @POST("api/Etapes/reset-session")
+    suspend fun resetSession(): Response<Void>
+
     @GET("api/Gammes")
     suspend fun getGammes(): Response<List<Gamme>>
 

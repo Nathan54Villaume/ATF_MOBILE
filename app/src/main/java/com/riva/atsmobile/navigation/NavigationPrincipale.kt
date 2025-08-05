@@ -50,7 +50,7 @@ fun ATSMobileNavHost(
         // Protégée par la fonction requireRoleOrDev.
         composable(Routes.Home) {
             requireRoleOrDev(role, devMode, navController) {
-                HomeScreen(selectionViewModel, navController)
+                HomeScreen(selectionViewModel, navController,)
             }
         }
 
