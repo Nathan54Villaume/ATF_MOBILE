@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -114,6 +115,58 @@ private fun computeFullyValidatedIds(
     return out
 }
 
+/* ----------------- UI helpers (pastille + chips) ----------------- */
+
+@Composable
+private fun StepPill(currentIndex: Int, total: Int) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = Color(0x22FFFFFF),
+        contentColor = Color.White
+    ) {
+        Text(
+            text = "Étape ${currentIndex + 1} / $total",
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelLarge
+        )
+    }
+}
+
+@Composable
+private fun RoleChips(etape: Etape, localRoles: Set<String>) {
+    val roles = rolesOfNorm(etape)
+    val server = roleMapNorm(etape)
+    if (roles.isEmpty()) return
+
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        roles.forEach { role ->
+            val validated = (server[role] == "VALIDE") || (role in localRoles)
+            val bg = if (validated) Color(0x334CAF50) else Color(0x331E88E5)
+            val fg = if (validated) Color(0xFF4CAF50) else Color(0xFF90CAF9)
+            Surface(
+                shape = RoundedCornerShape(999.dp),
+                color = bg,
+                contentColor = fg
+            ) {
+                val label = when (role) {
+                    "operateur_t1" -> "T1"
+                    "operateur_t2" -> "T2"
+                    "operateur_soudeuse" -> "Soudeuse"
+                    "mecanicien_1" -> "Mécanicien 1"
+                    "mecanicien_2" -> "Mécanicien 2"
+                    "pontier" -> "Pontier"
+                    else -> role
+                }
+                Text(
+                    text = (if (validated) "✅ " else "⏳ ") + label,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+    }
+}
+
 /* ----------------- Écran ----------------- */
 
 @Composable
@@ -184,10 +237,11 @@ fun EtapesScreen(
         ) {
             StepHeader(currentGamme, desiredGamme, nbFilsActuel, nbFilsVise)
 
+            // --- Opérateurs de prod ---
             MachineSection(
                 title = "Soudeuse",
                 operateur = "operateur_soudeuse",
-                etapes = etapesTriees.filter { it.affectation_Etape.contains("operateur_soudeuse") },
+                etapes = etapesTriees.filter { rolesOfNorm(it).contains("operateur_soudeuse") },
                 currentGamme = currentGamme,
                 desiredGamme = desiredGamme,
                 zone = zone,
@@ -203,7 +257,7 @@ fun EtapesScreen(
             MachineSection(
                 title = "Tréfileuse T1",
                 operateur = "operateur_t1",
-                etapes = etapesTriees.filter { it.affectation_Etape.contains("operateur_t1") },
+                etapes = etapesTriees.filter { rolesOfNorm(it).contains("operateur_t1") },
                 currentGamme = currentGamme,
                 desiredGamme = desiredGamme,
                 zone = zone,
@@ -219,7 +273,7 @@ fun EtapesScreen(
             MachineSection(
                 title = "Tréfileuse T2",
                 operateur = "operateur_t2",
-                etapes = etapesTriees.filter { it.affectation_Etape.contains("operateur_t2") },
+                etapes = etapesTriees.filter { rolesOfNorm(it).contains("operateur_t2") },
                 currentGamme = currentGamme,
                 desiredGamme = desiredGamme,
                 zone = zone,
@@ -230,6 +284,56 @@ fun EtapesScreen(
                 excludedIds = idsToExclude,
                 allEtapes = etapesTriees,
                 cardColor = Color(0xFF2C3E50),
+                locallyValidatedByRole = locallyValidatedByRole
+            )
+
+            // --- Pontier & Maintenance ---
+            MachineSection(
+                title = "Pontier",
+                operateur = "pontier",
+                etapes = etapesTriees.filter { rolesOfNorm(it).contains("pontier") },
+                currentGamme = currentGamme,
+                desiredGamme = desiredGamme,
+                zone = zone,
+                intervention = intervention,
+                etapeViewModel = etapeViewModel,
+                context = context,
+                isAdmin = isAdmin,
+                excludedIds = idsToExclude,
+                allEtapes = etapesTriees,
+                cardColor = Color(0xFF37474F), // bleu-gris sombre
+                locallyValidatedByRole = locallyValidatedByRole
+            )
+            MachineSection(
+                title = "Mécanicien 1",
+                operateur = "mecanicien_1",
+                etapes = etapesTriees.filter { rolesOfNorm(it).contains("mecanicien_1") },
+                currentGamme = currentGamme,
+                desiredGamme = desiredGamme,
+                zone = zone,
+                intervention = intervention,
+                etapeViewModel = etapeViewModel,
+                context = context,
+                isAdmin = isAdmin,
+                excludedIds = idsToExclude,
+                allEtapes = etapesTriees,
+                cardColor = Color(0xFF283593), // indigo sombre
+                locallyValidatedByRole = locallyValidatedByRole
+            )
+            MachineSection(
+                title = "Mécanicien 2",
+                operateur = "mecanicien_2",
+                etapes = etapesTriees.filter { rolesOfNorm(it).contains("mecanicien_2") },
+                currentGamme = currentGamme,
+                desiredGamme = desiredGamme,
+                zone = zone,
+                intervention = intervention,
+                etapeViewModel = etapeViewModel,
+                context = context,
+                isAdmin = isAdmin,
+                excludedIds = idsToExclude,
+                allEtapes = etapesTriees,
+                cardColor = Color(0xFF00695C), // teal sombre
                 locallyValidatedByRole = locallyValidatedByRole
             )
         }
@@ -300,7 +404,7 @@ private fun EtapeCardGroup(
     excludedIds: List<Int>,
     locallyValidatedByRole: MutableMap<Int, MutableSet<String>>
 ) {
-    // Toujours au début
+    // Toujours au début (pas de reprise)
     var currentIndex by rememberSaveable { mutableStateOf(0) }
     if (currentIndex >= etapes.size) currentIndex = etapes.lastIndex
     val etape = etapes.getOrNull(currentIndex) ?: return
@@ -357,16 +461,33 @@ private fun EtapeCardGroup(
             colors = CardDefaults.cardColors(containerColor = cardColor)
         ) {
             Column(Modifier.padding(20.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("$title – Étape ${currentIndex + 1} / ${etapes.size}", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                    if (isAdmin) Text("ID: ${etape.id_Etape}", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.titleSmall)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    StepPill(currentIndex, etapes.size)
+                    if (isAdmin) {
+                        Text(
+                            "ID: ${etape.id_Etape}",
+                            color = Color.White.copy(alpha = 0.7f),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(8.dp))
                 Text(etape.libelle_Etape, color = Color.White, style = MaterialTheme.typography.titleLarge)
 
+                // Rôles (visuel)
+                Spacer(Modifier.height(6.dp))
+                RoleChips(
+                    etape = etape,
+                    localRoles = (locallyValidatedByRole[etape.id_Etape] ?: emptySet())
+                )
+
                 if (!etape.conditions_A_Valider.isNullOrBlank()) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     Text("Conditions à valider :", color = Color.White, style = MaterialTheme.typography.titleSmall)
 
                     val condString = etape.conditions_A_Valider
@@ -443,14 +564,12 @@ private fun EtapeCardGroup(
                 val canUnvalidate = currentRoleValidated
 
                 Spacer(Modifier.height(20.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = { if (currentIndex > 0) currentIndex-- },
                         enabled = currentIndex > 0,
                         modifier = Modifier.weight(1f)
                     ) { Text("Précédent") }
-
-                    Spacer(Modifier.width(8.dp))
 
                     Button(
                         onClick = {
@@ -466,7 +585,6 @@ private fun EtapeCardGroup(
                                         locallyValidatedByRole[etape.id_Etape]?.remove(normalizeRoleKey(operateur))
                                         bgColor = Color(0x33FFFF00)
                                         etapeViewModel.loadEtapes(context)
-                                        // Pas d'auto-advance / pas de sauvegarde de position
                                     } else msg?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
                                 }
                             } else if (canValidate) {
@@ -478,24 +596,24 @@ private fun EtapeCardGroup(
                                         set += normalizeRoleKey(operateur)
                                         bgColor = Color(0x3300FF00)
                                         etapeViewModel.loadEtapes(context)
-                                        // Pas d'auto-advance / pas de sauvegarde de position
                                     } else msg?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
                                 }
                             }
                         },
                         enabled = canValidate || canUnvalidate,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        colors = if (canUnvalidate)
+                            ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                        else ButtonDefaults.buttonColors()
                     ) {
                         Text(
                             when {
-                                canUnvalidate -> "🔄 Annuler"
+                                canUnvalidate -> "❌ Dévalider"
                                 canValidate   -> "✅ Valider"
                                 else          -> "Pré-requis manquants"
                             }
                         )
                     }
-
-                    Spacer(Modifier.width(8.dp))
 
                     Button(
                         onClick = {
