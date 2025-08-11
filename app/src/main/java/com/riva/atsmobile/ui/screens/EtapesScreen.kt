@@ -16,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -42,11 +41,8 @@ import kotlin.coroutines.resume
 
 private fun normalizeRoleKey(raw: String): String {
     var s = raw.trim().lowercase()
-    s = s.replace(" ", "_")
-        .replace("-", "_")
-    // operateur_t_1 / operateur t-1 / operateur_t1 -> operateur_t1
+    s = s.replace(" ", "_").replace("-", "_")
     s = s.replace(Regex("^operateur_t[_\\- ]?([0-9])$"), "operateur_t$1")
-    // mecanicien-1 -> mecanicien_1
     s = s.replace(Regex("^mecanicien[_\\- ]?([0-9])$"), "mecanicien_$1")
     return s
 }
@@ -63,9 +59,9 @@ private fun roleMapNorm(etape: Etape): Map<String, String> =
 
 /* ----------------- Conditions personnalisées ----------------- */
 /**
- * Interprétation:
- *  - '+' = OU (entre blocs)
- *  - 'ou' dans les parenthèses = OU interne (ex: "(29 ou 31)")
+ * Règles:
+ *  - '+' = ET (tous les blocs séparés par '+' doivent être vrais)
+ *  - 'ou' = OU à l'intérieur d'un bloc (avec ou sans parenthèses)
  *  - Un ID est “valide” s’il est dans fullyValidatedIds (ou bien exclu).
  */
 private fun checkCustomConditions(
@@ -74,7 +70,8 @@ private fun checkCustomConditions(
     excludedIds: List<Int>
 ): Boolean {
     if (conditionString.isNullOrBlank()) return true
-    val parts = conditionString.split('+').map { it.trim() }
+
+    val parts = conditionString.split('+').map { it.trim() }.filter { it.isNotEmpty() }
 
     fun idOk(id: Int): Boolean {
         if (id in excludedIds) return true
@@ -82,18 +79,15 @@ private fun checkCustomConditions(
     }
 
     fun partOk(part: String): Boolean {
-        return if (part.startsWith("(") && part.endsWith(")")) {
-            val inside = part.removeSurrounding("(", ")")
-            val ids = inside.split("ou").mapNotNull { it.trim().toIntOrNull() }
-            ids.any { idOk(it) } || ids.isEmpty()
-        } else {
-            val id = part.toIntOrNull()
-            id == null || idOk(id)
-        }
+        val inside = part.removePrefix("(").removeSuffix(")")
+        val ids = inside
+            .split(Regex("\\bou\\b", RegexOption.IGNORE_CASE))
+            .mapNotNull { it.trim().toIntOrNull() }
+        return if (ids.isEmpty()) true else ids.any { idOk(it) } // OU interne
     }
 
-    // '+' = OU global
-    return parts.any { partOk(it) }
+    // '+' = ET global
+    return parts.all { partOk(it) }
 }
 
 /* ----------------- Calcule les étapes entièrement validées ----------------- */
@@ -109,13 +103,10 @@ private fun computeFullyValidatedIds(
         val local  = locallyValidatedByRole[e.id_Etape] ?: emptySet()
 
         val fully = if (roles.isEmpty()) {
-            // Pas d'affectation -> on considère non bloquant
             true
         } else if (roles.size == 1) {
-            // Mono-rôle : serveur OU cache local
             (server[roles[0]] == "VALIDE") || (roles[0] in local)
         } else {
-            // Multi-rôles : chaque rôle doit être VALIDE (serveur OU local)
             roles.all { r -> (server[r] == "VALIDE") || (r in local) }
         }
         if (fully) out += e.id_Etape
@@ -132,12 +123,10 @@ fun EtapesScreen(
     etapeViewModel: EtapeViewModel
 ) {
     val context = LocalContext.current
-    val locallyValidatedIds = remember { mutableStateListOf<Int>() } // compat mono-rôle (peut rester)
-    // NOUVEAU : validations locales par rôle (id_Etape -> set de rôles normalisés)
+    // Validations locales par rôle (id_Etape -> set de rôles normalisés)
     val locallyValidatedByRole = remember { mutableStateMapOf<Int, MutableSet<String>>() }
 
     val scope = rememberCoroutineScope()
-    val savedSession = SessionManager.loadSession(context)
 
     LaunchedEffect(Unit) {
         StepFilterManager.init(context)
@@ -199,7 +188,6 @@ fun EtapesScreen(
                 title = "Soudeuse",
                 operateur = "operateur_soudeuse",
                 etapes = etapesTriees.filter { it.affectation_Etape.contains("operateur_soudeuse") },
-                savedSession = savedSession,
                 currentGamme = currentGamme,
                 desiredGamme = desiredGamme,
                 zone = zone,
@@ -210,14 +198,12 @@ fun EtapesScreen(
                 excludedIds = idsToExclude,
                 allEtapes = etapesTriees,
                 cardColor = Color(0xFF263238),
-                locallyValidatedIds = locallyValidatedIds,
                 locallyValidatedByRole = locallyValidatedByRole
             )
             MachineSection(
                 title = "Tréfileuse T1",
                 operateur = "operateur_t1",
                 etapes = etapesTriees.filter { it.affectation_Etape.contains("operateur_t1") },
-                savedSession = savedSession,
                 currentGamme = currentGamme,
                 desiredGamme = desiredGamme,
                 zone = zone,
@@ -228,14 +214,12 @@ fun EtapesScreen(
                 excludedIds = idsToExclude,
                 allEtapes = etapesTriees,
                 cardColor = Color(0xFF1E272E),
-                locallyValidatedIds = locallyValidatedIds,
                 locallyValidatedByRole = locallyValidatedByRole
             )
             MachineSection(
                 title = "Tréfileuse T2",
                 operateur = "operateur_t2",
                 etapes = etapesTriees.filter { it.affectation_Etape.contains("operateur_t2") },
-                savedSession = savedSession,
                 currentGamme = currentGamme,
                 desiredGamme = desiredGamme,
                 zone = zone,
@@ -246,7 +230,6 @@ fun EtapesScreen(
                 excludedIds = idsToExclude,
                 allEtapes = etapesTriees,
                 cardColor = Color(0xFF2C3E50),
-                locallyValidatedIds = locallyValidatedIds,
                 locallyValidatedByRole = locallyValidatedByRole
             )
         }
@@ -266,7 +249,6 @@ private fun MachineSection(
     title: String,
     operateur: String,
     etapes: List<Etape>,
-    savedSession: SessionManager.SessionData?,
     currentGamme: Gamme?,
     desiredGamme: Gamme?,
     zone: String,
@@ -277,18 +259,15 @@ private fun MachineSection(
     excludedIds: List<Int>,
     allEtapes: List<Etape>,
     cardColor: Color,
-    locallyValidatedIds: SnapshotStateList<Int>,
     locallyValidatedByRole: MutableMap<Int, MutableSet<String>>
 ) {
     var expanded by rememberSaveable { mutableStateOf(true) }
-    val resumeIndex = savedSession?.takeIf { it.current == currentGamme && it.desired == desiredGamme }?.stepIndex ?: 0
 
     ExpandableCard(title = title, expanded = expanded, onToggle = { expanded = !expanded }) {
         EtapeCardGroup(
             operateur = operateur,
             title = title,
             etapes = etapes,
-            resumeIndex = resumeIndex,
             currentGamme = currentGamme,
             desiredGamme = desiredGamme,
             zone = zone,
@@ -299,7 +278,6 @@ private fun MachineSection(
             isAdmin = isAdmin,
             allEtapes = allEtapes,
             excludedIds = excludedIds,
-            locallyValidatedIds = locallyValidatedIds,
             locallyValidatedByRole = locallyValidatedByRole
         )
     }
@@ -310,7 +288,6 @@ private fun EtapeCardGroup(
     operateur: String,
     title: String,
     etapes: List<Etape>,
-    resumeIndex: Int,
     currentGamme: Gamme?,
     desiredGamme: Gamme?,
     zone: String,
@@ -321,25 +298,12 @@ private fun EtapeCardGroup(
     isAdmin: Boolean,
     allEtapes: List<Etape>,
     excludedIds: List<Int>,
-    locallyValidatedIds: SnapshotStateList<Int>,
     locallyValidatedByRole: MutableMap<Int, MutableSet<String>>
 ) {
-    var currentIndex by rememberSaveable { mutableStateOf(resumeIndex) }
+    // Toujours au début
+    var currentIndex by rememberSaveable { mutableStateOf(0) }
     if (currentIndex >= etapes.size) currentIndex = etapes.lastIndex
     val etape = etapes.getOrNull(currentIndex) ?: return
-
-    DisposableEffect(currentIndex) {
-        if (currentGamme != null && desiredGamme != null) {
-            SessionManager.saveSession(
-                context,
-                SessionManager.SessionData(
-                    current = currentGamme, desired = desiredGamme,
-                    zone = zone, intervention = intervention, stepIndex = currentIndex
-                )
-            )
-        }
-        onDispose { }
-    }
 
     var startTime by rememberSaveable(etape.id_Etape) { mutableStateOf(System.currentTimeMillis()) }
     var bgColor by remember { mutableStateOf(Color.Transparent) }
@@ -355,8 +319,7 @@ private fun EtapeCardGroup(
         (serverMap[roleKey] == "VALIDE") ||
                 (locallyValidatedByRole[etape.id_Etape]?.contains(roleKey) == true)
 
-    // IDs entièrement validées (serveur OU local par rôle) — utilisé pour les prérequis
-    val fullyValidatedIds = remember(allEtapes, locallyValidatedByRole.keys, locallyValidatedByRole.values) {
+    val fullyValidatedIds = remember(allEtapes, locallyValidatedByRole.entries.toList()) {
         computeFullyValidatedIds(
             allEtapes,
             locallyValidatedByRole.mapValues { it.value.toSet() }
@@ -369,16 +332,17 @@ private fun EtapeCardGroup(
         excludedIds
     )
 
-    // Liste informative d’IDs manquants (approximative si expression complexe)
     val missingIds: List<Int> = remember(etape.conditions_A_Valider, fullyValidatedIds, excludedIds) {
         val raw = etape.conditions_A_Valider ?: return@remember emptyList()
-        raw.replace("(", "").replace(")", "").replace("ou", "+").split('+')
+        raw.replace("(", "")
+            .replace(")", "")
+            .split('+') // AND blocks
+            .flatMap { it.split(Regex("\\bou\\b", RegexOption.IGNORE_CASE)) } // OR ids
             .mapNotNull { it.trim().toIntOrNull() }
             .distinct()
             .filter { id -> id !in excludedIds && id !in fullyValidatedIds }
     }
 
-    // Tous rôles validés ? (serveur OU local)
     val allRolesValidated = run {
         val roles = rolesOfNorm(etape)
         val local = locallyValidatedByRole[etape.id_Etape] ?: emptySet()
@@ -406,7 +370,10 @@ private fun EtapeCardGroup(
                     Text("Conditions à valider :", color = Color.White, style = MaterialTheme.typography.titleSmall)
 
                     val condString = etape.conditions_A_Valider
-                        .replace("+", " OU ").replace("ou", " OU ").replace("(", "( ").replace(")", " )")
+                        .replace("+", " ET ")
+                        .replace(Regex("\\bou\\b", RegexOption.IGNORE_CASE), " OU ")
+                        .replace("(", "( ")
+                        .replace(")", " )")
                     val parts = condString.split(" ")
 
                     val styled = buildAnnotatedString {
@@ -499,6 +466,7 @@ private fun EtapeCardGroup(
                                         locallyValidatedByRole[etape.id_Etape]?.remove(normalizeRoleKey(operateur))
                                         bgColor = Color(0x33FFFF00)
                                         etapeViewModel.loadEtapes(context)
+                                        // Pas d'auto-advance / pas de sauvegarde de position
                                     } else msg?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
                                 }
                             } else if (canValidate) {
@@ -510,12 +478,7 @@ private fun EtapeCardGroup(
                                         set += normalizeRoleKey(operateur)
                                         bgColor = Color(0x3300FF00)
                                         etapeViewModel.loadEtapes(context)
-                                        if (currentIndex < etapes.lastIndex) {
-                                            currentIndex++
-                                            startTime = System.currentTimeMillis()
-                                        } else {
-                                            Toast.makeText(context, "Dernière étape validée !", Toast.LENGTH_SHORT).show()
-                                        }
+                                        // Pas d'auto-advance / pas de sauvegarde de position
                                     } else msg?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
                                 }
                             }
