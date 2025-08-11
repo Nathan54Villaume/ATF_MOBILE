@@ -38,104 +38,92 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
-/* ------------ Normalisation / rôles ------------ */
+/* ----------------- Normalisation des rôles ----------------- */
 
-private fun normRole(s: String): String =
-    s.trim().lowercase().replace(Regex("[^a-z0-9]"), "") // enlève _ - espaces etc.
-
-private fun rolesOfRaw(etape: Etape): List<String> =
-    etape.affectation_Etape
-        .split(';', ',')
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
+private fun normalizeRoleKey(raw: String): String {
+    var s = raw.trim().lowercase()
+    s = s.replace(" ", "_")
+        .replace("-", "_")
+    // operateur_t_1 / operateur t-1 / operateur_t1 -> operateur_t1
+    s = s.replace(Regex("^operateur_t[_\\- ]?([0-9])$"), "operateur_t$1")
+    // mecanicien-1 -> mecanicien_1
+    s = s.replace(Regex("^mecanicien[_\\- ]?([0-9])$"), "mecanicien_$1")
+    return s
+}
 
 private fun rolesOfNorm(etape: Etape): List<String> =
-    rolesOfRaw(etape).map(::normRole)
+    etape.affectation_Etape
+        .split(';', ',')
+        .map { normalizeRoleKey(it) }
+        .filter { it.isNotEmpty() }
+        .distinct()
 
-private fun roleMapNorm(etape: Etape?): Map<String, String> =
-    (etape?.etatParRole ?: emptyMap()).entries.associate { normRole(it.key) to it.value }
+private fun roleMapNorm(etape: Etape): Map<String, String> =
+    (etape.etatParRole ?: emptyMap()).mapKeys { (k, _) -> normalizeRoleKey(k) }
 
+/* ----------------- Conditions personnalisées ----------------- */
 /**
- * Étape entièrement validée :
- *  - Si UNE SEULE affectation : "VALIDE" serveur OU validation locale (optimiste).
- *  - Si PLUSIEURS affectations : TOUS les rôles doivent être "VALIDE" côté serveur.
+ * Interprétation:
+ *  - '+' = OU (entre blocs)
+ *  - 'ou' dans les parenthèses = OU interne (ex: "(29 ou 31)")
+ *  - Un ID est “valide” s’il est dans fullyValidatedIds (ou bien exclu).
  */
-private fun isStepFullyValidated(etape: Etape?, locallyValidatedIds: Set<Int>): Boolean {
-    if (etape == null) return false
-    val roles = rolesOfNorm(etape)
-    val map = roleMapNorm(etape)
-    return if (roles.size <= 1) {
-        (roles.firstOrNull()?.let { r -> map[r] == "VALIDE" } == true) ||
-                locallyValidatedIds.contains(etape.id_Etape)
-    } else {
-        roles.all { r -> map[r] == "VALIDE" }
+private fun checkCustomConditions(
+    conditionString: String?,
+    fullyValidatedIds: Set<Int>,
+    excludedIds: List<Int>
+): Boolean {
+    if (conditionString.isNullOrBlank()) return true
+    val parts = conditionString.split('+').map { it.trim() }
+
+    fun idOk(id: Int): Boolean {
+        if (id in excludedIds) return true
+        return id in fullyValidatedIds
     }
+
+    fun partOk(part: String): Boolean {
+        return if (part.startsWith("(") && part.endsWith(")")) {
+            val inside = part.removeSurrounding("(", ")")
+            val ids = inside.split("ou").mapNotNull { it.trim().toIntOrNull() }
+            ids.any { idOk(it) } || ids.isEmpty()
+        } else {
+            val id = part.toIntOrNull()
+            id == null || idOk(id)
+        }
+    }
+
+    // '+' = OU global
+    return parts.any { partOk(it) }
 }
 
-/** Détail par rôle pour affichage (ex: operateur_t1:✅ operateur_t2:❌). */
-private fun roleBadgesFor(etape: Etape?, locallyValidatedIds: Set<Int>): String {
-    if (etape == null) return "?"
-    val rolesRaw = rolesOfRaw(etape)
-    val rolesN = rolesOfNorm(etape)
-    val mapN = roleMapNorm(etape)
-    val badges = rolesRaw.indices.joinToString(" ") { i ->
-        val keyN = rolesN[i]
-        val ok = mapN[keyN] == "VALIDE"
-        val symb = if (ok) "✅" else "❌"
-        "${rolesRaw[i]}:$symb"
-    }
-    return if (rolesN.size <= 1 && locallyValidatedIds.contains(etape.id_Etape)) "$badges (local)" else badges
-}
+/* ----------------- Calcule les étapes entièrement validées ----------------- */
 
-/* ------------ Snapshot validations & parsing conditions ------------ */
-
-/** Construit l’ensemble des IDs d’étapes considérées “entièrement validées” à l’instant t. */
 private fun computeFullyValidatedIds(
     allEtapes: List<Etape>,
-    locallyValidatedIds: Set<Int>
+    locallyValidatedByRole: Map<Int, Set<String>>
 ): Set<Int> {
     val out = mutableSetOf<Int>()
-    allEtapes.forEach { e ->
+    for (e in allEtapes) {
         val roles = rolesOfNorm(e)
-        val map = roleMapNorm(e)
-        val fully = if (roles.size <= 1) {
-            (roles.firstOrNull()?.let { r -> map[r] == "VALIDE" } == true) ||
-                    (e.id_Etape in locallyValidatedIds)
+        val server = roleMapNorm(e)
+        val local  = locallyValidatedByRole[e.id_Etape] ?: emptySet()
+
+        val fully = if (roles.isEmpty()) {
+            // Pas d'affectation -> on considère non bloquant
+            true
+        } else if (roles.size == 1) {
+            // Mono-rôle : serveur OU cache local
+            (server[roles[0]] == "VALIDE") || (roles[0] in local)
         } else {
-            roles.all { r -> map[r] == "VALIDE" }
+            // Multi-rôles : chaque rôle doit être VALIDE (serveur OU local)
+            roles.all { r -> (server[r] == "VALIDE") || (r in local) }
         }
         if (fully) out += e.id_Etape
     }
     return out
 }
 
-/** Teste les conditions à partir d’un Set d’IDs déjà validés. '+' = OU global, 'ou' intra-parenthèses = OU. */
-private fun areConditionsMet(
-    cond: String?,
-    fullyValidatedIds: Set<Int>,
-    excludedIds: Set<Int>
-): Boolean {
-    if (cond.isNullOrBlank()) return true
-    val parts = cond.split('+').map { it.trim() }
-    fun idOk(id: Int): Boolean = id in excludedIds || id in fullyValidatedIds
-    fun partOk(p: String): Boolean {
-        return if (p.startsWith("(") && p.endsWith(")")) {
-            val ids = p.removeSurrounding("(", ")").split("ou").mapNotNull { it.trim().toIntOrNull() }
-            ids.any { idOk(it) } || ids.isEmpty()
-        } else {
-            p.toIntOrNull()?.let { idOk(it) } ?: true
-        }
-    }
-    return parts.any { partOk(it) }
-}
-
-/** Pour l’affichage des manquants. */
-private fun extractAllIds(cond: String?): List<Int> =
-    cond?.replace("(", "")?.replace(")", "")?.replace("ou", "+")
-        ?.split('+')?.mapNotNull { it.trim().toIntOrNull() }?.distinct()
-        ?: emptyList()
-
-/* ------------ Écran ------------ */
+/* ----------------- Écran ----------------- */
 
 @Composable
 fun EtapesScreen(
@@ -144,7 +132,10 @@ fun EtapesScreen(
     etapeViewModel: EtapeViewModel
 ) {
     val context = LocalContext.current
-    val locallyValidatedIds = remember { mutableStateListOf<Int>() }
+    val locallyValidatedIds = remember { mutableStateListOf<Int>() } // compat mono-rôle (peut rester)
+    // NOUVEAU : validations locales par rôle (id_Etape -> set de rôles normalisés)
+    val locallyValidatedByRole = remember { mutableStateMapOf<Int, MutableSet<String>>() }
+
     val scope = rememberCoroutineScope()
     val savedSession = SessionManager.loadSession(context)
 
@@ -219,7 +210,8 @@ fun EtapesScreen(
                 excludedIds = idsToExclude,
                 allEtapes = etapesTriees,
                 cardColor = Color(0xFF263238),
-                locallyValidatedIds = locallyValidatedIds
+                locallyValidatedIds = locallyValidatedIds,
+                locallyValidatedByRole = locallyValidatedByRole
             )
             MachineSection(
                 title = "Tréfileuse T1",
@@ -236,7 +228,8 @@ fun EtapesScreen(
                 excludedIds = idsToExclude,
                 allEtapes = etapesTriees,
                 cardColor = Color(0xFF1E272E),
-                locallyValidatedIds = locallyValidatedIds
+                locallyValidatedIds = locallyValidatedIds,
+                locallyValidatedByRole = locallyValidatedByRole
             )
             MachineSection(
                 title = "Tréfileuse T2",
@@ -253,7 +246,8 @@ fun EtapesScreen(
                 excludedIds = idsToExclude,
                 allEtapes = etapesTriees,
                 cardColor = Color(0xFF2C3E50),
-                locallyValidatedIds = locallyValidatedIds
+                locallyValidatedIds = locallyValidatedIds,
+                locallyValidatedByRole = locallyValidatedByRole
             )
         }
     }
@@ -283,7 +277,8 @@ private fun MachineSection(
     excludedIds: List<Int>,
     allEtapes: List<Etape>,
     cardColor: Color,
-    locallyValidatedIds: SnapshotStateList<Int>
+    locallyValidatedIds: SnapshotStateList<Int>,
+    locallyValidatedByRole: MutableMap<Int, MutableSet<String>>
 ) {
     var expanded by rememberSaveable { mutableStateOf(true) }
     val resumeIndex = savedSession?.takeIf { it.current == currentGamme && it.desired == desiredGamme }?.stepIndex ?: 0
@@ -304,7 +299,8 @@ private fun MachineSection(
             isAdmin = isAdmin,
             allEtapes = allEtapes,
             excludedIds = excludedIds,
-            locallyValidatedIds = locallyValidatedIds
+            locallyValidatedIds = locallyValidatedIds,
+            locallyValidatedByRole = locallyValidatedByRole
         )
     }
 }
@@ -325,7 +321,8 @@ private fun EtapeCardGroup(
     isAdmin: Boolean,
     allEtapes: List<Etape>,
     excludedIds: List<Int>,
-    locallyValidatedIds: SnapshotStateList<Int>
+    locallyValidatedIds: SnapshotStateList<Int>,
+    locallyValidatedByRole: MutableMap<Int, MutableSet<String>>
 ) {
     var currentIndex by rememberSaveable { mutableStateOf(resumeIndex) }
     if (currentIndex >= etapes.size) currentIndex = etapes.lastIndex
@@ -351,32 +348,42 @@ private fun EtapeCardGroup(
     var description by rememberSaveable(etape.id_Etape) { mutableStateOf(etape.description_Etape.orEmpty()) }
     var commentaire by rememberSaveable(etape.id_Etape) { mutableStateOf(etape.commentaire_Etape_1.orEmpty()) }
 
-    val mapNorm = roleMapNorm(etape)
-    val currentRoleValidated = mapNorm[normRole(operateur)] == "VALIDE"
-    val hasCurrentRoleValidated =
-        currentRoleValidated || locallyValidatedIds.contains(etape.id_Etape)
+    val roleKey = normalizeRoleKey(operateur)
+    val serverMap = roleMapNorm(etape)
 
-    val allRolesValidated =
-        isStepFullyValidated(etape, locallyValidatedIds.toSet())
+    val currentRoleValidated =
+        (serverMap[roleKey] == "VALIDE") ||
+                (locallyValidatedByRole[etape.id_Etape]?.contains(roleKey) == true)
 
-    // === Snapshot des étapes entièrement validées (rôles normalisés) ===
-    val fullyValidatedIds = remember(allEtapes, locallyValidatedIds.toList()) {
-        computeFullyValidatedIds(allEtapes, locallyValidatedIds.toSet())
+    // IDs entièrement validées (serveur OU local par rôle) — utilisé pour les prérequis
+    val fullyValidatedIds = remember(allEtapes, locallyValidatedByRole.keys, locallyValidatedByRole.values) {
+        computeFullyValidatedIds(
+            allEtapes,
+            locallyValidatedByRole.mapValues { it.value.toSet() }
+        )
     }
 
-    val arePreconditionsMet = areConditionsMet(
+    val arePreconditionsMet = checkCustomConditions(
         etape.conditions_A_Valider,
         fullyValidatedIds,
-        excludedIds.toSet()
+        excludedIds
     )
 
-    // IDs manquants pour affichage
-    val missingIds = remember(etape.conditions_A_Valider, fullyValidatedIds, excludedIds) {
-        extractAllIds(etape.conditions_A_Valider)
-            .filter { it !in excludedIds && it !in fullyValidatedIds }
+    // Liste informative d’IDs manquants (approximative si expression complexe)
+    val missingIds: List<Int> = remember(etape.conditions_A_Valider, fullyValidatedIds, excludedIds) {
+        val raw = etape.conditions_A_Valider ?: return@remember emptyList()
+        raw.replace("(", "").replace(")", "").replace("ou", "+").split('+')
+            .mapNotNull { it.trim().toIntOrNull() }
+            .distinct()
+            .filter { id -> id !in excludedIds && id !in fullyValidatedIds }
     }
 
-    val allMap = remember(allEtapes) { allEtapes.associateBy { it.id_Etape } }
+    // Tous rôles validés ? (serveur OU local)
+    val allRolesValidated = run {
+        val roles = rolesOfNorm(etape)
+        val local = locallyValidatedByRole[etape.id_Etape] ?: emptySet()
+        roles.isNotEmpty() && roles.all { r -> (serverMap[r] == "VALIDE") || (r in local) }
+    }
 
     key(etape.id_Etape) {
         Card(
@@ -407,16 +414,16 @@ private fun EtapeCardGroup(
                             val id = part.toIntOrNull()
                             if (id != null) {
                                 val excluded = id in excludedIds
-                                val fullyValid = !excluded && (id in fullyValidatedIds)
+                                val ok = if (excluded) false else id in fullyValidatedIds
                                 val color = when {
-                                    excluded   -> Color.Gray
-                                    fullyValid -> Color(0xFF4CAF50) // ✅
-                                    else       -> Color(0xFFF44336) // ❌
+                                    excluded -> Color.Gray
+                                    ok       -> Color(0xFF4CAF50) // ✅
+                                    else     -> Color(0xFFF44336) // ❌
                                 }
                                 val status = when {
-                                    excluded   -> "👻"
-                                    fullyValid -> "✅"
-                                    else       -> "❌"
+                                    excluded -> "👻"
+                                    ok       -> "✅"
+                                    else     -> "❌"
                                 }
                                 withStyle(style = SpanStyle(color = color, fontWeight = FontWeight.Bold)) {
                                     append("$id$status ")
@@ -428,21 +435,6 @@ private fun EtapeCardGroup(
                         }
                     }
                     Text(styled, style = MaterialTheme.typography.bodySmall)
-
-                    // Détail par rôle pour chaque ID unique
-                    val idsInCond: List<Int> = extractAllIds(etape.conditions_A_Valider)
-                    Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        idsInCond.forEach { id ->
-                            val excluded = id in excludedIds
-                            val dep = allMap[id]
-                            val badges = if (excluded) "👻 exclue" else roleBadgesFor(dep, locallyValidatedIds.toSet())
-                            Text(
-                                text = "• $id • $badges",
-                                color = if (excluded) Color.Gray else Color.LightGray,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
                 }
 
                 if (!etape.description_Etape.isNullOrBlank() || isAdmin) {
@@ -457,24 +449,22 @@ private fun EtapeCardGroup(
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = commentaire, onValueChange = { commentaire = it },
-                    label = { Text("Commentaire") }, enabled = !hasCurrentRoleValidated,
+                    label = { Text("Commentaire") }, enabled = !currentRoleValidated,
                     modifier = Modifier.fillMaxWidth(), textStyle = TextStyle(color = Color.White)
                 )
 
                 Spacer(Modifier.height(12.dp))
-                // Statut synthétique
-                val rolesCount = rolesOfNorm(etape).size
                 val statusText = when {
-                    allRolesValidated -> "✅ Validée (tous rôles)"
-                    hasCurrentRoleValidated -> if (rolesCount <= 1) "✅ Validée" else "✅ Validée (mon rôle)"
-                    !arePreconditionsMet -> "❌ Conditions non remplies"
-                    else -> "⏳ En attente"
+                    allRolesValidated     -> "✅ Validée (tous rôles)"
+                    currentRoleValidated  -> "✅ Validée (mon rôle)"
+                    !arePreconditionsMet  -> "❌ Conditions non remplies"
+                    else                  -> "⏳ En attente"
                 }
                 val statusColor = when {
-                    allRolesValidated -> Color.Green
-                    hasCurrentRoleValidated -> Color(0xFF8BC34A)
-                    !arePreconditionsMet -> Color.Red
-                    else -> Color.Yellow
+                    allRolesValidated     -> Color.Green
+                    currentRoleValidated  -> Color(0xFF8BC34A)
+                    !arePreconditionsMet  -> Color.Red
+                    else                  -> Color.Yellow
                 }
                 Text(
                     text = statusText + if (!arePreconditionsMet && missingIds.isNotEmpty())
@@ -482,9 +472,8 @@ private fun EtapeCardGroup(
                     color = statusColor
                 )
 
-                // Boutons
-                val canValidate = !hasCurrentRoleValidated && arePreconditionsMet
-                val canUnvalidate = hasCurrentRoleValidated
+                val canValidate = !currentRoleValidated && arePreconditionsMet
+                val canUnvalidate = currentRoleValidated
 
                 Spacer(Modifier.height(20.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -507,41 +496,38 @@ private fun EtapeCardGroup(
                                     context, etape.id_Etape, comTrim, descTrim, 0, operateur
                                 ) { success, msg ->
                                     if (success) {
-                                        locallyValidatedIds.remove(etape.id_Etape)
-                                        bgColor = Color(0x33FFFF00) // jaune léger
+                                        locallyValidatedByRole[etape.id_Etape]?.remove(normalizeRoleKey(operateur))
+                                        bgColor = Color(0x33FFFF00)
                                         etapeViewModel.loadEtapes(context)
                                     } else msg?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
                                 }
                             } else if (canValidate) {
-                                val id = etape.id_Etape
-                                val singleRole = rolesCount <= 1
-
-                                // Optimiste : si une seule affectation, on marque localement tout de suite
-                                if (singleRole && !locallyValidatedIds.contains(id)) {
-                                    locallyValidatedIds.add(id)
-                                }
-
                                 etapeViewModel.validerEtape(
-                                    context, id, comTrim, descTrim, elapsed, operateur = operateur
+                                    context, etape.id_Etape, comTrim, descTrim, elapsed, operateur = operateur
                                 ) { success, msg ->
                                     if (success) {
-                                        bgColor = Color(0x3300FF00) // vert léger
+                                        val set = locallyValidatedByRole.getOrPut(etape.id_Etape) { mutableSetOf() }
+                                        set += normalizeRoleKey(operateur)
+                                        bgColor = Color(0x3300FF00)
                                         etapeViewModel.loadEtapes(context)
-                                    } else {
-                                        if (singleRole) locallyValidatedIds.remove(id)
-                                        msg?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
-                                    }
+                                        if (currentIndex < etapes.lastIndex) {
+                                            currentIndex++
+                                            startTime = System.currentTimeMillis()
+                                        } else {
+                                            Toast.makeText(context, "Dernière étape validée !", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } else msg?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
                                 }
                             }
                         },
-                        enabled = canValidate || canUnvalidate, // Valider bloqué si prérequis KO. Suivant reste libre.
+                        enabled = canValidate || canUnvalidate,
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
                             when {
                                 canUnvalidate -> "🔄 Annuler"
-                                canValidate -> "✅ Valider"
-                                else -> "Pré-requis manquants"
+                                canValidate   -> "✅ Valider"
+                                else          -> "Pré-requis manquants"
                             }
                         )
                     }
@@ -555,7 +541,7 @@ private fun EtapeCardGroup(
                                 startTime = System.currentTimeMillis()
                             }
                         },
-                        enabled = currentIndex < etapes.lastIndex, // Navigation toujours permise
+                        enabled = currentIndex < etapes.lastIndex, // navigation toujours possible
                         modifier = Modifier.weight(1f)
                     ) { Text("Suivant") }
                 }
@@ -564,7 +550,7 @@ private fun EtapeCardGroup(
     }
 }
 
-/* ------------ Dialog & utils ------------ */
+/* ----------------- Dialog & utils ----------------- */
 
 private suspend fun confirmReset(context: Context): Boolean =
     suspendCancellableCoroutine { cont ->
@@ -577,7 +563,7 @@ private suspend fun confirmReset(context: Context): Boolean =
             .show()
     }
 
-// Tri topologique des étapes selon leurs prédecesseurs (tous opérateurs confondus ici)
+// Tri topologique des étapes selon leurs prédecesseurs (tous opérateurs confondus)
 private fun getOrderedSteps(etapes: List<Etape>): List<Etape> {
     val map = etapes.associateBy { it.id_Etape }
     val visited = mutableSetOf<Int>()
@@ -603,17 +589,11 @@ private fun ExpandableCard(
             text = title,
             color = Color.White,
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onToggle() }
-                .padding(vertical = 8.dp)
+            modifier = Modifier.fillMaxWidth().clickable { onToggle() }.padding(vertical = 8.dp)
         )
         if (expanded) {
             Column(
-                Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF121212))
-                    .padding(8.dp),
+                Modifier.fillMaxWidth().background(Color(0xFF121212)).padding(8.dp),
                 content = content
             )
         }
