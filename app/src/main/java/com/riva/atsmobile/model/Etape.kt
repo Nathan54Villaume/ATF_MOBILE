@@ -1,10 +1,8 @@
+// file: app/src/main/java/com/riva/atsmobile/model/Etape.kt
 package com.riva.atsmobile.model
 
 import com.google.gson.annotations.SerializedName
 
-/**
- * Représente un lien entre étapes pour un opérateur donné.
- */
 data class EtapeRelation(
     @SerializedName("operateur")
     val operateur: String,
@@ -35,8 +33,9 @@ data class Etape(
     @SerializedName("description_etape")
     val description_Etape: String?,
 
-    @SerializedName("etat_etape")
-    val etat_Etape: String?,
+    // on supprime l’ancien champ etat_etape et on le remplace par une map par rôle
+    @SerializedName("EtatParRole")
+    val etatParRole: Map<String, String>,
 
     @SerializedName("temps_reel_etape")
     val temps_Reel_Etape: Int?,
@@ -47,9 +46,11 @@ data class Etape(
     @SerializedName("predecesseurs")
     val predecesseurs: List<EtapeRelation>,
 
+
     @SerializedName("successeurs")
     val successeurs: List<EtapeRelation>,
 
     @SerializedName("conditions_a_valider")
-    val conditions_A_Valider: String? // Nouvelle colonne
+    val conditions_A_Valider: String?
+
 )

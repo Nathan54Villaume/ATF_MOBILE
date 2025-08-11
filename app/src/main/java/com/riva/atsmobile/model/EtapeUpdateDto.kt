@@ -22,8 +22,9 @@ data class EtapeUpdateDto(
     @SerializedName("description_etape")
     val description_Etape: String?,
 
-    @SerializedName("etat_etape")
-    val etat_Etape: String?,
+    // Remplacement de l'ancien "etat_etape"
+    @SerializedName("etat_par_role")
+    val etatParRole: Map<String, String>?,
 
     @SerializedName("temps_reel_etape")
     val temps_Reel_Etape: Int?,

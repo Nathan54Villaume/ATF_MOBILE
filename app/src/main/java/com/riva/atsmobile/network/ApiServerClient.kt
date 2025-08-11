@@ -29,16 +29,26 @@ interface ApiServerClient {
         @Body dto: EtapeUpdateDto
     ): Response<Void>
 
+    /**
+     * Valide une étape pour un opérateur.
+     * Le DTO contient maintenant : id_etape, commentaire, description, tempsReel et role.
+     */
     @POST("api/Etapes/valider")
     suspend fun validerEtape(
         @Body dto: EtapeValidationDto
     ): Response<Void>
 
+    /**
+     * Annule la validation d’une étape pour un opérateur.
+     */
     @POST("api/Etapes/devalider")
     suspend fun devaliderEtape(
         @Body dto: EtapeValidationDto
     ): Response<Void>
 
+    /**
+     * Réinitialise la session (toutes les validations) côté serveur.
+     */
     @POST("api/Etapes/reset-session")
     suspend fun resetSession(): Response<Void>
 

@@ -14,5 +14,12 @@ data class EtapeValidationDto(
     val description: String?,
 
     @SerializedName("tempsReel")
-    val tempsReel: Int?
+    val tempsReel: Int?,
+
+    @SerializedName("role_log")
+    val operateur: String,
+
+    @SerializedName("EtatParRole")
+    val etatParRole: Map<String, String>?
+
 )
