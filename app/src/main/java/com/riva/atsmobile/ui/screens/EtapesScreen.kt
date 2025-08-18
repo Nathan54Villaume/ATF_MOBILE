@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder // ✅ pour conserver l’état au repli
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -233,20 +234,27 @@ fun EtapesScreen(
             Text(
                 "Aucune étape trouvée.",
                 color = Color.White,
-                modifier = Modifier.fillMaxSize().padding(32.dp).padding(padding)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp)
+                    .padding(padding)
             )
             return@BaseScreen
         }
 
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             StepHeader(currentGamme, desiredGamme, nbFilsActuel, nbFilsVise)
 
             // --- Opérateurs de prod ---
             MachineSection(
-                title = "Soudeuse",
+                title = "SOUDEUSE",
                 operateur = "operateur_soudeuse",
                 etapes = etapesTriees.filter { rolesOfNorm(it).contains("operateur_soudeuse") },
                 currentGamme = currentGamme,
@@ -262,7 +270,7 @@ fun EtapesScreen(
                 locallyValidatedByRole = locallyValidatedByRole
             )
             MachineSection(
-                title = "Tréfileuse T1",
+                title = "OPERATEUR T1",
                 operateur = "operateur_t1",
                 etapes = etapesTriees.filter { rolesOfNorm(it).contains("operateur_t1") },
                 currentGamme = currentGamme,
@@ -278,7 +286,7 @@ fun EtapesScreen(
                 locallyValidatedByRole = locallyValidatedByRole
             )
             MachineSection(
-                title = "Tréfileuse T2",
+                title = "OPERATEUR T2",
                 operateur = "operateur_t2",
                 etapes = etapesTriees.filter { rolesOfNorm(it).contains("operateur_t2") },
                 currentGamme = currentGamme,
@@ -296,7 +304,7 @@ fun EtapesScreen(
 
             // --- Pontier & Maintenance ---
             MachineSection(
-                title = "Pontier",
+                title = "PONTIER",
                 operateur = "pontier",
                 etapes = etapesTriees.filter { rolesOfNorm(it).contains("pontier") },
                 currentGamme = currentGamme,
@@ -312,7 +320,7 @@ fun EtapesScreen(
                 locallyValidatedByRole = locallyValidatedByRole
             )
             MachineSection(
-                title = "Mécanicien 1",
+                title = "MÉCANICIEN 1",
                 operateur = "mecanicien_1",
                 etapes = etapesTriees.filter { rolesOfNorm(it).contains("mecanicien_1") },
                 currentGamme = currentGamme,
@@ -328,7 +336,7 @@ fun EtapesScreen(
                 locallyValidatedByRole = locallyValidatedByRole
             )
             MachineSection(
-                title = "Mécanicien 2",
+                title = "MÉCANICIEN 2",
                 operateur = "mecanicien_2",
                 etapes = etapesTriees.filter { rolesOfNorm(it).contains("mecanicien_2") },
                 currentGamme = currentGamme,
@@ -350,8 +358,16 @@ fun EtapesScreen(
 @Composable
 private fun StepHeader(current: Gamme?, desired: Gamme?, nbAct: Int?, nbVis: Int?) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text("Gamme Actuelle : ${current?.designation ?: "-"} ($nbAct)", color = Color.LightGray, style = MaterialTheme.typography.titleLarge)
-        Text(text = "Gamme Visée : ${desired?.designation ?: "-"} (${nbVis ?: "-"})", color = Color.LightGray, style = MaterialTheme.typography.titleLarge)
+        Text(
+            "Gamme Actuelle : ${current?.designation ?: "-"} ($nbAct)",
+            color = Color.LightGray,
+            style = MaterialTheme.typography.titleLarge
+        )
+        Text(
+            text = "Gamme Visée : ${desired?.designation ?: "-"} (${nbVis ?: "-"})",
+            color = Color.LightGray,
+            style = MaterialTheme.typography.titleLarge
+        )
     }
 }
 
@@ -374,23 +390,32 @@ private fun MachineSection(
 ) {
     var expanded by rememberSaveable { mutableStateOf(true) }
 
+    // ✅ Conserve l’état interne de la section (index, champs texte, etc.) même quand replié
+    val stateHolder = rememberSaveableStateHolder()
+    val saveKey = remember(operateur, zone, intervention) {
+        "section_${operateur}_${zone}_${intervention}"
+    }
+
     ExpandableCard(title = title, expanded = expanded, onToggle = { expanded = !expanded }) {
-        EtapeCardGroup(
-            operateur = operateur,
-            title = title,
-            etapes = etapes,
-            currentGamme = currentGamme,
-            desiredGamme = desiredGamme,
-            zone = zone,
-            intervention = intervention,
-            etapeViewModel = etapeViewModel,
-            context = context,
-            cardColor = cardColor,
-            isAdmin = isAdmin,
-            allEtapes = allEtapes,
-            excludedIds = excludedIds,
-            locallyValidatedByRole = locallyValidatedByRole
-        )
+        // ✅ Fournit un scope sauvegardé : tout ce qui est rememberSaveable en dessous est préservé
+        stateHolder.SaveableStateProvider(key = saveKey) {
+            EtapeCardGroup(
+                operateur = operateur,
+                title = title,
+                etapes = etapes,
+                currentGamme = currentGamme,
+                desiredGamme = desiredGamme,
+                zone = zone,
+                intervention = intervention,
+                etapeViewModel = etapeViewModel,
+                context = context,
+                cardColor = cardColor,
+                isAdmin = isAdmin,
+                allEtapes = allEtapes,
+                excludedIds = excludedIds,
+                locallyValidatedByRole = locallyValidatedByRole
+            )
+        }
     }
 }
 
@@ -411,7 +436,7 @@ private fun EtapeCardGroup(
     excludedIds: List<Int>,
     locallyValidatedByRole: MutableMap<Int, MutableSet<String>>
 ) {
-    // Toujours au début (pas de reprise)
+    // ✅ Soumis à SaveableStateProvider -> persiste au repli/dépli
     var currentIndex by rememberSaveable { mutableStateOf(0) }
     if (currentIndex >= etapes.size) currentIndex = etapes.lastIndex
     val etape = etapes.getOrNull(currentIndex) ?: return
@@ -462,7 +487,9 @@ private fun EtapeCardGroup(
 
     key(etape.id_Etape) {
         Card(
-            Modifier.fillMaxWidth().background(animatedBgColor),
+            Modifier
+                .fillMaxWidth()
+                .background(animatedBgColor),
             shape = RoundedCornerShape(20.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
             colors = CardDefaults.cardColors(containerColor = cardColor)
@@ -535,17 +562,23 @@ private fun EtapeCardGroup(
                 if (!etape.description_Etape.isNullOrBlank() || isAdmin) {
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
-                        value = description, onValueChange = { description = it },
-                        label = { Text("Description") }, enabled = isAdmin,
-                        modifier = Modifier.fillMaxWidth(), textStyle = TextStyle(color = Color.White)
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Description") },
+                        enabled = isAdmin,
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(color = Color.White)
                     )
                 }
 
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
-                    value = commentaire, onValueChange = { commentaire = it },
-                    label = { Text("Commentaire") }, enabled = !currentRoleValidated,
-                    modifier = Modifier.fillMaxWidth(), textStyle = TextStyle(color = Color.White)
+                    value = commentaire,
+                    onValueChange = { commentaire = it },
+                    label = { Text("Commentaire") },
+                    enabled = !currentRoleValidated,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = Color.White)
                 )
 
                 Spacer(Modifier.height(12.dp))
@@ -650,6 +683,7 @@ private suspend fun confirmReset(context: Context): Boolean =
             .setNegativeButton("Non") { _, _ -> cont.resume(false) }
             .show()
     }
+
 // --- Helpers -------------------------------------------------------------
 
 /**
@@ -782,9 +816,6 @@ private fun getOrderedSteps(etapes: List<Etape>): List<Etape> {
     return out.mapNotNull { byId[it] }
 }
 
-
-
-
 @Composable
 private fun ExpandableCard(
     title: String,
@@ -797,11 +828,17 @@ private fun ExpandableCard(
             text = title,
             color = Color.White,
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.fillMaxWidth().clickable { onToggle() }.padding(vertical = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onToggle() }
+                .padding(vertical = 8.dp)
         )
         if (expanded) {
             Column(
-                Modifier.fillMaxWidth().background(Color(0xFF121212)).padding(8.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF121212))
+                    .padding(8.dp),
                 content = content
             )
         }
