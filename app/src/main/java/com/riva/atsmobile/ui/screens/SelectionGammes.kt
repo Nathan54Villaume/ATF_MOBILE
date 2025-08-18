@@ -460,7 +460,7 @@ fun ActionRow(
                 TextButton(onClick = {
                     openDialog.value = false
                     scope.launch {
-                        val success = viewModel.demarrerNouvelleSession()
+                        val success = viewModel.demarrerNouvelleSession(context)
                         if (success) {
                             viewModel.sauvegarderSessionLocalement(context)
                             navController.currentBackStackEntry?.savedStateHandle?.set("currentDesignation", current?.designation.orEmpty())

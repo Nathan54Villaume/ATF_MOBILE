@@ -1,5 +1,7 @@
+// file: app/src/main/java/com/riva/atsmobile/ui/screens/ParametresExclusionsScreen.kt
 package com.riva.atsmobile.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,6 +22,14 @@ import com.riva.atsmobile.model.EtapeCreateDto
 import com.riva.atsmobile.model.EtapeUpdateDto
 import com.riva.atsmobile.viewmodel.EtapeViewModel
 import com.riva.atsmobile.viewmodel.SelectionViewModel
+
+@Composable
+fun ParametresExclusionsScreen(
+    selectionViewModel: SelectionViewModel,
+    etapeViewModel: EtapeViewModel
+) {
+    ExclusionsParamSection(selectionViewModel, etapeViewModel)
+}
 
 @Composable
 fun ExclusionsParamSection(
@@ -43,7 +53,7 @@ fun ExclusionsParamSection(
     var duree by remember { mutableStateOf("") }
     var predecessor by remember { mutableStateOf("") }
     var successor by remember { mutableStateOf("") }
-    var conditionsAValider by remember { mutableStateOf("") } // Nouveau champ d'état
+    var conditionsAValider by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         StepFilterManager.init(context)
@@ -84,7 +94,7 @@ fun ExclusionsParamSection(
                 duree = ""
                 predecessor = ""
                 successor = ""
-                conditionsAValider = "" // Réinitialiser pour une nouvelle étape
+                conditionsAValider = ""
                 showDialog = true
             },
             modifier = Modifier.fillMaxWidth()
@@ -103,8 +113,10 @@ fun ExclusionsParamSection(
         Spacer(Modifier.height(8.dp))
 
         LazyColumn(modifier = Modifier.weight(1f)) {
-            items(allEtapes.sortedBy { it.id_Etape }) { etape ->
-                val checkedState = remember { mutableStateOf(etape.id_Etape in selectedSet) }
+            items(
+                items = allEtapes.sortedBy { it.id_Etape },
+                key = { it.id_Etape }
+            ) { etape ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -117,16 +129,25 @@ fun ExclusionsParamSection(
                             roleLog = etape.role_Log
                             phase = etape.phase_Etape
                             duree = etape.duree_Etape?.toString() ?: ""
-                            predecessor = etape.predecesseurs.flatMap { it.ids }.joinToString("!")
-                            successor = etape.successeurs.flatMap { it.ids }.joinToString("!")
-                            conditionsAValider = etape.conditions_A_Valider.orEmpty() // Charger la valeur existante
+
+                            // on pré-remplit avec UN entier > 1 (ou vide)
+                            predecessor = etape.predecesseurs
+                                .flatMap { it.ids }
+                                .firstOrNull { it > 1 }
+                                ?.toString() ?: ""
+
+                            successor = etape.successeurs
+                                .flatMap { it.ids }
+                                .firstOrNull { it > 1 }
+                                ?.toString() ?: ""
+
+                            conditionsAValider = etape.conditions_A_Valider.orEmpty()
                             showDialog = true
                         }
                 ) {
                     Checkbox(
-                        checked = checkedState.value,
+                        checked = etape.id_Etape in selectedSet,
                         onCheckedChange = { isChecked ->
-                            checkedState.value = isChecked
                             if (isChecked) selectedSet.add(etape.id_Etape)
                             else selectedSet.remove(etape.id_Etape)
                         }
@@ -181,14 +202,14 @@ fun ExclusionsParamSection(
                     )
                     Spacer(Modifier.height(8.dp))
                     DropdownMenuSelector(
-                        label = "Affectation",
+                        label = "Affectation (opérateurs ; séparés par ';')",
                         selected = affectation,
                         options = affectationOptions,
                         onSelected = { affectation = it }
                     )
                     Spacer(Modifier.height(8.dp))
                     DropdownMenuSelector(
-                        label = "Rôle",
+                        label = "Rôle (role_log)",
                         selected = roleLog,
                         options = roleOptions,
                         onSelected = { roleLog = it }
@@ -203,8 +224,11 @@ fun ExclusionsParamSection(
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = duree,
-                        onValueChange = { duree = it },
-                        label = { Text("Durée") },
+                        onValueChange = { input ->
+                            val cleaned = input.filter { it.isDigit() }.take(6)
+                            duree = cleaned
+                        },
+                        label = { Text("Durée (secondes)") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -212,7 +236,7 @@ fun ExclusionsParamSection(
                     OutlinedTextField(
                         value = predecessor,
                         onValueChange = { predecessor = it },
-                        label = { Text("Prédécesseurs (ids séparés par !)")},
+                        label = { Text("Prédécesseur (un entier > 1)") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -220,7 +244,7 @@ fun ExclusionsParamSection(
                     OutlinedTextField(
                         value = successor,
                         onValueChange = { successor = it },
-                        label = { Text("Successeurs (ids séparés par !)")},
+                        label = { Text("Successeur (un entier > 1)") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -228,7 +252,7 @@ fun ExclusionsParamSection(
                     OutlinedTextField(
                         value = conditionsAValider,
                         onValueChange = { conditionsAValider = it },
-                        label = { Text("Conditions à Valider") },
+                        label = { Text("Conditions à valider (ex: A+B)") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -236,37 +260,61 @@ fun ExclusionsParamSection(
             },
             confirmButton = {
                 TextButton(onClick = {
+                    // -> un seul entier > 1, sinon vide
+                    val predValue = firstValidIdOrEmpty(predecessor)
+                    val succValue = firstValidIdOrEmpty(successor)
+
+                    Log.d(
+                        "ParametresExcl",
+                        "UPDATE id=${editingEtape?.id_Etape} affectation='$affectation' predRaw='$predecessor' succRaw='$successor' => pred='$predValue' succ='$succValue'"
+                    )
+
+                    val defaultEtatParRole =
+                        if (editingEtape == null) {
+                            val ops = affectation.split(';')
+                                .map { it.trim() }
+                                .filter { it.isNotEmpty() }
+                            if (ops.isEmpty()) null else ops.associateWith { "EN_ATTENTE" }
+                        } else {
+                            editingEtape?.etatParRole
+                        }
+
                     val createDto = EtapeCreateDto(
-                        libelle_Etape      = libelle,
-                        affectation_Etape  = affectation,
-                        role_Log           = roleLog,
-                        phase_Etape        = phase,
-                        duree_Etape        = duree.toIntOrNull(),
-                        description_Etape  = editingEtape?.description_Etape,
-                        etatParRole         = editingEtape?.etatParRole,
-                        temps_Reel_Etape   = editingEtape?.temps_Reel_Etape,
-                        commentaire_Etape_1= editingEtape?.commentaire_Etape_1,
-                        predecesseur_etape = predecessor,
-                        successeur_etape   = successor,
+                        libelle_Etape        = libelle,
+                        affectation_Etape    = affectation,
+                        role_Log             = roleLog,
+                        phase_Etape          = phase,
+                        duree_Etape          = duree.toIntOrNull(),
+                        description_Etape    = editingEtape?.description_Etape,
+                        etatParRole          = defaultEtatParRole,
+                        temps_Reel_Etape     = editingEtape?.temps_Reel_Etape,
+                        commentaire_Etape_1  = editingEtape?.commentaire_Etape_1,
+                        // IMPORTANT : on envoie maintenant une simple chaîne "12" ou ""
+                        predecesseur_etape   = predValue,
+                        successeur_etape     = succValue,
                         conditions_A_Valider = conditionsAValider
                     )
+
                     val updateDto = EtapeUpdateDto(
-                        //id_Etape           = editingEtape!!.id_Etape, // ID nécessaire pour la mise à jour
-                        libelle_Etape      = libelle, // Utiliser directement le champ d'état libelle
-                        affectation_Etape  = affectation,
-                        role_Log           = roleLog,
-                        phase_Etape        = phase,
-                        duree_Etape        = duree.toIntOrNull(),
-                        description_Etape  = editingEtape?.description_Etape,
-                        etatParRole        = editingEtape?.etatParRole,
-                        temps_Reel_Etape   = editingEtape?.temps_Reel_Etape,
-                        commentaire_Etape_1= editingEtape?.commentaire_Etape_1,
-                        predecesseur_etape = predecessor,
-                        successeur_etape   = successor,
+                        libelle_Etape        = libelle,
+                        affectation_Etape    = affectation,
+                        role_Log             = roleLog,
+                        phase_Etape          = phase,
+                        duree_Etape          = duree.toIntOrNull(),
+                        description_Etape    = editingEtape?.description_Etape,
+                        etatParRole          = editingEtape?.etatParRole,
+                        temps_Reel_Etape     = editingEtape?.temps_Reel_Etape,
+                        commentaire_Etape_1  = editingEtape?.commentaire_Etape_1,
+                        predecesseur_etape   = predValue,
+                        successeur_etape     = succValue,
                         conditions_A_Valider = conditionsAValider
                     )
-                    if (editingEtape == null) etapeViewModel.createEtape(context, createDto) {}
-                    else etapeViewModel.updateEtape(context, editingEtape!!.id_Etape, updateDto) {}
+
+                    if (editingEtape == null) {
+                        etapeViewModel.createEtape(context, createDto) { }
+                    } else {
+                        etapeViewModel.updateEtape(context, editingEtape!!.id_Etape, updateDto) { }
+                    }
                     etapeViewModel.loadEtapes(context)
                     showDialog = false
                 }) { Text("OK") }
@@ -279,6 +327,8 @@ fun ExclusionsParamSection(
         )
     }
 }
+
+/* ============================= HELPERS UI ============================= */
 
 @Composable
 fun DropdownMenuCoupleSelector(
@@ -355,4 +405,14 @@ fun DropdownMenuSelector(
             }
         }
     }
+}
+
+/* ============================ HELPERS LOGIQUES ============================ */
+
+// Extrait le PREMIER entier > 1 du texte saisi, sinon renvoie "".
+private fun firstValidIdOrEmpty(raw: String): String {
+    val match = Regex("\\d+").findAll(raw)
+        .mapNotNull { it.value.toIntOrNull() }
+        .firstOrNull { it > 1 }
+    return match?.toString() ?: ""
 }

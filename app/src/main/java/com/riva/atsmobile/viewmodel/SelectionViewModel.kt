@@ -7,8 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.riva.atsmobile.model.Gamme
-import com.riva.atsmobile.model.LoginResponse
+import com.riva.atsmobile.model.*
 import com.riva.atsmobile.network.ApiServerClient
 import com.riva.atsmobile.utils.ApiConfig
 import com.riva.atsmobile.utils.LocalAuthManager
@@ -23,8 +22,11 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import retrofit2.Response
 
 class SelectionViewModel : ViewModel() {
+
+    private val TAG = "SelectionVM"
 
     // --- User info ---
     private val _matricule = MutableStateFlow("")
@@ -41,7 +43,7 @@ class SelectionViewModel : ViewModel() {
         .map { it.equals("ADMIN", ignoreCase = true) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    // --- Date contextuelles ---
+    // --- Dates contextuelles ---
     private val _annee = MutableStateFlow(2025)
     val annee: StateFlow<Int> = _annee.asStateFlow()
 
@@ -112,41 +114,45 @@ class SelectionViewModel : ViewModel() {
     // ————————————————————————————————————————————
     fun chargerGammesDepuisApi(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
+            val baseUrl = ApiConfig.getBaseUrl(context)
+            val url = "$baseUrl/api/gammes"
             try {
-                val baseUrl = ApiConfig.getBaseUrl(context)
+                Log.d(TAG, "GET $url")
                 val resp = OkHttpClient().newCall(
                     Request.Builder()
-                        .url("$baseUrl/api/gammes")
+                        .url(url)
                         .get()
                         .addHeader("Accept", "application/json")
                         .build()
                 ).execute()
                 val body = resp.body?.string()
+                Log.d(TAG, "GET /gammes -> code=${resp.code} success=${resp.isSuccessful} len=${body?.length ?: 0}")
                 if (resp.isSuccessful && body != null) {
                     val listType = object : TypeToken<List<Gamme>>() {}.type
                     val loaded = Gson().fromJson<List<Gamme>>(body, listType)
+                    Log.d(TAG, "gammes chargées: ${loaded.size}")
                     _gammes.value = loaded
 
                     if (_gammesSelectionnees.value.isEmpty()) {
-                        val defaults = setOf(
-                            "PAF R","PAF C","PAF V","PAF 10",
-                            "ST 15 C","ST 20","ST 25","ST 25 C"
-                        ).map(String::uppercase).toSet()
+                        val defaults = setOf("PAF R","PAF C","PAF V","PAF 10","ST 15 C","ST 20","ST 25","ST 25 C")
+                            .map(String::uppercase).toSet()
                         _gammesSelectionnees.value =
                             loaded.filter { it.designation.uppercase() in defaults }
                                 .map { it.codeTreillis }
                                 .toSet()
+                        Log.d(TAG, "gammes sélection par défaut: ${_gammesSelectionnees.value.size}")
                     }
                 } else {
-                    Log.e("SelectionVM","Chargement gammes KO : $body")
+                    Log.e(TAG,"/gammes KO: ${body?.take(500)}")
                 }
             } catch(e: Exception) {
-                Log.e("SelectionVM","Erreur chargement gammes", e)
+                Log.e(TAG,"Erreur chargement gammes ($url)", e)
             }
         }
     }
 
     fun selectCurrentGamme(g: Gamme) {
+        Log.d(TAG, "selectCurrentGamme code=${g.codeTreillis} nbFils=${g.nbFilChaine}")
         _currentGamme.value = g
         memoireGammeActuelle = g
         _nbFilsActuel.value = g.nbFilChaine
@@ -155,6 +161,7 @@ class SelectionViewModel : ViewModel() {
 
     fun selectDesiredGamme(g: Gamme) {
         if (_currentGamme.value != g) {
+            Log.d(TAG, "selectDesiredGamme code=${g.codeTreillis} nbFils=${g.nbFilChaine}")
             _desiredGamme.value = g
             memoireGammeVisee = g
             _nbFilsVise.value = g.nbFilChaine
@@ -165,6 +172,7 @@ class SelectionViewModel : ViewModel() {
         viewModelScope.launch {
             val demo = mapOf("g1" to listOf("a","b"), "g2" to listOf("c"))
             val baseUrl = ApiConfig.getBaseUrl(context)
+            Log.d(TAG,"fetchGroupedValues -> $baseUrl")
             val result = com.riva.atsmobile.network.ApiAutomateClient.fetchGroupedValues(demo, baseUrl)
             _groupedValues.value = result
         }
@@ -176,27 +184,22 @@ class SelectionViewModel : ViewModel() {
     /** Charge uniquement les infos utilisateur stockées */
     fun chargerSessionLocale(context: Context) {
         LocalAuthManager.loadUserInfo(context)?.let {
+            Log.d(TAG,"session locale chargée: ${it.matricule}/${it.role}")
             setMatricule(it.matricule)
             setNom(it.nom)
             setRole(it.role)
-        }
+        } ?: Log.d(TAG,"aucune session locale")
     }
 
     /** Sauvegarde minimale (stub) */
     fun sauvegarderSessionLocalement(context: Context) {
-        // SessionManager.saveSession(context, …)
+        // SessionManager.saveSession(context, …
     }
 
     /** Recharge l’utilisateur + gammes + zone + intervention */
     fun chargerSessionEnCours(context: Context) {
-        // 1) utilisateur
-        LocalAuthManager.loadUserInfo(context)?.let {
-            setMatricule(it.matricule)
-            setNom(it.nom)
-            setRole(it.role)
-        }
-        // 2) métadonnées
         SessionManager.loadSession(context)?.let { s ->
+            Log.d(TAG,"chargerSessionEnCours OK: ${s.current.codeTreillis} -> ${s.desired.codeTreillis}")
             _currentGamme.value    = s.current
             _desiredGamme.value    = s.desired
             memoireGammeActuelle   = s.current
@@ -205,11 +208,12 @@ class SelectionViewModel : ViewModel() {
             _intervention.value    = s.intervention
             _nbFilsActuel.value    = s.current.nbFilChaine
             _nbFilsVise.value      = s.desired.nbFilChaine
-        }
+        } ?: Log.d(TAG,"pas de session en cours à recharger")
     }
 
     /** Vide tout l’état pour le logout */
     fun reset() {
+        Log.d(TAG,"reset all state")
         setMatricule("")
         setNom("")
         setRole("")
@@ -229,17 +233,16 @@ class SelectionViewModel : ViewModel() {
     // ————————————————————————————————————————————
     fun updateOnlineStatus(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
-            _isOnline.value = try {
-                isNetworkAvailable(context)
-            } catch (_: Exception) {
-                false
-            }
+            val online = try { isNetworkAvailable(context) } catch (_: Exception) { false }
+            if (_isOnline.value != online) Log.d(TAG, "online=$online")
+            _isOnline.value = online
         }
     }
 
     fun initNetworkObserverIfNeeded(context: Context, intervalMillis: Long = 5_000L) {
         if (networkObserverStarted) return
         networkObserverStarted = true
+        Log.d(TAG,"network observer started (every ${intervalMillis}ms)")
         viewModelScope.launch {
             while (true) {
                 updateOnlineStatus(context)
@@ -249,7 +252,7 @@ class SelectionViewModel : ViewModel() {
     }
 
     // ————————————————————————————————————————————
-    // 5) API d’authentification & session serveur
+    // 5) API d’authentification & session serveur (LOGS AJOUTÉS)
     // ————————————————————————————————————————————
     suspend fun verifierConnexion(
         context: Context,
@@ -263,6 +266,7 @@ class SelectionViewModel : ViewModel() {
 
         return withContext(Dispatchers.IO) {
             try {
+                Log.d(TAG, "POST $url (matricule=$matricule)")
                 OkHttpClient().newCall(
                     Request.Builder()
                         .url(url)
@@ -272,6 +276,7 @@ class SelectionViewModel : ViewModel() {
                         .build()
                 ).execute().use { resp ->
                     val respBody = resp.body?.string()
+                    Log.d(TAG, "login -> code=${resp.code} success=${resp.isSuccessful} len=${respBody?.length ?: 0}")
                     if (resp.isSuccessful && respBody != null) {
                         val user = Gson().fromJson(respBody, LoginResponse::class.java)
                         LocalAuthManager.saveUserInfo(
@@ -280,25 +285,118 @@ class SelectionViewModel : ViewModel() {
                         )
                         Result.success(user)
                     } else {
+                        Log.e(TAG, "login erreur: ${respBody?.take(800)}")
                         Result.failure(Exception(respBody ?: "Erreur inconnue"))
                     }
                 }
             } catch (e: Exception) {
-                Log.e("SelectionVM","Login error", e)
+                Log.e(TAG,"login exception", e)
                 Result.failure(e)
             }
         }
     }
 
-    suspend fun demarrerNouvelleSession(): Boolean {
-        return try {
-            ApiServerClient
-                .create("http://10.250.13.4:8088/")
-                .resetSession()
-                .isSuccessful
-        } catch (e: Exception) {
-            Log.e("SelectionVM","Session reset error", e)
-            false
+    suspend fun demarrerNouvelleSession(context: Context): Boolean {
+        val baseUrl = ApiConfig.getBaseUrl(context)
+        return withContext(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "resetSession -> baseUrl=$baseUrl")
+                val api = ApiServerClient.create(baseUrl)
+                val r: Response<Void> = api.resetSession()
+                val err = try { r.errorBody()?.string() } catch (_: Exception) { null }
+                Log.d(
+                    TAG,
+                    "resetSession resp: code=${r.code()} success=${r.isSuccessful} " +
+                            "headers=${r.headers().size} err=${err?.take(800)}"
+                )
+                r.isSuccessful
+            } catch (e: Exception) {
+                Log.e(TAG, "resetSession exception", e)
+                false
+            }
         }
+    }
+
+    // ————————————————————————————————————————————
+    // 6) Création / Mise à jour d'une Étape (corrigé + LOGS)
+    // ————————————————————————————————————————————
+
+    /** Extrait le **premier id > 1** ; sinon "" */
+    private fun List<EtapeRelation>?.firstValidIdOrEmpty(): String {
+        if (this == null) return ""
+        val id = this.asSequence().flatMap { it.ids.asSequence() }.firstOrNull { it > 1 }
+        return id?.toString() ?: ""
+    }
+
+    private fun buildCreateDtoFromModel(model: Etape): EtapeCreateDto {
+        val pred = model.predecesseurs.firstValidIdOrEmpty()
+        val succ = model.successeurs.firstValidIdOrEmpty()
+        Log.d(TAG, "buildCreateDto pred='$pred' succ='$succ' id=${model.id_Etape}")
+        return EtapeCreateDto(
+            libelle_Etape        = model.libelle_Etape,
+            affectation_Etape    = model.affectation_Etape,
+            role_Log             = model.role_Log,
+            phase_Etape          = model.phase_Etape,
+            duree_Etape          = model.duree_Etape,
+            description_Etape    = model.description_Etape,
+            etatParRole          = model.etatParRole,
+            temps_Reel_Etape     = model.temps_Reel_Etape,
+            commentaire_Etape_1  = model.commentaire_Etape_1,
+            predecesseur_etape   = pred,
+            successeur_etape     = succ,
+            conditions_A_Valider = model.conditions_A_Valider
+        )
+    }
+
+    private fun buildUpdateDtoFromModel(model: Etape): EtapeUpdateDto {
+        val pred = model.predecesseurs.firstValidIdOrEmpty()
+        val succ = model.successeurs.firstValidIdOrEmpty()
+        Log.d(TAG, "buildUpdateDto pred='$pred' succ='$succ' id=${model.id_Etape}")
+        return EtapeUpdateDto(
+            libelle_Etape        = model.libelle_Etape,
+            affectation_Etape    = model.affectation_Etape,
+            role_Log             = model.role_Log,
+            phase_Etape          = model.phase_Etape,
+            duree_Etape          = model.duree_Etape,
+            description_Etape    = model.description_Etape,
+            etatParRole          = model.etatParRole,
+            temps_Reel_Etape     = model.temps_Reel_Etape,
+            commentaire_Etape_1  = model.commentaire_Etape_1,
+            predecesseur_etape   = pred,
+            successeur_etape     = succ,
+            conditions_A_Valider = model.conditions_A_Valider
+        )
+    }
+
+    suspend fun createEtapeFromModel(context: Context, model: Etape): Response<Void> {
+        val baseUrl = ApiConfig.getBaseUrl(context)
+        val api = ApiServerClient.create(baseUrl)
+        val dto = buildCreateDtoFromModel(model)
+        Log.d(TAG, "POST createEtape -> baseUrl=$baseUrl lib='${dto.libelle_Etape}' pred='${dto.predecesseur_etape}' succ='${dto.successeur_etape}'")
+        return withContext(Dispatchers.IO) {
+            val r = api.createEtape(dto)
+            logResponse("createEtape", r)
+            r
+        }
+    }
+
+    suspend fun updateEtapeFromModel(context: Context, model: Etape): Response<Void> {
+        val baseUrl = ApiConfig.getBaseUrl(context)
+        val api = ApiServerClient.create(baseUrl)
+        val dto = buildUpdateDtoFromModel(model)
+        Log.d(TAG, "PUT updateEtape(${model.id_Etape}) -> pred='${dto.predecesseur_etape}' succ='${dto.successeur_etape}'")
+        return withContext(Dispatchers.IO) {
+            val r = api.updateEtape(model.id_Etape, dto)
+            logResponse("updateEtape", r)
+            r
+        }
+    }
+
+    // ————————————————————————————————————————————
+    // Helpers logging retrofit
+    // ————————————————————————————————————————————
+    private fun <T> logResponse(label: String, r: Response<T>) {
+        val err = try { r.errorBody()?.string() } catch (_: Exception) { null }
+        Log.d(TAG, "$label resp: code=${r.code()} success=${r.isSuccessful} headers=${r.headers().size} err=${err?.take(800)}")
     }
 }

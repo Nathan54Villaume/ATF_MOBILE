@@ -60,10 +60,11 @@ private fun roleMapNorm(etape: Etape): Map<String, String> =
 
 /* ----------------- Conditions personnalisées ----------------- */
 /**
- * Règles:
- *  - '+' = ET (tous les blocs séparés par '+' doivent être vrais)
- *  - 'ou' = OU à l'intérieur d'un bloc (avec ou sans parenthèses)
- *  - Un ID est “valide” s’il est dans fullyValidatedIds (ou bien exclu).
+ * Évalue la chaîne de conditions personnalisées.
+ * - '+' sépare des blocs en AND (tous les blocs doivent être vrais)
+ * - 'ou' est un OR *dans* un bloc
+ * - Les IDs EXCLUS ne comptent pas comme "valides" ; on les **ignore** simplement.
+ *   => Un bloc qui ne contient **que** des IDs exclus devient sans contrainte (vrai).
  */
 private fun checkCustomConditions(
     conditionString: String?,
@@ -72,24 +73,30 @@ private fun checkCustomConditions(
 ): Boolean {
     if (conditionString.isNullOrBlank()) return true
 
-    val parts = conditionString.split('+').map { it.trim() }.filter { it.isNotEmpty() }
+    // Sépare les blocs AND
+    val blocks = conditionString.split('+')
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
 
-    fun idOk(id: Int): Boolean {
-        if (id in excludedIds) return true
-        return id in fullyValidatedIds
-    }
-
-    fun partOk(part: String): Boolean {
-        val inside = part.removePrefix("(").removeSuffix(")")
-        val ids = inside
+    fun parseOrIds(raw: String): List<Int> {
+        val inside = raw.removePrefix("(").removeSuffix(")")
+        return inside
             .split(Regex("\\bou\\b", RegexOption.IGNORE_CASE))
             .mapNotNull { it.trim().toIntOrNull() }
-        return if (ids.isEmpty()) true else ids.any { idOk(it) } // OU interne
     }
 
-    // '+' = ET global
-    return parts.all { partOk(it) }
+    return blocks.all { block ->
+        // On enlève du bloc les IDs exclus (ils ne rendent PAS le bloc "vrai")
+        val candidateIds = parseOrIds(block).filter { it !in excludedIds }
+        when {
+            // Bloc ne contenant que des IDs exclus => pas de contrainte
+            candidateIds.isEmpty() -> true
+            // Il faut qu'au moins un ID non-exclu soit validé
+            else -> candidateIds.any { it in fullyValidatedIds }
+        }
+    }
 }
+
 
 /* ----------------- Calcule les étapes entièrement validées ----------------- */
 
@@ -643,20 +650,140 @@ private suspend fun confirmReset(context: Context): Boolean =
             .setNegativeButton("Non") { _, _ -> cont.resume(false) }
             .show()
     }
+// --- Helpers -------------------------------------------------------------
 
-// Tri topologique des étapes selon leurs prédecesseurs (tous opérateurs confondus)
-private fun getOrderedSteps(etapes: List<Etape>): List<Etape> {
-    val map = etapes.associateBy { it.id_Etape }
-    val visited = mutableSetOf<Int>()
-    val out = mutableListOf<Etape>()
-    fun dfs(e: Etape) {
-        if (!visited.add(e.id_Etape)) return
-        e.predecesseurs.flatMap { it.ids }.filter { it != 0 }.mapNotNull { map[it] }.forEach { dfs(it) }
-        if (e !in out) out += e
+/**
+ * Retourne les groupes de prédécesseurs tels que fournis (1 groupe = 1 rôle, par index).
+ * - Les "0" sont des sentinelles "début de rôle" => on les exclut des arêtes.
+ */
+private fun predecessorGroups(e: Etape): List<List<Int>> =
+    e.predecesseurs.map { grp -> grp.ids.filter { it != 0 } }
+
+/**
+ * Lecture "safe" de la propriété successeurs si elle existe.
+ * - Accepte List<Int> ou List<Objets{ ids: List<Int> }>
+ * - Retourne des groupes alignés par rôle (même indexation que prédecesseurs).
+ * - Si le champ est absent dans Etape, renvoie une liste vide.
+ */
+private fun safeSuccesseurGroups(e: Etape): List<List<Int>> {
+    // Essaye "successeurs" (ou "successeur" si besoin)
+    val tryNames = listOf("successeurs", "successeur")
+    for (name in tryNames) {
+        try {
+            val f = e.javaClass.getDeclaredField(name)
+            f.isAccessible = true
+            val raw = f.get(e)
+            return when (raw) {
+                is List<*> -> {
+                    if (raw.isEmpty()) emptyList() else {
+                        val first = raw.first()
+                        if (first is Int) listOf(raw.mapNotNull { it as? Int })
+                        else raw.map { item ->
+                            try {
+                                val ff = item?.javaClass?.getDeclaredField("ids")?.apply { isAccessible = true }
+                                val value = ff?.get(item)
+                                (value as? List<*>)?.mapNotNull { it as? Int }.orEmpty()
+                            } catch (_: Throwable) { emptyList() }
+                        }
+                    }
+                }
+                else -> emptyList()
+            }
+        } catch (_: Throwable) { /* champ absent : on ignore */ }
     }
-    etapes.forEach { dfs(it) }
-    return out
+    return emptyList()
 }
+
+/**
+ * Calcule un "score de départ par rôles" : +1 pour chaque groupe de prédécesseurs vide (après retrait des 0).
+ * Sert uniquement à départager les sources : plus le score est élevé, plus l’étape est prioritaire dans la file.
+ */
+private fun startScoreForRoles(e: Etape): Int {
+    val groups = predecessorGroups(e) // 0 retirés
+    if (groups.isEmpty()) return 0
+    return groups.count { it.isEmpty() }
+}
+
+// --- Tri topologique Kahn avec alignement Rôle ↔ Groupe ------------------
+
+/**
+ * Construit le graphe dirigé en fusionnant :
+ *  1) les PRÉDÉCESSEURS alignés par rôle (groupe i -> étape),
+ *  2) les SUCCESSEURS alignés par rôle (étape -> groupe i),
+ * en considérant "0" comme "début de rôle" (pas d'arête).
+ * La file de Kahn est déterministe : on priorise les étapes "débutantes" (plus de rôles à 0),
+ * puis on départage par id.
+ */
+private fun getOrderedSteps(etapes: List<Etape>): List<Etape> {
+    val byId = etapes.associateBy { it.id_Etape }
+
+    // Graphe u -> {v} et degrés entrants
+    val adj = mutableMapOf<Int, MutableSet<Int>>()
+    val indeg = mutableMapOf<Int, Int>().apply { etapes.forEach { put(it.id_Etape, 0) } }
+
+    fun addEdge(u: Int, v: Int) {
+        if (u == v) return
+        if (!byId.containsKey(u) || !byId.containsKey(v)) return // ignore ids exclus/absents
+        val set = adj.getOrPut(u) { mutableSetOf() }
+        if (set.add(v)) indeg[v] = (indeg[v] ?: 0) + 1
+    }
+
+    // Pré-calcul du "start score" pour prioriser les sources ayant des 0 (début de rôle)
+    val startScore = etapes.associate { e -> e.id_Etape to startScoreForRoles(e) }
+
+    // Construit les arêtes en respectant l’alignement par rôle
+    for (e in etapes) {
+        val roles = rolesOfNorm(e) // ordre des affectations
+        val predGroups = predecessorGroups(e)           // 0 retirés ici
+        val succGroups = safeSuccesseurGroups(e)        // peut être vide si champ absent
+
+        // 1) Prédécesseurs (groupe i -> e)
+        val nPred = minOf(roles.size, predGroups.size)
+        for (i in 0 until nPred) predGroups[i].forEach { p -> addEdge(p, e.id_Etape) }
+        // Groupes surnuméraires éventuels (sécurité)
+        for (i in nPred until predGroups.size) predGroups[i].forEach { p -> addEdge(p, e.id_Etape) }
+
+        // 2) Successeurs (e -> groupe i) si dispo
+        val nSucc = minOf(roles.size, succGroups.size)
+        for (i in 0 until nSucc) succGroups[i].forEach { s -> addEdge(e.id_Etape, s) }
+        for (i in nSucc until succGroups.size) succGroups[i].forEach { s -> addEdge(e.id_Etape, s) }
+    }
+
+    // Kahn déterministe : on trie d'abord par "start score" décroissant (plus de débuts de rôle en premier), puis par id croissant
+    val queue = java.util.PriorityQueue<Int> { a, b ->
+        val sa = startScore[a] ?: 0
+        val sb = startScore[b] ?: 0
+        when {
+            sa != sb -> sb - sa                 // score plus grand en premier
+            else     -> a.compareTo(b)          // sinon par id
+        }
+    }.apply {
+        indeg.filter { it.value == 0 }.keys.forEach { add(it) }
+    }
+
+    val out = mutableListOf<Int>()
+    while (queue.isNotEmpty()) {
+        val u = queue.poll()
+        out += u
+        for (v in adj[u].orEmpty()) {
+            val nv = (indeg[v] ?: 0) - 1
+            indeg[v] = nv
+            if (nv == 0) queue.add(v)
+        }
+    }
+
+    // Fallback si cycle/incohérence (on ne perd rien)
+    if (out.size != etapes.size) {
+        val remaining = etapes.map { it.id_Etape }.toSet() - out.toSet()
+        Log.w("EtapesScreen", "Cycle/incohérence détecté, fallback tri par id: $remaining")
+        out += remaining.sorted()
+    }
+
+    return out.mapNotNull { byId[it] }
+}
+
+
+
 
 @Composable
 private fun ExpandableCard(
